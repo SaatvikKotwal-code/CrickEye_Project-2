@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Models (DO NOT upload)
+*.pt
+*.pth
+
+# Videos & media
+*.mp4
+*.avi
+*.mov
+
+# Uploads (generated during runtime)
+uploads/
+
+# Logs / temp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+
+# Jupyter (if any)
+.ipynb_checkpoints/
+
+# Data files (optional - keep only small demo JSON)
+*.csv

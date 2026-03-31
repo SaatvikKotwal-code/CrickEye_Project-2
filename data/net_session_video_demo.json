@@ -1,0 +1,350 @@
+{
+  "total_frames": 441,
+  "fps": 30.0,
+  "session_handedness": "RHB",
+  "stance_conf": 1.0,
+  "speed_unit": "km/h",
+  "analysis": {
+    "session_handedness": "RHB",
+    "stance_conf": 1.0,
+    "shots_total": 6,
+    "shots_confirmed": 5,
+    "best_shot": {
+      "shot_num": 5,
+      "label": "sweep",
+      "shot_score": 7.3,
+      "shot_quality": "Good",
+      "timestamp": "00:14.00"
+    },
+    "worst_shot": {
+      "shot_num": 3,
+      "label": "flick",
+      "shot_score": 4.0,
+      "shot_quality": "Average",
+      "timestamp": "00:06.00"
+    },
+    "session_scores": {
+      "power": 77.8,
+      "head_discipline": 44.9,
+      "stability": 56.92
+    },
+    "session_averages": {
+      "peak_swing_speed": 108.88,
+      "head_stability": 44.9,
+      "stability_score": 56.92
+    },
+    "footwork_summary": {
+      "front_foot_count": 1,
+      "back_foot_count": 1,
+      "neutral_count": 3
+    },
+    "trend": {
+      "peak_swing_speed": {
+        "first_half": 105.35,
+        "second_half": 111.23
+      },
+      "head_stability": {
+        "first_half": 47.7,
+        "second_half": 43.03
+      },
+      "stability_score": {
+        "first_half": 71.1,
+        "second_half": 47.47
+      }
+    },
+    "fatigue_detected": false,
+    "by_shot_type": {
+      "pull": {
+        "count": 1,
+        "avg_conf": 0.83,
+        "peak_swing_speed": {
+          "mean": 80.7,
+          "std": null,
+          "n": 1
+        },
+        "head_stability": {
+          "mean": 88.7,
+          "std": null,
+          "n": 1
+        },
+        "stability_score": {
+          "mean": 75.1,
+          "std": null,
+          "n": 1
+        },
+        "footwork_counts": {
+          "front_foot": 0,
+          "back_foot": 0,
+          "neutral": 1
+        }
+      },
+      "straight": {
+        "count": 1,
+        "avg_conf": 0.8,
+        "peak_swing_speed": {
+          "mean": 130.0,
+          "std": null,
+          "n": 1
+        },
+        "head_stability": {
+          "mean": 6.7,
+          "std": null,
+          "n": 1
+        },
+        "stability_score": {
+          "mean": 67.1,
+          "std": null,
+          "n": 1
+        },
+        "footwork_counts": {
+          "front_foot": 1,
+          "back_foot": 0,
+          "neutral": 0
+        }
+      },
+      "flick": {
+        "count": 1,
+        "avg_conf": 0.8,
+        "peak_swing_speed": {
+          "mean": 130.0,
+          "std": null,
+          "n": 1
+        },
+        "head_stability": {
+          "mean": 6.9,
+          "std": null,
+          "n": 1
+        },
+        "stability_score": {
+          "mean": 2.1,
+          "std": null,
+          "n": 1
+        },
+        "footwork_counts": {
+          "front_foot": 0,
+          "back_foot": 1,
+          "neutral": 0
+        }
+      },
+      "cover": {
+        "count": 1,
+        "avg_conf": 0.62,
+        "peak_swing_speed": {
+          "mean": 130.0,
+          "std": null,
+          "n": 1
+        },
+        "head_stability": {
+          "mean": 40.2,
+          "std": null,
+          "n": 1
+        },
+        "stability_score": {
+          "mean": 51.3,
+          "std": null,
+          "n": 1
+        },
+        "footwork_counts": {
+          "front_foot": 0,
+          "back_foot": 0,
+          "neutral": 1
+        }
+      },
+      "sweep": {
+        "count": 1,
+        "avg_conf": 0.9,
+        "peak_swing_speed": {
+          "mean": 73.7,
+          "std": null,
+          "n": 1
+        },
+        "head_stability": {
+          "mean": 82.0,
+          "std": null,
+          "n": 1
+        },
+        "stability_score": {
+          "mean": 89.0,
+          "std": null,
+          "n": 1
+        },
+        "footwork_counts": {
+          "front_foot": 0,
+          "back_foot": 0,
+          "neutral": 1
+        }
+      }
+    },
+    "coaching_alerts": [
+      {
+        "severity": "HIGH",
+        "metric": "Head stability",
+        "message": "Poor head stability on 2 shots. Worst: Shot #2 straight (score=7/100)",
+        "action": "Keep eyes level and still through contact. Shadow drills in front of mirror. Focus on watching ball onto bat."
+      }
+    ]
+  },
+  "shots": [
+    {
+      "shot_num": 1,
+      "display_num": 1,
+      "label": "pull",
+      "confidence": 0.8343,
+      "confirmed": true,
+      "timestamp": "00:00.43",
+      "peak_frame": 13,
+      "travel_px": 249.0,
+      "peak_swing_speed": 80.7,
+      "footwork": "neutral",
+      "footwork_conf": "low",
+      "head_stability": 88.7,
+      "stability_score": 75.1,
+      "shot_score": 7.2,
+      "shot_quality": "Good",
+      "flags": [
+        "FOOTWORK_UNCLEAR"
+      ],
+      "probs": {
+        "cover": 0.0066,
+        "flick": 0.0488,
+        "pull": 0.8343,
+        "straight": 0.0129,
+        "sweep": 0.0974
+      }
+    },
+    {
+      "shot_num": 2,
+      "display_num": 2,
+      "label": "straight",
+      "confidence": 0.8023,
+      "confirmed": true,
+      "timestamp": "00:03.70",
+      "peak_frame": 111,
+      "travel_px": 605.8,
+      "peak_swing_speed": 130.0,
+      "footwork": "front_foot",
+      "footwork_conf": "high",
+      "head_stability": 6.7,
+      "stability_score": 67.1,
+      "shot_score": 6.2,
+      "shot_quality": "Good",
+      "flags": [
+        "HEAD_MOVING"
+      ],
+      "probs": {
+        "cover": 0.0743,
+        "flick": 0.1144,
+        "pull": 0.0059,
+        "straight": 0.8023,
+        "sweep": 0.0031
+      }
+    },
+    {
+      "shot_num": 3,
+      "display_num": 3,
+      "label": "flick",
+      "confidence": 0.7966,
+      "confirmed": true,
+      "timestamp": "00:06.00",
+      "peak_frame": 180,
+      "travel_px": 460.8,
+      "peak_swing_speed": 130.0,
+      "footwork": "back_foot",
+      "footwork_conf": "high",
+      "head_stability": 6.9,
+      "stability_score": 2.1,
+      "shot_score": 4.0,
+      "shot_quality": "Average",
+      "flags": [
+        "HEAD_MOVING",
+        "UNSTABLE"
+      ],
+      "probs": {
+        "cover": 0.1062,
+        "flick": 0.7966,
+        "pull": 0.0268,
+        "straight": 0.0064,
+        "sweep": 0.064
+      }
+    },
+    {
+      "shot_num": 4,
+      "display_num": 4,
+      "label": "cover",
+      "confidence": 0.6157,
+      "confirmed": true,
+      "timestamp": "00:09.43",
+      "peak_frame": 283,
+      "travel_px": 310.8,
+      "peak_swing_speed": 130.0,
+      "footwork": "neutral",
+      "footwork_conf": "low",
+      "head_stability": 40.2,
+      "stability_score": 51.3,
+      "shot_score": 6.5,
+      "shot_quality": "Good",
+      "flags": [
+        "FOOTWORK_UNCLEAR"
+      ],
+      "probs": {
+        "cover": 0.6157,
+        "flick": 0.0857,
+        "pull": 0.0759,
+        "straight": 0.208,
+        "sweep": 0.0146
+      }
+    },
+    {
+      "shot_num": 5,
+      "display_num": null,
+      "label": "pull",
+      "confidence": 0.5662,
+      "confirmed": false,
+      "timestamp": "00:11.10",
+      "peak_frame": 333,
+      "travel_px": 103.6,
+      "peak_swing_speed": 91.4,
+      "footwork": "front_foot",
+      "footwork_conf": "high",
+      "head_stability": 83.9,
+      "stability_score": 83.8,
+      "shot_score": 7.6,
+      "shot_quality": "Good",
+      "flags": [],
+      "probs": {
+        "cover": 0.0506,
+        "flick": 0.1132,
+        "pull": 0.5662,
+        "straight": 0.0197,
+        "sweep": 0.2503
+      }
+    },
+    {
+      "shot_num": 6,
+      "display_num": 5,
+      "label": "sweep",
+      "confidence": 0.8968,
+      "confirmed": true,
+      "timestamp": "00:14.00",
+      "peak_frame": 420,
+      "travel_px": 145.6,
+      "peak_swing_speed": 73.7,
+      "footwork": "neutral",
+      "footwork_conf": "low",
+      "head_stability": 82.0,
+      "stability_score": 89.0,
+      "shot_score": 7.3,
+      "shot_quality": "Good",
+      "flags": [
+        "FOOTWORK_UNCLEAR"
+      ],
+      "probs": {
+        "cover": 0.0197,
+        "flick": 0.0575,
+        "pull": 0.0211,
+        "straight": 0.0049,
+        "sweep": 0.8968
+      }
+    }
+  ]
+}

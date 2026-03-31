@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CrickEye Pro — AI Cricket Analytics</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ───────────────── TOP HEADER ───────────────── -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="logo-mark">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.5"/>
+          <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.2" stroke="#06B6D4" stroke-width="1"/>
+          <circle cx="16" cy="16" r="2.5" fill="#06B6D4"/>
+        </svg>
+      </div>
+      <div class="header-title-block">
+        <h1 class="header-title">CrickEye<span class="accent">Pro</span></h1>
+        <span class="header-sub">AI Batting Analytics Engine</span>
+      </div>
+    </div>
+
+    <div class="verdict-pill">
+      <span class="verdict-icon">⚡</span>
+      <span class="verdict-text">Awaiting analysis…</span>
+    </div>
+
+    <div class="verdict-pill verdict-pill--orange">
+      <span class="verdict-icon">🏏</span>
+      <span class="verdict-text" id="batsmanLabel">AWAITING ANALYSIS</span>
+    </div>
+
+    <div class="header-right">
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        <span class="status-label">Online &amp; Tracking</span>
+      </div>
+      <div class="session-info">
+        <span class="session-label">Session</span>
+        <span class="session-value" id="sessionTime">00:00</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ───────────────── MAIN GRID ───────────────── -->
+  <main class="main-grid">
+
+    <!-- ══════════ LEFT PANEL ══════════ -->
+    <section class="panel left-panel">
+
+      <div class="panel-header">
+        <div class="panel-label-group">
+          <span class="live-dot"></span>
+          <span class="panel-label">Live Feed</span>
+        </div>
+        <div class="panel-controls">
+          <span class="ctrl-btn" id="btnSpeed">1×</span>
+          <span class="ctrl-btn" id="btnLoop">↺ Loop</span>
+
+          <button class="btn-report" id="btnReport" disabled>
+            <svg class="btn-report-icon" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 2.5A1.5 1.5 0 013.5 1h5L11 4v7.5A1.5 1.5 0 019.5 13h-6A1.5 1.5 0 012 11.5v-9z" stroke="white" stroke-width="1.2" fill="none"/>
+              <path d="M8 1v3.5H11" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M4.5 7.5h5M4.5 9.5h3" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            Generate Report
+          </button>
+
+        </div>
+      </div>
+
+      <div class="video-wrapper">
+        <video id="mainVideo" class="main-video" playsinline></video>
+        <div class="video-hud">
+          <div class="hud-corner hud-tl">
+            <span class="rec-dot"></span> LIVE
+          </div>
+          <div class="hud-corner hud-tr" id="hudTime">00:00</div>
+          <div class="hud-corner hud-bl">SHOT: <span id="hudShot">—</span></div>
+          <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
+        </div>
+      </div>
+
+      <!-- Shot timeline -->
+      <div class="timeline-section">
+        <div class="timeline-label">Shot Timeline</div>
+        <div class="timeline-track" id="timelineTrack"></div>
+        <div class="timeline-bar">
+          <div class="timeline-progress" id="timelineProgress"></div>
+        </div>
+      </div>
+
+      <!-- Current shot display -->
+      <div class="current-shot-display">
+        <div class="shot-badge" id="currentShotBadge">
+          <span class="shot-number">SHOT <span id="shotIndex">—</span></span>
+          <span class="shot-name" id="shotName">AWAITING</span>
+          <span class="shot-time" id="shotTime">—</span>
+        </div>
+        <div class="shot-color-bar" id="shotColorBar"></div>
+      </div>
+
+    </section>
+
+    <!-- ══════════ RIGHT PANEL — WAGON WHEEL ══════════ -->
+    <section class="panel right-panel">
+
+      <div class="panel-header">
+        <span class="panel-label">Wagon Wheel</span>
+        <div class="panel-controls">
+          <span class="ctrl-btn" id="btnClearWheel">Clear</span>
+        </div>
+      </div>
+
+      <div class="wagon-wheel-container">
+        <canvas id="wagonWheelCanvas"></canvas>
+      </div>
+
+      <div class="wheel-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#06B6D4"></span>Cover Drive</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#10B981"></span>Straight Drive</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#F97316"></span>Pull Shot</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#A855F7"></span>Flick</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#EAB308"></span>Sweep</div>
+      </div>
+
+      <!-- Shot Distribution -->
+      <div class="shot-distribution">
+        <div class="dist-header">Shot Distribution</div>
+        <div class="dist-rows">
+          <div class="dist-row">
+            <div class="dist-row-top">
+              <span class="dist-label dist-label--orange">Leg Side</span>
+              <div class="dist-row-right">
+                <span class="dist-count" id="dist-leg-cnt">0</span>
+                <span class="dist-pct" id="dist-leg-pct">0%</span>
+              </div>
+            </div>
+            <div class="dist-track">
+              <div class="dist-bar leg" id="dist-leg-bar" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="dist-row">
+            <div class="dist-row-top">
+              <span class="dist-label dist-label--cyan">Off Side</span>
+              <div class="dist-row-right">
+                <span class="dist-count" id="dist-off-cnt">0</span>
+                <span class="dist-pct" id="dist-off-pct">0%</span>
+              </div>
+            </div>
+            <div class="dist-track">
+              <div class="dist-bar off" id="dist-off-bar" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="dist-row">
+            <div class="dist-row-top">
+              <span class="dist-label dist-label--green">Straight</span>
+              <div class="dist-row-right">
+                <span class="dist-count" id="dist-str-cnt">0</span>
+                <span class="dist-pct" id="dist-str-pct">0%</span>
+              </div>
+            </div>
+            <div class="dist-track">
+              <div class="dist-bar str" id="dist-str-bar" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Summary
+           Stars are updated dynamically by updateSessionRating() in app.js
+           once analysis completes. Scale: ★★★★★ 8+  ★★★★ 6-7.9  ★★★ 4-5.9  ★★ 2-3.9  ★ 0-1.9
+      -->
+      <div class="over-summary">
+        <div class="over-summary-header">Session Summary</div>
+        <div class="over-rating">
+          Rating:
+          <span id="sessionStars">
+            <span class="star">★</span>
+            <span class="star">★</span>
+            <span class="star">★</span>
+            <span class="star">★</span>
+            <span class="star">★</span>
+          </span>
+          <span class="rating-label" id="ratingLabel" style="font-family:JetBrains Mono,monospace;font-size:0.6rem;color:#94A3B8;margin-left:6px;letter-spacing:0.08em"></span>
+        </div>
+        <table class="over-table" id="overTable">
+          <thead>
+            <tr><th>Shot Type</th><th>Count</th></tr>
+          </thead>
+          <tbody id="overTableBody">
+            <tr><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ───────────────── BIOMECHANICS — FULL WIDTH ───────────────── -->
+  <section class="biomech-section">
+    <div class="biomech-section-header">
+      <div class="panel-label-group">
+        <span class="panel-label">Biomechanics</span>
+        <span class="live-chip">
+          <span class="live-chip-dot"></span>Live
+        </span>
+      </div>
+      <span class="shot-count-display">Shots: <span id="shotCount">0</span></span>
+    </div>
+    <div id="biomech-feed">
+      <div class="biomech-empty">AWAITING FIRST SHOT…</div>
+    </div>
+  </section>
+
+  <!-- ───────────────── BOTTOM SECTION ───────────────── -->
+  <section class="bottom-section">
+
+    <!-- Hidden stubs — keep app.js DOM refs valid without rendering anything -->
+    <div style="display:none">
+      <div id="session-report"></div>
+      <svg>
+        <circle id="ring-timing"/>
+        <circle id="ring-middling"/>
+        <circle id="ring-impact"/>
+        <circle id="ring-backlift"/>
+      </svg>
+      <div class="analysis-row">
+        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
+        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
+        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
+        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <span class="footer-brand">CrickEye<span class="accent">Pro</span></span>
+      <span class="footer-sep">·</span>
+      <span class="footer-sub">AI Batting Analytics Engine</span>
+      <span class="footer-sep">·</span>
+      <span class="footer-copy">© 2026</span>
+    </footer>
+
+  </section>
+
+  <script src="components/wagonWheel.js"></script>
+  <script src="components/ReportModal.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>

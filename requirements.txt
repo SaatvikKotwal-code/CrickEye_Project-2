@@ -1,0 +1,24 @@
+# Core Python dependencies
+numpy
+pandas
+
+# Computer Vision
+opencv-python
+
+# Deep Learning / YOLO
+ultralytics
+torch
+torchvision
+
+# Backend (choose based on your code)
+flask
+fastapi
+uvicorn
+
+# Utilities
+matplotlib
+scikit-learn
+tqdm
+
+# File handling / JSON
+python-multipart
