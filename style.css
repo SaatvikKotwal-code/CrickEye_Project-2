@@ -1159,3 +1159,45 @@ body {
   min-width: 90px;
   text-align: right;
 }
+
+.auth-controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; max-width:460px; }
+.auth-controls input {
+  background:#0b1220; border:1px solid #23314f; color:#e2e8f0; border-radius:8px;
+  padding:6px 8px; font-size:.75rem; min-width:110px;
+}
+.auth-btn { background:#0ea5e9; border:0; color:#fff; border-radius:8px; padding:6px 10px; font-size:.72rem; cursor:pointer; }
+.auth-btn:hover { opacity:.9; }
+.auth-user-label { font-size:.68rem; color:#94a3b8; }
+
+.user-sessions-panel { margin:18px 18px 10px; padding:14px; border:1px solid #1f2a44; border-radius:14px; background:#070d18; }
+.sessions-list { display:flex; flex-direction:column; gap:10px; max-height:220px; overflow:auto; margin-top:10px; }
+.session-item { border:1px solid #1f2a44; border-radius:10px; padding:10px; background:#0b1220; }
+.session-item-top { display:flex; justify-content:space-between; gap:10px; color:#cbd5e1; font-size:.78rem; }
+.session-status { font-weight:600; text-transform:uppercase; font-size:.68rem; }
+.session-result { margin-top:6px; color:#94a3b8; font-size:.72rem; white-space:pre-wrap; }
+.session-item-empty { color:#64748b; font-size:.78rem; }
+
+.auth-gate {
+  position: fixed; inset: 0; z-index: 9999;
+  background: radial-gradient(circle at 20% 20%, #0f172a, #020617 60%);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-gate.hidden { display: none; }
+.auth-gate-card {
+  width: min(420px, 92vw);
+  background: #0b1220;
+  border: 1px solid #1f2a44;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.auth-gate-card h2 { margin: 0; color: #e2e8f0; }
+.auth-gate-card p { margin: 0 0 4px; color: #94a3b8; font-size: .9rem; }
+.auth-gate-card input {
+  background: #020617; border: 1px solid #23314f; color: #e2e8f0;
+  border-radius: 8px; padding: 10px 12px; font-size: .85rem;
+}
+.auth-gate-actions { display: flex; gap: 10px; margin-top: 6px; }
+.auth-gate-msg { min-height: 18px; color: #fda4af; font-size: .78rem; }

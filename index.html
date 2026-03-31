@@ -10,6 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
+  <div id="authGate" class="auth-gate">
+    <div class="auth-gate-card">
+      <h2>CrickEye Login</h2>
+      <p>Login or create account to continue.</p>
+      <input type="email" id="gateEmail" placeholder="Email" />
+      <input type="password" id="gatePassword" placeholder="Password" />
+      <div class="auth-gate-actions">
+        <button id="gateSignupBtn" class="auth-btn">Sign Up</button>
+        <button id="gateLoginBtn" class="auth-btn">Login</button>
+      </div>
+      <div id="gateMessage" class="auth-gate-msg"></div>
+    </div>
+  </div>
 
   <!-- ───────────────── TOP HEADER ───────────────── -->
   <header class="top-header">
@@ -45,6 +58,14 @@
       <div class="session-info">
         <span class="session-label">Session</span>
         <span class="session-value" id="sessionTime">00:00</span>
+      </div>
+      <div class="auth-controls" id="authControls">
+        <input type="email" id="authEmail" placeholder="email" />
+        <input type="password" id="authPassword" placeholder="password" />
+        <button id="signupBtn" class="auth-btn">Sign Up</button>
+        <button id="loginBtn" class="auth-btn">Login</button>
+        <button id="logoutBtn" class="auth-btn" style="display:none">Logout</button>
+        <span id="authUserLabel" class="auth-user-label">Not logged in</span>
       </div>
     </div>
   </header>
@@ -222,6 +243,14 @@
 
   <!-- ───────────────── BOTTOM SECTION ───────────────── -->
   <section class="bottom-section">
+    <section class="user-sessions-panel">
+      <div class="panel-header">
+        <span class="panel-label">My Sessions</span>
+      </div>
+      <div id="sessionsList" class="sessions-list">
+        <div class="session-item-empty">Login to view your sessions.</div>
+      </div>
+    </section>
 
     <!-- Hidden stubs — keep app.js DOM refs valid without rendering anything -->
     <div style="display:none">
@@ -252,6 +281,7 @@
 
   <script src="components/wagonWheel.js"></script>
   <script src="components/ReportModal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 
 </body>

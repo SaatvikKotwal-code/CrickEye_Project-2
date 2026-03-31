@@ -68,6 +68,26 @@ const distOffCnt       = document.getElementById('dist-off-cnt');
 const distLegCnt       = document.getElementById('dist-leg-cnt');
 const distStrCnt       = document.getElementById('dist-str-cnt');
 const btnReport        = document.getElementById('btnReport');
+const authEmail        = document.getElementById('authEmail');
+const authPassword     = document.getElementById('authPassword');
+const signupBtn        = document.getElementById('signupBtn');
+const loginBtn         = document.getElementById('loginBtn');
+const logoutBtn        = document.getElementById('logoutBtn');
+const authUserLabel    = document.getElementById('authUserLabel');
+const sessionsList     = document.getElementById('sessionsList');
+const authGate         = document.getElementById('authGate');
+const gateEmail        = document.getElementById('gateEmail');
+const gatePassword     = document.getElementById('gatePassword');
+const gateSignupBtn    = document.getElementById('gateSignupBtn');
+const gateLoginBtn     = document.getElementById('gateLoginBtn');
+const gateMessage      = document.getElementById('gateMessage');
+
+// ── Supabase (frontend auth + storage + db) ────────────────
+const SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('SUPABASE_URL') || '';
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('SUPABASE_ANON_KEY') || '';
+const supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 // ── State ───────────────────────────────────────────────────
 let state = {
@@ -88,6 +108,8 @@ let state = {
   sessionAnalysis:       null,
   completePayload:       null,
   videoFlushed:          false,
+  currentUser:           null,
+  activeSessionId:       null,
 };
 const SPEEDS = [1, 1.5, 0.5, 0.25];
 
@@ -299,6 +321,167 @@ function replaceAnalysisCards(analysis) {
   });
 }
 
+function updateAuthUi() {
+  if (!authUserLabel || !loginBtn || !signupBtn || !logoutBtn) return;
+  const loggedIn = !!state.currentUser;
+  authUserLabel.textContent = loggedIn ? state.currentUser.email : 'Not logged in';
+  loginBtn.style.display = loggedIn ? 'none' : 'inline-block';
+  signupBtn.style.display = loggedIn ? 'none' : 'inline-block';
+  logoutBtn.style.display = loggedIn ? 'inline-block' : 'none';
+  if (authGate) authGate.classList.toggle('hidden', loggedIn);
+}
+
+function renderSessions(items) {
+  if (!sessionsList) return;
+  if (!items || !items.length) {
+    sessionsList.innerHTML = '<div class="session-item-empty">No sessions yet.</div>';
+    return;
+  }
+
+  sessionsList.innerHTML = items.map((s) => {
+    const created = new Date(s.created_at).toLocaleString();
+    const shortResult = s.results ? JSON.stringify(s.results).slice(0, 260) + '…' : '';
+    return `
+      <div class="session-item">
+        <div class="session-item-top">
+          <span>${created}</span>
+          <span class="session-status">${s.status}</span>
+        </div>
+        <div class="session-result">${s.video_url || ''}</div>
+        ${shortResult ? `<div class="session-result">${shortResult}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function fetchUserSessions() {
+  if (!supabase || !state.currentUser) {
+    renderSessions([]);
+    return;
+  }
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('user_id', state.currentUser.id)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('[CrickEye] sessions fetch error:', error.message);
+    return;
+  }
+  renderSessions(data || []);
+}
+
+async function signup() {
+  if (!supabase) return alert('Supabase is not configured in frontend.');
+  const email = (gateEmail?.value || authEmail?.value || '').trim();
+  const password = (gatePassword?.value || authPassword?.value || '').trim();
+  if (!email || !password) return alert('Enter email and password.');
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    if (gateMessage) gateMessage.textContent = error.message;
+    return alert(error.message);
+  }
+  if (gateMessage) gateMessage.textContent = 'Signup successful. Please login.';
+  alert('Signup successful. Please login.');
+}
+
+async function login() {
+  if (!supabase) return alert('Supabase is not configured in frontend.');
+  const email = (gateEmail?.value || authEmail?.value || '').trim();
+  const password = (gatePassword?.value || authPassword?.value || '').trim();
+  if (!email || !password) return alert('Enter email and password.');
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    if (gateMessage) gateMessage.textContent = error.message;
+    return alert(error.message);
+  }
+  const { data } = await supabase.auth.getUser();
+  state.currentUser = data?.user || null;
+  if (gateMessage) gateMessage.textContent = '';
+  updateAuthUi();
+  await fetchUserSessions();
+}
+
+async function logout() {
+  if (!supabase) return;
+  await supabase.auth.signOut();
+  state.currentUser = null;
+  updateAuthUi();
+  renderSessions([]);
+  if (gateMessage) gateMessage.textContent = 'Logged out.';
+}
+
+async function initAuth() {
+  if (!supabase) {
+    if (authUserLabel) authUserLabel.textContent = 'Set SUPABASE_URL / SUPABASE_ANON_KEY';
+    return;
+  }
+  const { data } = await supabase.auth.getUser();
+  state.currentUser = data?.user || null;
+  updateAuthUi();
+  if (state.currentUser) await fetchUserSessions();
+}
+
+async function createSupabaseSessionForLiveAnalysis(file) {
+  if (!supabase) throw new Error('Supabase is not configured in frontend.');
+  if (!state.currentUser) throw new Error('Please login first.');
+
+  const filePath = `${state.currentUser.id}/${Date.now()}-${file.name}`;
+  const { error: uploadError } = await supabase.storage
+    .from('videos')
+    .upload(filePath, file, { upsert: false });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data: publicData } = supabase.storage
+    .from('videos')
+    .getPublicUrl(filePath);
+  const videoUrl = publicData?.publicUrl;
+  if (!videoUrl) throw new Error('Could not get public URL.');
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('sessions')
+    .insert({
+      user_id: state.currentUser.id,
+      video_url: videoUrl,
+      status: 'uploaded',
+    })
+    .select('id')
+    .single();
+  if (insertError) throw new Error(insertError.message);
+  state.activeSessionId = inserted.id;
+  await fetchUserSessions();
+}
+
+async function markSessionStatus(status) {
+  if (!supabase || !state.activeSessionId || !state.currentUser) return;
+  const { error } = await supabase
+    .from('sessions')
+    .update({ status })
+    .eq('id', state.activeSessionId)
+    .eq('user_id', state.currentUser.id);
+  if (error) {
+    console.error('[CrickEye] session status update error:', error.message);
+  }
+}
+
+async function saveLiveAnalysisResult(msg) {
+  if (!supabase || !state.activeSessionId || !state.currentUser) return;
+  const payload = state.sessionAnalysis || msg.analysis || msg || null;
+  const { error } = await supabase
+    .from('sessions')
+    .update({
+      status: 'completed',
+      results: payload,
+    })
+    .eq('id', state.activeSessionId)
+    .eq('user_id', state.currentUser.id);
+  if (error) {
+    console.error('[CrickEye] session result save error:', error.message);
+    return;
+  }
+  await fetchUserSessions();
+}
+
 // ── WebSocket ───────────────────────────────────────────────
 let ws = null;
 function connectWebSocket() {
@@ -392,6 +575,7 @@ function onComplete(msg) {
     setTimeout(tryPlay, 3000);
   }, 1500);
   document.getElementById('btnReport')?.removeAttribute('disabled');
+  saveLiveAnalysisResult(msg);
 }
 
 function flushDashboard() {
@@ -457,6 +641,7 @@ function onError(msg) {
   updateStageText(`ERROR: ${msg.message}`);
   document.getElementById('procStage')?.classList.add('error-text');
   console.error('[CrickEye Error]',msg.message);
+  markSessionStatus('failed');
 }
 
 function updateStageText(text) {
@@ -606,6 +791,11 @@ function buildStartPanel() {
 
 // ── Start Analysis (v6.4 — upload then run) ────────────────
 async function startAnalysis() {
+  if (!state.currentUser) {
+    alert('Please login before uploading a video.');
+    return;
+  }
+
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     alert('WebSocket not connected.\n\nRun: uvicorn backend.main:app --port 8000');
     return;
@@ -628,6 +818,10 @@ async function startAnalysis() {
   if (progressWrap) progressWrap.style.display = 'block';
 
   try {
+    // Save owner + video in Supabase first, but keep the existing local WS flow.
+    await createSupabaseSessionForLiveAnalysis(file);
+    await markSessionStatus('processing');
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -671,6 +865,7 @@ async function startAnalysis() {
 
   } catch (err) {
     console.error('[CrickEye] Upload error:', err);
+    await markSessionStatus('failed');
     if (progressLabel) progressLabel.textContent = `✗ ${err.message}`;
     if (progressFill)  progressFill.style.background = '#EF4444';
     if (startBtn) { startBtn.disabled = false; startBtn.textContent = '▶  RUN CRICKEYE PIPELINE'; }
@@ -740,6 +935,11 @@ function init() {
   injectBiomechStyles();
   buildStartPanel();
   injectOverlayStyles();
+  signupBtn?.addEventListener('click', signup);
+  loginBtn?.addEventListener('click', login);
+  logoutBtn?.addEventListener('click', logout);
+  gateSignupBtn?.addEventListener('click', signup);
+  gateLoginBtn?.addEventListener('click', login);
   video.addEventListener('timeupdate', onVideoTimeUpdate);
   video.addEventListener('click', ()=>{ if(video.paused) video.play(); else video.pause(); });
   btnClearWheel?.addEventListener('click', clearWheelAndReset);
@@ -751,6 +951,7 @@ function init() {
   setTimeout(animateStatRings, 600);
   updateDistribution();
   updateSessionRating(null);
+  initAuth();
   console.log('[CrickEye Pro v6.4 — Calibrated km/h] Initialised.');
 }
 document.addEventListener('DOMContentLoaded', init);

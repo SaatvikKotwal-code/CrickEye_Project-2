@@ -74,12 +74,23 @@ This drive link contains all the assets video and trained model as well.
 
 ```bash
 pip install -r requirements.txt
+uvicorn backend.main:app --reload --port 8000
+```
 
-Run backend
-python backend/main.py
+Open frontend at `http://localhost:8000`.
 
-Open frontend
-Simply open:
+## Supabase Phase-1 (multi-user)
 
-index.html
+1. Create a Supabase project and run `backend/supabase_schema.sql`.
+2. Create a public bucket named `videos`.
+3. In browser console set frontend env values:
+   - `localStorage.setItem('SUPABASE_URL', 'https://<project>.supabase.co')`
+   - `localStorage.setItem('SUPABASE_ANON_KEY', '<anon-key>')`
+4. Copy `backend/.env.example` to `backend/.env` and fill all values.
+5. Start the Node process endpoint server:
+
+```bash
+cd backend
+npm start
+```
 
