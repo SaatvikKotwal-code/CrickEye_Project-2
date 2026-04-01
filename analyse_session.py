@@ -38,6 +38,7 @@ from ultralytics import YOLO
 BASE_DIR    = Path(__file__).parent
 VIDEO_PATH  = str(BASE_DIR / "assets" / "net_session_video.mp4")
 MODEL_PATH  = str(BASE_DIR / "assets" / "crickeye_best.pth")
+POSE_MODEL_PATH = str(BASE_DIR / "assets" / "yolov8n-pose.pt")
 OUTPUT_PATH = str(BASE_DIR / "assets" / "analysed_out.mp4")
 CSV_PATH    = str(BASE_DIR / "data"   / "session_log.csv")
 JSON_PATH   = str(BASE_DIR / "data"   / "session_report.json")
@@ -163,8 +164,14 @@ _pose_model = None
 def get_pose_model():
     global _pose_model
     if _pose_model is None:
-        print("[CrickEye] Loading YOLOv8n-pose ...")
-        _pose_model = YOLO('yolov8n-pose.pt')
+        path = POSE_MODEL_PATH
+        if not Path(path).is_file():
+            raise FileNotFoundError(
+                f"Pose weights not found: {path}\n"
+                "Place yolov8n-pose.pt in assets/ (same folder as crickeye_best.pth)."
+            )
+        print(f"[CrickEye] Loading YOLOv8n-pose from disk: {path}")
+        _pose_model = YOLO(path)
         print("[CrickEye] Pose model ready")
     return _pose_model
 
@@ -1081,13 +1088,26 @@ def _reencode_for_browser(output_path: str, ws=None, loop=None):
     ws_emit(ws, loop, {"type": "stage", "stage": "encoding",
                        "message": "Re-encoding video for browser playback..."})
 
-    if not shutil.which("ffmpeg"):
-        print("[CrickEye] WARNING: ffmpeg not found.")
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if not ffmpeg_bin:
+        try:
+            import imageio_ffmpeg
+            ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            ffmpeg_bin = None
+
+    if not ffmpeg_bin:
+        warn = (
+            "ffmpeg not found — OpenCV wrote MPEG-4 (mp4v) which most browsers cannot play. "
+            "Install ffmpeg or: pip install imageio-ffmpeg"
+        )
+        print(f"[CrickEye] WARNING: {warn}")
+        ws_emit(ws, loop, {"type": "warning", "message": warn})
         return
 
     tmp_path = output_path.replace(".mp4", "_h264.mp4")
     cmd = [
-        "ffmpeg", "-y", "-i", output_path,
+        ffmpeg_bin, "-y", "-i", output_path,
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-movflags", "+faststart", "-pix_fmt", "yuv420p", "-an",
         tmp_path

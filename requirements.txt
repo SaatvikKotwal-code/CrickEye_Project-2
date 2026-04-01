@@ -13,12 +13,14 @@ torchvision
 # Backend (choose based on your code)
 flask
 fastapi
-uvicorn
+uvicorn[standard]
 
 # Utilities
+imageio-ffmpeg
 matplotlib
 scikit-learn
 tqdm
+python-dotenv
 
 # File handling / JSON
 python-multipart

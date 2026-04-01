@@ -68,13 +68,18 @@ const distOffCnt       = document.getElementById('dist-off-cnt');
 const distLegCnt       = document.getElementById('dist-leg-cnt');
 const distStrCnt       = document.getElementById('dist-str-cnt');
 const btnReport        = document.getElementById('btnReport');
-const authEmail        = document.getElementById('authEmail');
-const authPassword     = document.getElementById('authPassword');
-const signupBtn        = document.getElementById('signupBtn');
-const loginBtn         = document.getElementById('loginBtn');
-const logoutBtn        = document.getElementById('logoutBtn');
-const authUserLabel    = document.getElementById('authUserLabel');
 const sessionsList     = document.getElementById('sessionsList');
+const headerProfileBtn = document.getElementById('headerProfileBtn');
+const headerProfileAvatar = document.getElementById('headerProfileAvatar');
+const headerProfileEmail = document.getElementById('headerProfileEmail');
+const headerAuthHint   = document.getElementById('headerAuthHint');
+const profileModal     = document.getElementById('profileModal');
+const profileModalEmail = document.getElementById('profileModalEmail');
+const profileModalUserId = document.getElementById('profileModalUserId');
+const profileModalCreated = document.getElementById('profileModalCreated');
+const profileLogoutBtn = document.getElementById('profileLogoutBtn');
+const sessionDetailModal = document.getElementById('sessionDetailModal');
+const sessionDetailBody = document.getElementById('sessionDetailBody');
 const authGate         = document.getElementById('authGate');
 const gateEmail        = document.getElementById('gateEmail');
 const gatePassword     = document.getElementById('gatePassword');
@@ -83,11 +88,43 @@ const gateLoginBtn     = document.getElementById('gateLoginBtn');
 const gateMessage      = document.getElementById('gateMessage');
 
 // ── Supabase (frontend auth + storage + db) ────────────────
-const SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('SUPABASE_URL') || '';
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('SUPABASE_ANON_KEY') || '';
-const supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+// Use supabaseClient (not "supabase"): the UMD bundle already defines global `supabase` = library API.
+// Populated from GET /api/public-config (reads backend/.env) or optional window.* override.
+let supabaseClient = null;
+
+function getSupabaseUmd() {
+  const g = typeof globalThis !== 'undefined' ? globalThis : window;
+  const lib = g.supabase;
+  if (lib && typeof lib.createClient === 'function') return lib;
+  return null;
+}
+
+async function bootstrapSupabase() {
+  const lib = getSupabaseUmd();
+  if (!lib) {
+    console.error('[CrickEye] Supabase JS not loaded. Use dist/umd/supabase.js in index.html.');
+    return;
+  }
+  try {
+    const res = await fetch('/api/public-config');
+    if (res.ok) {
+      const cfg = await res.json();
+      const url = (cfg.supabaseUrl || '').trim();
+      const key = (cfg.supabaseAnonKey || '').trim();
+      if (url && key) {
+        supabaseClient = lib.createClient(url, key);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('[CrickEye] /api/public-config failed:', e);
+  }
+  const url = (window.SUPABASE_URL || '').trim();
+  const key = (window.SUPABASE_ANON_KEY || '').trim();
+  if (url && key) {
+    supabaseClient = lib.createClient(url, key);
+  }
+}
 
 // ── State ───────────────────────────────────────────────────
 let state = {
@@ -110,6 +147,9 @@ let state = {
   videoFlushed:          false,
   currentUser:           null,
   activeSessionId:       null,
+  sessionsCache:         [],
+  /** SHA-256 hex for current run; used on save so cache can find this session later. */
+  pendingAnalysisFileHash: null,
 };
 const SPEEDS = [1, 1.5, 0.5, 0.25];
 
@@ -322,44 +362,303 @@ function replaceAnalysisCards(analysis) {
 }
 
 function updateAuthUi() {
-  if (!authUserLabel || !loginBtn || !signupBtn || !logoutBtn) return;
   const loggedIn = !!state.currentUser;
-  authUserLabel.textContent = loggedIn ? state.currentUser.email : 'Not logged in';
-  loginBtn.style.display = loggedIn ? 'none' : 'inline-block';
-  signupBtn.style.display = loggedIn ? 'none' : 'inline-block';
-  logoutBtn.style.display = loggedIn ? 'inline-block' : 'none';
   if (authGate) authGate.classList.toggle('hidden', loggedIn);
+  if (headerProfileBtn) headerProfileBtn.hidden = !loggedIn;
+  if (headerAuthHint) headerAuthHint.hidden = true;
+  if (loggedIn && state.currentUser) {
+    const em = state.currentUser.email || '';
+    if (headerProfileAvatar) headerProfileAvatar.textContent = (em.trim()[0] || '?').toUpperCase();
+    if (headerProfileEmail) headerProfileEmail.textContent = em;
+  }
+}
+
+function openModal(el) {
+  if (!el) return;
+  el.hidden = false;
+  document.body.classList.add('ce-modal-open');
+}
+
+function closeModal(el) {
+  if (!el) return;
+  el.hidden = true;
+  const anyOpen = [...document.querySelectorAll('.ce-modal')].some((m) => !m.hidden);
+  if (!anyOpen) document.body.classList.remove('ce-modal-open');
+}
+
+function fillProfileModal() {
+  const u = state.currentUser;
+  if (!u) return;
+  if (profileModalEmail) profileModalEmail.textContent = u.email || '—';
+  if (profileModalUserId) profileModalUserId.textContent = u.id || '—';
+  let created = '—';
+  if (u.created_at) {
+    try {
+      created = new Date(u.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch { /* ignore */ }
+  }
+  if (profileModalCreated) profileModalCreated.textContent = created;
+}
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function shotLabelPretty(label) {
+  return SHOT_LABELS[label] || (label ? String(label).replace(/_/g, ' ') : '—');
+}
+
+function sessionVideoFilename(url) {
+  if (!url) return '—';
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split('/').filter(Boolean);
+    return seg.length ? decodeURIComponent(seg[seg.length - 1]) : url;
+  } catch {
+    return url;
+  }
+}
+
+function statusBadgeClass(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'completed') return 'session-pill session-pill--ok';
+  if (s === 'failed') return 'session-pill session-pill--bad';
+  if (s === 'processing') return 'session-pill session-pill--run';
+  if (s === 'uploaded') return 'session-pill session-pill--neutral';
+  return 'session-pill session-pill--neutral';
+}
+
+/** Unwrap results saved as { analysis, replay } or legacy flat analysis JSON. */
+function getSessionAnalysis(results) {
+  if (!results || typeof results !== 'object') return null;
+  if (results.replay && results.analysis && typeof results.analysis === 'object') return results.analysis;
+  return results;
+}
+
+/**
+ * Find latest completed session for this user that matches file hash and has replay data.
+ * Uses DB column file_hash first, then scans recent rows for results.file_fingerprint (backfill).
+ * Avoids .maybeSingle() — it errors when more than one row matches the same hash.
+ */
+async function findReplayableCompletedSession(fileHash) {
+  if (!supabaseClient || !state.currentUser || !fileHash) return null;
+
+  const { data: byHash, error: err1 } = await supabaseClient
+    .from('sessions')
+    .select('*')
+    .eq('user_id', state.currentUser.id)
+    .eq('file_hash', fileHash)
+    .eq('status', 'completed')
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (err1) {
+    console.warn('[CrickEye] Cache lookup (file_hash):', err1.message);
+  } else {
+    const row = byHash?.[0];
+    if (row && getSessionReplay(row.results)) return row;
+  }
+
+  const { data: recent, error: err2 } = await supabaseClient
+    .from('sessions')
+    .select('*')
+    .eq('user_id', state.currentUser.id)
+    .eq('status', 'completed')
+    .order('created_at', { ascending: false })
+    .limit(60);
+
+  if (err2) {
+    console.warn('[CrickEye] Cache scan (recent completed):', err2.message);
+    return null;
+  }
+
+  const hit = (recent || []).find((s) => {
+    if (!getSessionReplay(s.results)) return false;
+    if (s.file_hash === fileHash) return true;
+    const fp = s.results && typeof s.results === 'object' ? s.results.file_fingerprint : null;
+    return fp === fileHash;
+  });
+  return hit || null;
+}
+
+function getSessionReplay(results) {
+  if (!results || typeof results !== 'object' || !results.replay) return null;
+  return results.replay;
+}
+
+function formatSessionCardSummary(r) {
+  if (!r || typeof r !== 'object' || r.error) return '';
+  const parts = [];
+  if (r.shots_confirmed != null) parts.push(`${r.shots_confirmed} confirmed shots`);
+  const av = r.session_averages || {};
+  if (av.peak_swing_speed != null) parts.push(`Avg ${Number(av.peak_swing_speed).toFixed(1)} km/h`);
+  const best = r.best_shot;
+  if (best && best.label) parts.push(`Best: ${shotLabelPretty(best.label)}`);
+  return parts.join(' · ');
+}
+
+function buildSessionDetailHtml(session) {
+  const r = getSessionAnalysis(session.results);
+  const status = String(session.status || '—');
+  const dateStr = new Date(session.created_at).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
+  const fname = sessionVideoFilename(session.video_url);
+  const vidUrl = escapeHtml(session.video_url || '');
+  const sid = escapeHtml(session.id || '');
+
+  let metrics = '';
+  if (r && typeof r === 'object' && !r.error) {
+    const av = r.session_averages || {};
+    const sc = r.session_scores || {};
+    const hand = r.session_handedness || '—';
+    const stance = r.stance_conf != null ? `${Math.round(Number(r.stance_conf) * 100)}%` : '—';
+    metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Performance summary</h3>
+      <div class="session-metric-grid">
+        <div class="session-metric"><span class="session-metric-label">Stance</span><span class="session-metric-val">${escapeHtml(hand)}</span><span class="session-metric-sub">confidence ${escapeHtml(stance)}</span></div>
+        <div class="session-metric"><span class="session-metric-label">Confirmed shots</span><span class="session-metric-val">${r.shots_confirmed != null ? escapeHtml(String(r.shots_confirmed)) : '—'}</span><span class="session-metric-sub">of ${r.shots_total != null ? escapeHtml(String(r.shots_total)) : '—'} detected</span></div>
+        <div class="session-metric"><span class="session-metric-label">Avg bat speed</span><span class="session-metric-val">${av.peak_swing_speed != null ? escapeHtml(Number(av.peak_swing_speed).toFixed(1)) : '—'}</span><span class="session-metric-sub">km/h</span></div>
+        <div class="session-metric"><span class="session-metric-label">Head stability</span><span class="session-metric-val">${av.head_stability != null ? escapeHtml(Math.round(Number(av.head_stability)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
+        <div class="session-metric"><span class="session-metric-label">Stability score</span><span class="session-metric-val">${av.stability_score != null ? escapeHtml(Math.round(Number(av.stability_score)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
+        <div class="session-metric"><span class="session-metric-label">Power / discipline</span><span class="session-metric-val">${sc.power != null ? escapeHtml(String(sc.power)) : '—'} / ${sc.head_discipline != null ? escapeHtml(String(sc.head_discipline)) : '—'}</span><span class="session-metric-sub">session scores</span></div>
+      </div></section>`;
+
+    const best = r.best_shot;
+    const worst = r.worst_shot;
+    if (best || worst) {
+      metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Shot highlights</h3><div class="session-highlight-row">`;
+      if (best && best.label) {
+        metrics += `<div class="session-highlight session-highlight--best"><span class="session-highlight-tag">Best shot</span><strong>${escapeHtml(shotLabelPretty(best.label))}</strong><span class="session-highlight-meta">#${escapeHtml(String(best.shot_num))} · ${escapeHtml(best.timestamp || '')} · score ${escapeHtml(String(best.shot_score != null ? best.shot_score : '—'))}</span></div>`;
+      }
+      if (worst && worst.label) {
+        metrics += `<div class="session-highlight session-highlight--worst"><span class="session-highlight-tag">Needs work</span><strong>${escapeHtml(shotLabelPretty(worst.label))}</strong><span class="session-highlight-meta">#${escapeHtml(String(worst.shot_num))} · ${escapeHtml(worst.timestamp || '')}</span></div>`;
+      }
+      metrics += '</div></section>';
+    }
+
+    const trend = r.trend;
+    if (trend && typeof trend === 'object') {
+      const rows = ['peak_swing_speed', 'head_stability', 'stability_score'].map((key) => {
+        const o = trend[key];
+        if (!o || (o.first_half == null && o.second_half == null)) return '';
+        const label = key === 'peak_swing_speed' ? 'Bat speed (km/h)' : key === 'head_stability' ? 'Head stability' : 'Stability score';
+        const u1 = o.first_half != null ? Number(o.first_half).toFixed(1) : '—';
+        const u2 = o.second_half != null ? Number(o.second_half).toFixed(1) : '—';
+        return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(u1)}</td><td>${escapeHtml(u2)}</td></tr>`;
+      }).join('');
+      if (rows) {
+        metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">First half vs second half</h3>
+          <table class="session-trend-table"><thead><tr><th>Metric</th><th>1st half</th><th>2nd half</th></tr></thead><tbody>${rows}</tbody></table>
+          ${r.fatigue_detected ? '<p class="session-fatigue-note">Fatigue pattern suggested (speed dropped in second half).</p>' : ''}</section>`;
+      }
+    }
+
+    const fw = r.footwork_summary;
+    if (fw && typeof fw === 'object') {
+      const t = (fw.front_foot_count || 0) + (fw.back_foot_count || 0) + (fw.neutral_count || 0);
+      if (t > 0) {
+        metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Footwork</h3><p class="session-footwork-line">Front foot <strong>${fw.front_foot_count || 0}</strong> · Back foot <strong>${fw.back_foot_count || 0}</strong> · Neutral <strong>${fw.neutral_count || 0}</strong></p></section>`;
+      }
+    }
+
+    const alerts = r.coaching_alerts;
+    if (Array.isArray(alerts) && alerts.length) {
+      const lis = alerts.slice(0, 6).map((a) =>
+        `<li class="session-alert session-alert--${escapeHtml((a.severity || 'low').toLowerCase())}"><span class="session-alert-sev">${escapeHtml(a.severity || '')}</span> <strong>${escapeHtml(a.metric || '')}</strong> — ${escapeHtml(a.message || '')} <em>${escapeHtml(a.action || '')}</em></li>`
+      ).join('');
+      metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Coaching notes</h3><ul class="session-alert-list">${lis}</ul></section>`;
+    }
+  } else if (r && r.error) {
+    metrics += `<section class="session-detail-section"><p class="session-no-results">${escapeHtml(String(r.error))}</p></section>`;
+  } else if (status === 'failed') {
+    metrics += `<section class="session-detail-section"><p class="session-no-results">This run did not finish successfully. No analytics were saved.</p></section>`;
+  } else {
+    metrics += `<section class="session-detail-section"><p class="session-no-results">No analytics stored yet for this session.</p></section>`;
+  }
+
+  return `
+    <div class="session-detail-header">
+      <div>
+        <p class="session-detail-date">${escapeHtml(dateStr)}</p>
+        <span class="${statusBadgeClass(status)}">${escapeHtml(status.toUpperCase())}</span>
+      </div>
+      <p class="session-detail-id">Session <code>${sid}</code></p>
+    </div>
+    <section class="session-detail-section">
+      <h3 class="session-detail-h3">Original video</h3>
+      <p class="session-video-name">${escapeHtml(fname)}</p>
+      <div class="session-video-preview">
+        ${vidUrl ? `<video class="session-detail-video" src="${vidUrl}" controls playsinline preload="metadata"></video>` : ''}
+      </div>
+      ${vidUrl ? `<p class="session-video-link"><a href="${vidUrl}" target="_blank" rel="noopener noreferrer">Open video in new tab</a></p>` : ''}
+    </section>
+    ${metrics}
+  `;
+}
+
+function openSessionDetailModal(sessionId) {
+  const session = state.sessionsCache.find((x) => x.id === sessionId);
+  if (!session || !sessionDetailModal || !sessionDetailBody) return;
+  const titleEl = document.getElementById('sessionDetailTitle');
+  if (titleEl) {
+    const d = new Date(session.created_at);
+    titleEl.textContent = `Session · ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }
+  sessionDetailBody.innerHTML = buildSessionDetailHtml(session);
+  openModal(sessionDetailModal);
+}
+
+function wireModalDismissals() {
+  document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-close-modal');
+      const mod = document.getElementById(id);
+      closeModal(mod);
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeModal(profileModal);
+    closeModal(sessionDetailModal);
+  });
 }
 
 function renderSessions(items) {
   if (!sessionsList) return;
-  if (!items || !items.length) {
-    sessionsList.innerHTML = '<div class="session-item-empty">No sessions yet.</div>';
+  state.sessionsCache = Array.isArray(items) ? items : [];
+  if (!state.sessionsCache.length) {
+    sessionsList.innerHTML = '<div class="session-item-empty">No sessions yet. Run an analysis after upload.</div>';
     return;
   }
 
-  sessionsList.innerHTML = items.map((s) => {
-    const created = new Date(s.created_at).toLocaleString();
-    const shortResult = s.results ? JSON.stringify(s.results).slice(0, 260) + '…' : '';
+  sessionsList.innerHTML = state.sessionsCache.map((s) => {
+    const created = new Date(s.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    const sum = formatSessionCardSummary(getSessionAnalysis(s.results));
+    const stat = (s.status || '').toUpperCase();
+    const sid = escapeHtml(s.id || '');
     return `
-      <div class="session-item">
-        <div class="session-item-top">
-          <span>${created}</span>
-          <span class="session-status">${s.status}</span>
+      <button type="button" class="session-card" data-session-id="${sid}">
+        <div class="session-card-top">
+          <span class="session-card-date">${escapeHtml(created)}</span>
+          <span class="${statusBadgeClass(s.status)}">${escapeHtml(stat)}</span>
         </div>
-        <div class="session-result">${s.video_url || ''}</div>
-        ${shortResult ? `<div class="session-result">${shortResult}</div>` : ''}
-      </div>
+        <div class="session-card-file" title="${escapeHtml(sessionVideoFilename(s.video_url))}">${escapeHtml(sessionVideoFilename(s.video_url))}</div>
+        ${sum ? `<div class="session-card-summary">${escapeHtml(sum)}</div>` : '<div class="session-card-summary session-card-summary--muted">Open for session details</div>'}
+        <span class="session-card-hint">View full session report</span>
+      </button>
     `;
   }).join('');
 }
 
 async function fetchUserSessions() {
-  if (!supabase || !state.currentUser) {
+  if (!supabaseClient || !state.currentUser) {
     renderSessions([]);
     return;
   }
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('sessions')
     .select('*')
     .eq('user_id', state.currentUser.id)
@@ -372,11 +671,16 @@ async function fetchUserSessions() {
 }
 
 async function signup() {
-  if (!supabase) return alert('Supabase is not configured in frontend.');
-  const email = (gateEmail?.value || authEmail?.value || '').trim();
-  const password = (gatePassword?.value || authPassword?.value || '').trim();
+  if (!supabaseClient) {
+    const msg = 'Supabase not ready. Check: 1) backend/.env SUPABASE_URL + SUPABASE_ANON_KEY 2) hard refresh. See browser console.';
+    if (gateMessage) gateMessage.textContent = msg;
+    alert(msg);
+    return;
+  }
+  const email = (gateEmail?.value || '').trim();
+  const password = (gatePassword?.value || '').trim();
   if (!email || !password) return alert('Enter email and password.');
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { error } = await supabaseClient.auth.signUp({ email, password });
   if (error) {
     if (gateMessage) gateMessage.textContent = error.message;
     return alert(error.message);
@@ -386,16 +690,21 @@ async function signup() {
 }
 
 async function login() {
-  if (!supabase) return alert('Supabase is not configured in frontend.');
-  const email = (gateEmail?.value || authEmail?.value || '').trim();
-  const password = (gatePassword?.value || authPassword?.value || '').trim();
+  if (!supabaseClient) {
+    const msg = 'Supabase not ready. Check backend/.env and console.';
+    if (gateMessage) gateMessage.textContent = msg;
+    alert(msg);
+    return;
+  }
+  const email = (gateEmail?.value || '').trim();
+  const password = (gatePassword?.value || '').trim();
   if (!email || !password) return alert('Enter email and password.');
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) {
     if (gateMessage) gateMessage.textContent = error.message;
     return alert(error.message);
   }
-  const { data } = await supabase.auth.getUser();
+  const { data } = await supabaseClient.auth.getUser();
   state.currentUser = data?.user || null;
   if (gateMessage) gateMessage.textContent = '';
   updateAuthUi();
@@ -403,47 +712,106 @@ async function login() {
 }
 
 async function logout() {
-  if (!supabase) return;
-  await supabase.auth.signOut();
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
   state.currentUser = null;
   updateAuthUi();
   renderSessions([]);
   if (gateMessage) gateMessage.textContent = 'Logged out.';
+  closeModal(profileModal);
 }
 
 async function initAuth() {
-  if (!supabase) {
-    if (authUserLabel) authUserLabel.textContent = 'Set SUPABASE_URL / SUPABASE_ANON_KEY';
+  if (!supabaseClient) {
+    if (headerAuthHint) headerAuthHint.hidden = false;
+    if (headerProfileBtn) headerProfileBtn.hidden = true;
+    if (gateMessage && !gateMessage.textContent) {
+      gateMessage.textContent = 'Add Supabase keys to backend/.env, restart uvicorn, then hard-refresh (Ctrl+Shift+R).';
+    }
     return;
   }
-  const { data } = await supabase.auth.getUser();
+  if (headerAuthHint) headerAuthHint.hidden = true;
+  const { data } = await supabaseClient.auth.getUser();
   state.currentUser = data?.user || null;
   updateAuthUi();
   if (state.currentUser) await fetchUserSessions();
 }
 
-async function createSupabaseSessionForLiveAnalysis(file) {
-  if (!supabase) throw new Error('Supabase is not configured in frontend.');
+async function sha256HexFromFile(file) {
+  const buf = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function rebuildDerivedShotStateFromShots(shots) {
+  state.shotLog = Array.isArray(shots) ? shots.map((s) => ({ ...s })) : [];
+  state.shotStats = {};
+  state.zoneCounts = { offside: 0, straight: 0, legside: 0 };
+  state.pendingSpokes = [];
+  for (const msg of state.shotLog) {
+    if (!state.shotStats[msg.label]) state.shotStats[msg.label] = { count: 0 };
+    state.shotStats[msg.label].count++;
+    const zone = SHOT_ZONE[msg.label];
+    if (zone) state.zoneCounts[zone]++;
+    const ts = msg.timestamp || '00:00.00';
+    const parts = ts.split(':');
+    state.pendingSpokes.push({
+      timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
+      label: msg.label,
+      shot_num: msg.shot_num,
+      msg,
+    });
+  }
+  state.pendingSpokes.sort((a, b) => a.timestamp_sec - b.timestamp_sec);
+}
+
+/** Restore dashboard from a completed session row (same file hash). */
+function applyCachedSession(cached) {
+  const analysis = getSessionAnalysis(cached.results);
+  const replay = getSessionReplay(cached.results);
+  if (!replay || !replay.complete || !Array.isArray(replay.shots)) return false;
+
+  state.activeSessionId = cached.id;
+  rebuildDerivedShotStateFromShots(replay.shots);
+  state.sessionAnalysis = analysis;
+  state.videoFlushed = false;
+  state.drawnSpokes.clear();
+  const msg = { ...replay.complete, analysis: analysis || replay.complete.analysis };
+  if (!msg.output_video) msg.output_video = '/assets/analysed_out.mp4';
+  onComplete(msg, { skipPersist: true, videoDelayMs: 250 });
+  console.log('[CrickEye] Reused completed session (same video file). Pipeline skipped.');
+  return true;
+}
+
+async function createSupabaseSessionForLiveAnalysis(file, fileHash = null) {
+  if (!supabaseClient) throw new Error('Supabase is not configured in frontend.');
   if (!state.currentUser) throw new Error('Please login first.');
 
   const filePath = `${state.currentUser.id}/${Date.now()}-${file.name}`;
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await supabaseClient.storage
     .from('videos')
     .upload(filePath, file, { upsert: false });
-  if (uploadError) throw new Error(uploadError.message);
+  if (uploadError) {
+    let msg = uploadError.message || 'Storage upload failed';
+    if (/bucket not found/i.test(msg)) {
+      msg = 'Supabase Storage bucket "videos" does not exist. In the Supabase dashboard: Storage → New bucket → name it exactly videos → create. Turn on "Public bucket" if you rely on public video URLs.';
+    }
+    throw new Error(msg);
+  }
 
-  const { data: publicData } = supabase.storage
+  const { data: publicData } = supabaseClient.storage
     .from('videos')
     .getPublicUrl(filePath);
   const videoUrl = publicData?.publicUrl;
   if (!videoUrl) throw new Error('Could not get public URL.');
 
-  const { data: inserted, error: insertError } = await supabase
+  const { data: inserted, error: insertError } = await supabaseClient
     .from('sessions')
     .insert({
       user_id: state.currentUser.id,
       video_url: videoUrl,
       status: 'uploaded',
+      file_hash: fileHash || null,
     })
     .select('id')
     .single();
@@ -453,8 +821,8 @@ async function createSupabaseSessionForLiveAnalysis(file) {
 }
 
 async function markSessionStatus(status) {
-  if (!supabase || !state.activeSessionId || !state.currentUser) return;
-  const { error } = await supabase
+  if (!supabaseClient || !state.activeSessionId || !state.currentUser) return;
+  const { error } = await supabaseClient
     .from('sessions')
     .update({ status })
     .eq('id', state.activeSessionId)
@@ -465,13 +833,33 @@ async function markSessionStatus(status) {
 }
 
 async function saveLiveAnalysisResult(msg) {
-  if (!supabase || !state.activeSessionId || !state.currentUser) return;
-  const payload = state.sessionAnalysis || msg.analysis || msg || null;
-  const { error } = await supabase
+  if (!supabaseClient || !state.activeSessionId || !state.currentUser) return;
+  const analysis = state.sessionAnalysis || msg.analysis || null;
+  const replay = {
+    complete: {
+      type: 'complete',
+      total_shots: msg.total_shots,
+      confirmed: msg.confirmed,
+      unclear: msg.unclear,
+      output_video: msg.output_video,
+      handedness: msg.handedness,
+      stance_conf: msg.stance_conf,
+      shot_counts: msg.shot_counts,
+      avg_conf: msg.avg_conf,
+      total_frames: msg.total_frames,
+      fps: msg.fps,
+      speed_unit: msg.speed_unit,
+    },
+    shots: JSON.parse(JSON.stringify(state.shotLog)),
+  };
+  const fp = state.pendingAnalysisFileHash || null;
+  const payload = { analysis, replay, file_fingerprint: fp };
+  const { error } = await supabaseClient
     .from('sessions')
     .update({
       status: 'completed',
       results: payload,
+      file_hash: fp,
     })
     .eq('id', state.activeSessionId)
     .eq('user_id', state.currentUser.id);
@@ -542,7 +930,10 @@ function onShotReceived(msg) {
   updateProcStat('procShots',`${state.shotLog.length} confirmed`);
 }
 
-function onComplete(msg) {
+function onComplete(msg, opts = {}) {
+  const skipPersist = opts.skipPersist === true;
+  const videoDelayMs = opts.videoDelayMs != null ? opts.videoDelayMs : 1500;
+
   state.completePayload = msg;
   if (msg.total_frames && msg.fps) state.originalVideoDuration = msg.total_frames / msg.fps;
   if (msg.analysis && !state.sessionAnalysis) state.sessionAnalysis = msg.analysis;
@@ -557,25 +948,46 @@ function onComplete(msg) {
   const overlay = document.getElementById('processingOverlay');
   if (overlay) { overlay.style.transition='opacity 0.8s ease'; overlay.style.opacity='0'; setTimeout(()=>overlay.remove(),800); }
 
-  if (!video || !msg.output_video) return;
+  if (!video || !msg.output_video) {
+    if (!skipPersist) saveLiveAnalysisResult(msg);
+    return;
+  }
   video.pause();
   while (video.firstChild) video.removeChild(video.firstChild);
 
   setTimeout(() => {
-    const url = msg.output_video + '?t=' + Date.now();
-    video.src = url; video.preload='auto'; video.muted=true; video.load();
+    const base = msg.output_video.startsWith('/')
+      ? `${window.location.origin}${msg.output_video}`
+      : msg.output_video;
+    const url = `${base}?t=${Date.now()}`;
+    video.preload = 'auto';
+    video.muted = true;
+    video.playsInline = true;
+    video.src = url;
+    video.load();
 
-    video.addEventListener('play', function onFirstPlay() {
-      video.removeEventListener('play', onFirstPlay);
+    const tryPlay = () => video.play().catch(() => console.warn('[CrickEye] Autoplay blocked — click the video to play.'));
+
+    const onReadyUi = () => {
       flushDashboard();
-    });
+    };
+    video.addEventListener('canplay', onReadyUi, { once: true });
+    video.addEventListener('play', onReadyUi, { once: true });
 
-    const tryPlay = () => video.play().catch(() => console.warn('[CrickEye] Autoplay blocked.'));
-    video.addEventListener('loadeddata', tryPlay, {once:true});
+    video.addEventListener('loadeddata', tryPlay, { once: true });
     setTimeout(tryPlay, 3000);
-  }, 1500);
+
+    video.addEventListener('error', () => {
+      const ve = video.error;
+      const detail = ve ? `code ${ve.code} (${ve.message || 'decode/network'})` : 'unknown';
+      console.error('[CrickEye] Output video failed to load/decode:', detail, url);
+      updateStageText(`Video playback failed (${detail}). Re-run analysis after: pip install imageio-ffmpeg`);
+      flushDashboard();
+      drawAllSpokesWithoutPlayback();
+    }, { once: true });
+  }, videoDelayMs);
   document.getElementById('btnReport')?.removeAttribute('disabled');
-  saveLiveAnalysisResult(msg);
+  if (!skipPersist) saveLiveAnalysisResult(msg);
 }
 
 function flushDashboard() {
@@ -796,11 +1208,6 @@ async function startAnalysis() {
     return;
   }
 
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    alert('WebSocket not connected.\n\nRun: uvicorn backend.main:app --port 8000');
-    return;
-  }
-
   const fileInput = document.getElementById('videoFileInput');
   const file = fileInput?._selectedFile || fileInput?.files?.[0];
 
@@ -810,16 +1217,66 @@ async function startAnalysis() {
   }
 
   const startBtn = document.getElementById('startBtn');
-  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳  UPLOADING…'; }
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳  Preparing…'; }
 
   const progressWrap  = document.getElementById('uploadProgressWrap');
   const progressFill  = document.getElementById('uploadProgressFill');
   const progressLabel = document.getElementById('uploadProgressLabel');
   if (progressWrap) progressWrap.style.display = 'block';
+  if (progressFill) progressFill.style.width = '0%';
+
+  let fileHash = null;
+  try {
+    if (progressLabel) progressLabel.textContent = 'Fingerprinting video…';
+    fileHash = await sha256HexFromFile(file);
+  } catch (e) {
+    console.warn('[CrickEye] Could not fingerprint file; full pipeline will run:', e);
+  }
+
+  state.pendingAnalysisFileHash = fileHash;
+
+  if (fileHash && supabaseClient) {
+    if (progressLabel) progressLabel.textContent = 'Checking for a previous run…';
+    const cached = await findReplayableCompletedSession(fileHash);
+
+    if (cached) {
+      const replay = getSessionReplay(cached.results);
+      if (replay && replay.complete && Array.isArray(replay.shots)) {
+        if (progressWrap) progressWrap.style.display = 'none';
+        if (startBtn) { startBtn.disabled = false; startBtn.textContent = '▶  RUN CRICKEYE PIPELINE'; }
+        const panel = document.getElementById('startPanel');
+        if (panel) { panel.style.opacity = '0'; setTimeout(() => panel.remove(), 300); }
+        createProcessingOverlay();
+        updateStageText('Same video — loading saved analysis (no re-run).');
+        setProgressBar(100);
+        updateProcStat('procFrame', '—');
+        updateProcStat('procEta', '—');
+        updateProcStat('procShots', String(replay.shots.length));
+        clearWheelAndReset();
+        const ok = applyCachedSession(cached);
+        if (!ok) {
+          alert('Saved session could not be restored. Run a new full analysis once, then retry.');
+        }
+        return;
+      }
+      console.warn(
+        '[CrickEye] A completed session exists for this file but has no replay payload (saved before replay was added). Run one full analysis with the current app, then re-uploads of the same file will skip the pipeline.'
+      );
+    }
+  }
+
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    alert('WebSocket not connected.\n\nRun: uvicorn backend.main:app --port 8000');
+    if (progressWrap) progressWrap.style.display = 'none';
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = '▶  RUN CRICKEYE PIPELINE'; }
+    return;
+  }
+
+  if (startBtn) startBtn.textContent = '⏳  UPLOADING…';
 
   try {
     // Save owner + video in Supabase first, but keep the existing local WS flow.
-    await createSupabaseSessionForLiveAnalysis(file);
+    await createSupabaseSessionForLiveAnalysis(file, fileHash);
     await markSessionStatus('processing');
 
     const formData = new FormData();
@@ -858,10 +1315,9 @@ async function startAnalysis() {
     clearWheelAndReset();
 
     const wsMsg = { action: 'start', video_path: uploadResult.video_path };
-    if (uploadResult.demo_key) wsMsg.demo_key = uploadResult.demo_key;
 
     ws.send(JSON.stringify(wsMsg));
-    console.log(`[CrickEye] Pipeline started — demo=${!!uploadResult.demo_key}  path=${uploadResult.video_path}`);
+    console.log(`[CrickEye] Pipeline started — path=${uploadResult.video_path}`);
 
   } catch (err) {
     console.error('[CrickEye] Upload error:', err);
@@ -893,7 +1349,7 @@ function onVideoTimeUpdate() {
   });
 }
 
-function drawSpokeNow(spoke) {
+function drawSpokeNow(spoke, onSpokeDrawn) {
   const circle = document.getElementById(`shot-circle-${spoke.shot_num}`);
   if (circle) {
     document.querySelectorAll('.shot-circle').forEach(el=>el.classList.remove('active'));
@@ -913,7 +1369,21 @@ function drawSpokeNow(spoke) {
   if (zone) state.displayedZoneCounts[zone]++;
   updateOverTableLive();
   updateDistributionLive();
-  WagonWheel.drawSpoke(spoke.label, () => { shotCount.textContent=WagonWheel.getSpokeCount(); });
+  WagonWheel.drawSpoke(spoke.label, () => {
+    shotCount.textContent = WagonWheel.getSpokeCount();
+    if (onSpokeDrawn) onSpokeDrawn();
+  });
+}
+
+/** When the output MP4 cannot play in-browser, still paint wagon-wheel spokes in order. */
+function drawAllSpokesWithoutPlayback() {
+  const spokes = [...state.pendingSpokes].sort((a, b) => a.timestamp_sec - b.timestamp_sec);
+  let i = 0;
+  function next() {
+    if (i >= spokes.length) return;
+    drawSpokeNow(spokes[i++], () => setTimeout(next, 90));
+  }
+  next();
 }
 
 function animateStatRings() {
@@ -931,15 +1401,24 @@ function formatTime(sec) { const m=String(Math.floor(sec/60)).padStart(2,'0'); c
 
 // ── Init ────────────────────────────────────────────────────
 function init() {
+  gateSignupBtn?.addEventListener('click', signup);
+  gateLoginBtn?.addEventListener('click', login);
+  wireModalDismissals();
+  headerProfileBtn?.addEventListener('click', () => {
+    fillProfileModal();
+    openModal(profileModal);
+  });
+  profileLogoutBtn?.addEventListener('click', () => { logout(); });
+  sessionsList?.addEventListener('click', (e) => {
+    const card = e.target.closest('.session-card');
+    if (!card) return;
+    const id = card.getAttribute('data-session-id');
+    if (id) openSessionDetailModal(id);
+  });
   WagonWheel.init(wagonCanvas);
   injectBiomechStyles();
   buildStartPanel();
   injectOverlayStyles();
-  signupBtn?.addEventListener('click', signup);
-  loginBtn?.addEventListener('click', login);
-  logoutBtn?.addEventListener('click', logout);
-  gateSignupBtn?.addEventListener('click', signup);
-  gateLoginBtn?.addEventListener('click', login);
   video.addEventListener('timeupdate', onVideoTimeUpdate);
   video.addEventListener('click', ()=>{ if(video.paused) video.play(); else video.pause(); });
   btnClearWheel?.addEventListener('click', clearWheelAndReset);
@@ -954,4 +1433,17 @@ function init() {
   initAuth();
   console.log('[CrickEye Pro v6.4 — Calibrated km/h] Initialised.');
 }
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await bootstrapSupabase();
+  } catch (e) {
+    console.error('[CrickEye] bootstrapSupabase:', e);
+    if (gateMessage) gateMessage.textContent = 'Config load failed — check console and backend/.env';
+  }
+  try {
+    init();
+  } catch (e) {
+    console.error('[CrickEye] init failed:', e);
+    if (gateMessage) gateMessage.textContent = 'App init failed — see console (F12).';
+  }
+});

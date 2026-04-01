@@ -25,6 +25,9 @@ Thumbs.db
 # Environment files
 .env
 
+# Local Supabase browser config (copy from config.example.js)
+config.js
+
 # Jupyter (if any)
 .ipynb_checkpoints/
 

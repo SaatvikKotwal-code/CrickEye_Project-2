@@ -17,8 +17,8 @@
       <input type="email" id="gateEmail" placeholder="Email" />
       <input type="password" id="gatePassword" placeholder="Password" />
       <div class="auth-gate-actions">
-        <button id="gateSignupBtn" class="auth-btn">Sign Up</button>
-        <button id="gateLoginBtn" class="auth-btn">Login</button>
+        <button type="button" id="gateSignupBtn" class="auth-btn">Sign Up</button>
+        <button type="button" id="gateLoginBtn" class="auth-btn">Login</button>
       </div>
       <div id="gateMessage" class="auth-gate-msg"></div>
     </div>
@@ -59,16 +59,60 @@
         <span class="session-label">Session</span>
         <span class="session-value" id="sessionTime">00:00</span>
       </div>
-      <div class="auth-controls" id="authControls">
-        <input type="email" id="authEmail" placeholder="email" />
-        <input type="password" id="authPassword" placeholder="password" />
-        <button id="signupBtn" class="auth-btn">Sign Up</button>
-        <button id="loginBtn" class="auth-btn">Login</button>
-        <button id="logoutBtn" class="auth-btn" style="display:none">Logout</button>
-        <span id="authUserLabel" class="auth-user-label">Not logged in</span>
+      <div class="header-profile-wrap">
+        <p id="headerAuthHint" class="header-auth-hint" hidden>Configure Supabase in <code>backend/.env</code></p>
+        <button type="button" class="header-profile-btn" id="headerProfileBtn" hidden aria-haspopup="dialog" aria-controls="profileModal">
+          <span class="header-profile-avatar" id="headerProfileAvatar">?</span>
+          <span class="header-profile-text">
+            <span class="header-profile-label">Account</span>
+            <span class="header-profile-email" id="headerProfileEmail"></span>
+          </span>
+        </button>
       </div>
     </div>
   </header>
+
+  <!-- Account / profile (logged-in user) -->
+  <div id="profileModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle" hidden>
+    <div class="ce-modal-backdrop" data-close-modal="profileModal"></div>
+    <div class="ce-modal-dialog ce-modal-dialog--profile">
+      <button type="button" class="ce-modal-close" data-close-modal="profileModal" aria-label="Close">&times;</button>
+      <h2 id="profileModalTitle" class="ce-modal-title">Your profile</h2>
+      <p class="ce-modal-lead">Signed in to CrickEye Pro. Sessions and uploads are tied to this account.</p>
+      <dl class="profile-detail-list">
+        <div class="profile-detail-row">
+          <dt>Email</dt>
+          <dd id="profileModalEmail">—</dd>
+        </div>
+        <div class="profile-detail-row">
+          <dt>User ID</dt>
+          <dd><code id="profileModalUserId" class="profile-code">—</code></dd>
+        </div>
+        <div class="profile-detail-row">
+          <dt>Member since</dt>
+          <dd id="profileModalCreated">—</dd>
+        </div>
+      </dl>
+      <p class="ce-modal-footnote">To change your password, use the reset link from the login screen or your Supabase project settings.</p>
+      <div class="ce-modal-actions">
+        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="profileModal">Close</button>
+        <button type="button" class="ce-btn ce-btn--danger" id="profileLogoutBtn">Log out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved session details (from My Sessions) -->
+  <div id="sessionDetailModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="sessionDetailTitle" hidden>
+    <div class="ce-modal-backdrop" data-close-modal="sessionDetailModal"></div>
+    <div class="ce-modal-dialog ce-modal-dialog--session">
+      <button type="button" class="ce-modal-close" data-close-modal="sessionDetailModal" aria-label="Close">&times;</button>
+      <h2 id="sessionDetailTitle" class="ce-modal-title">Session details</h2>
+      <div id="sessionDetailBody" class="session-detail-body"></div>
+      <div class="ce-modal-actions">
+        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="sessionDetailModal">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ───────────────── MAIN GRID ───────────────── -->
   <main class="main-grid">
@@ -281,7 +325,8 @@
 
   <script src="components/wagonWheel.js"></script>
   <script src="components/ReportModal.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- UMD build required for classic <script>; bare @2 points at CJS and breaks in the browser -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="app.js"></script>
 
 </body>

@@ -1,0 +1,6 @@
+Place these files in this folder (see readme.md → Model & Dataset Setup for the Google Drive link):
+
+  crickeye_best.pth   — shot classifier (required)
+  yolov8n-pose.pt     — YOLOv8n-pose weights (required; loaded only from this folder, no auto-download)
+
+The pipeline loads both paths from assets/ explicitly. Missing either file raises FileNotFoundError with the full path.

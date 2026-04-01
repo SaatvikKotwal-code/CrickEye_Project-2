@@ -59,7 +59,7 @@ After downloading, place them inside:
 assets/
 
 Required files:
-- `yolov8n-pose.pt`
+- `yolov8n-pose.pt` — must live in `assets/`; the pipeline loads this path only (no Ultralytics auto-download).
 - `crickeye_best.pth`
 - Sample input videos
 
@@ -74,23 +74,38 @@ This drive link contains all the assets video and trained model as well.
 
 ```bash
 pip install -r requirements.txt
-uvicorn backend.main:app --reload --port 8000
+```
+
+From the **project root** (`crickeye-dashboard/`, not inside `backend/`):
+
+```bash
+py -m uvicorn backend.main:app --reload --port 8000
+```
+
+If your shell is already in `backend/`, use the module name `main` instead:
+
+```bash
+py -m uvicorn main:app --reload --port 8000
 ```
 
 Open frontend at `http://localhost:8000`.
 
+The dashboard uses a **WebSocket** at `/ws`. `requirements.txt` includes **`uvicorn[standard]`** (pulls in `websockets`). If you see `No supported WebSocket library` or `GET /ws` **404**, run `pip install "uvicorn[standard]"` and restart uvicorn.
+
 ## Supabase Phase-1 (multi-user)
 
-1. Create a Supabase project and run `backend/supabase_schema.sql`.
-2. Create a public bucket named `videos`.
-3. In browser console set frontend env values:
-   - `localStorage.setItem('SUPABASE_URL', 'https://<project>.supabase.co')`
-   - `localStorage.setItem('SUPABASE_ANON_KEY', '<anon-key>')`
-4. Copy `backend/.env.example` to `backend/.env` and fill all values.
-5. Start the Node process endpoint server:
+1. Create a Supabase project and run **`backend/supabase_schema.sql`** in the SQL Editor (includes **RLS policies**). If you already created the table earlier, run **only the RLS block** from that file (from `alter table public.sessions enable row level security` through the storage policies). Without policies, you get **`new row violates row-level security policy`** on insert/update.
+2. **Storage bucket (required):** In Supabase go to **Storage → New bucket**. Set the name to **`videos`** exactly (lowercase). Enable **Public bucket** so `getPublicUrl` works for playback links. If you see **“Bucket not found”** in the app, this bucket was never created or the name does not match. Under **Policies**, allow authenticated users to **insert** and **read** objects in `videos` (or use the dashboard policy templates for “authenticated upload”).
+3. Put **`SUPABASE_URL`** and **`SUPABASE_ANON_KEY`** in **`backend/.env`** (see `backend/.env.example`). FastAPI loads that file and exposes them to the browser via **`GET /api/public-config`** (anon key only; service role stays server-side).
+4. Optional: for local overrides without `.env`, set `window.SUPABASE_URL` / `window.SUPABASE_ANON_KEY` before `app.js` (advanced).
+5. Optional Node server (only if you use `POST /process-session`):
 
 ```bash
 cd backend
 npm start
 ```
+
+### Sign Up / Login does nothing (no network, console errors)
+
+The Supabase UMD script defines a global named `supabase`. The app stores the **logged-in client** in `supabaseClient` so the script is not blocked by a duplicate `let supabase` declaration. Hard-refresh after updating (`Ctrl+Shift+R`).
 
