@@ -80,6 +80,11 @@ const profileModalCreated = document.getElementById('profileModalCreated');
 const profileLogoutBtn = document.getElementById('profileLogoutBtn');
 const sessionDetailModal = document.getElementById('sessionDetailModal');
 const sessionDetailBody = document.getElementById('sessionDetailBody');
+const openSessionCompareBtn = document.getElementById('openSessionCompareBtn');
+const sessionCompareModal = document.getElementById('sessionCompareModal');
+const compareSessionA = document.getElementById('compareSessionA');
+const compareSessionB = document.getElementById('compareSessionB');
+const sessionCompareBody = document.getElementById('sessionCompareBody');
 const authGate         = document.getElementById('authGate');
 const gateEmail        = document.getElementById('gateEmail');
 const gatePassword     = document.getElementById('gatePassword');
@@ -611,6 +616,128 @@ function openSessionDetailModal(sessionId) {
   openModal(sessionDetailModal);
 }
 
+function sessionLabel(s) {
+  const dt = new Date(s.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return `${dt} · ${sessionVideoFilename(s.video_url)}`;
+}
+
+function numOrNull(v) {
+  if (v == null || Number.isNaN(Number(v))) return null;
+  return Number(v);
+}
+
+function signedDelta(v1, v2, digits = 1) {
+  const a = numOrNull(v1);
+  const b = numOrNull(v2);
+  if (a == null || b == null) return '—';
+  const d = b - a;
+  const sign = d > 0 ? '+' : '';
+  return `${sign}${d.toFixed(digits)}`;
+}
+
+function compareTile(label, base, newer, unit = '', higherIsBetter = true, digits = 1) {
+  const a = numOrNull(base);
+  const b = numOrNull(newer);
+  const showA = a == null ? '—' : a.toFixed(digits);
+  const showB = b == null ? '—' : b.toFixed(digits);
+  const deltaStr = signedDelta(a, b, digits);
+  let cls = 'neutral';
+  if (a != null && b != null) {
+    const improved = higherIsBetter ? b >= a : b <= a;
+    cls = improved ? 'up' : 'down';
+  }
+  return `
+    <div class="compare-tile compare-${cls}">
+      <div class="compare-metric">${escapeHtml(label)}</div>
+      <div class="compare-values">${escapeHtml(showA)}${unit} → ${escapeHtml(showB)}${unit}</div>
+      <div class="compare-delta">Δ ${escapeHtml(deltaStr)}${unit}</div>
+    </div>
+  `;
+}
+
+function renderSessionComparison(sessionA, sessionB) {
+  if (!sessionCompareBody) return;
+  const a = getSessionAnalysis(sessionA?.results);
+  const b = getSessionAnalysis(sessionB?.results);
+  if (!a || !b || a.error || b.error) {
+    sessionCompareBody.innerHTML = '<p class="session-item-empty">Selected sessions need completed analysis results.</p>';
+    return;
+  }
+
+  const avA = a.session_averages || {};
+  const avB = b.session_averages || {};
+  const scA = a.session_scores || {};
+  const scB = b.session_scores || {};
+  const cA = numOrNull(a.shots_confirmed) || 0;
+  const cB = numOrNull(b.shots_confirmed) || 0;
+
+  const fwA = a.footwork_summary || {};
+  const fwB = b.footwork_summary || {};
+  const fwTotA = (fwA.front_foot_count || 0) + (fwA.back_foot_count || 0) + (fwA.neutral_count || 0);
+  const fwTotB = (fwB.front_foot_count || 0) + (fwB.back_foot_count || 0) + (fwB.neutral_count || 0);
+  const frontPctA = fwTotA ? (fwA.front_foot_count || 0) * 100 / fwTotA : null;
+  const frontPctB = fwTotB ? (fwB.front_foot_count || 0) * 100 / fwTotB : null;
+
+  const cards = [
+    compareTile('Confirmed shots', cA, cB, '', true, 0),
+    compareTile('Avg bat speed', avA.peak_swing_speed, avB.peak_swing_speed, ' km/h', true, 1),
+    compareTile('Head stability', avA.head_stability, avB.head_stability, '', true, 1),
+    compareTile('Stability score', avA.stability_score, avB.stability_score, '', true, 1),
+    compareTile('Power score', scA.power, scB.power, '', true, 1),
+    compareTile('Head discipline', scA.head_discipline, scB.head_discipline, '', true, 1),
+    compareTile('Front-foot usage', frontPctA, frontPctB, '%', true, 1),
+  ].join('');
+
+  const bestA = a.best_shot?.label ? shotLabelPretty(a.best_shot.label) : '—';
+  const bestB = b.best_shot?.label ? shotLabelPretty(b.best_shot.label) : '—';
+
+  sessionCompareBody.innerHTML = `
+    <div class="compare-header-row">
+      <div><strong>Session 1:</strong> ${escapeHtml(sessionLabel(sessionA))}</div>
+      <div><strong>Session 2:</strong> ${escapeHtml(sessionLabel(sessionB))}</div>
+    </div>
+    <div class="compare-grid">${cards}</div>
+    <div class="compare-meta-row">
+      <div><span class="compare-meta-k">Best shot (S1):</span> ${escapeHtml(bestA)}</div>
+      <div><span class="compare-meta-k">Best shot (S2):</span> ${escapeHtml(bestB)}</div>
+    </div>
+  `;
+}
+
+function refreshCompareSessionOptions() {
+  if (!compareSessionA || !compareSessionB) return;
+  const completed = state.sessionsCache
+    .filter((s) => (s.status || '').toLowerCase() === 'completed' && getSessionAnalysis(s.results))
+    .sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+
+  if (!completed.length) {
+    compareSessionA.innerHTML = '<option value="">No completed sessions</option>';
+    compareSessionB.innerHTML = '<option value="">No completed sessions</option>';
+    if (sessionCompareBody) {
+      sessionCompareBody.innerHTML = '<p class="session-item-empty">No completed sessions available for comparison yet.</p>';
+    }
+    return;
+  }
+
+  const options = completed
+    .map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(sessionLabel(s))}</option>`)
+    .join('');
+  compareSessionA.innerHTML = options;
+  compareSessionB.innerHTML = options;
+
+  compareSessionA.value = completed[Math.min(1, completed.length - 1)].id;
+  compareSessionB.value = completed[0].id;
+
+  const a = completed.find((s) => s.id === compareSessionA.value);
+  const b = completed.find((s) => s.id === compareSessionB.value);
+  if (a && b) renderSessionComparison(a, b);
+}
+
+function openSessionCompareModal() {
+  refreshCompareSessionOptions();
+  openModal(sessionCompareModal);
+}
+
 function wireModalDismissals() {
   document.querySelectorAll('[data-close-modal]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -623,6 +750,7 @@ function wireModalDismissals() {
     if (e.key !== 'Escape') return;
     closeModal(profileModal);
     closeModal(sessionDetailModal);
+    closeModal(sessionCompareModal);
   });
 }
 
@@ -651,6 +779,7 @@ function renderSessions(items) {
       </button>
     `;
   }).join('');
+  refreshCompareSessionOptions();
 }
 
 async function fetchUserSessions() {
@@ -1409,6 +1538,17 @@ function init() {
     openModal(profileModal);
   });
   profileLogoutBtn?.addEventListener('click', () => { logout(); });
+  openSessionCompareBtn?.addEventListener('click', openSessionCompareModal);
+  compareSessionA?.addEventListener('change', () => {
+    const a = state.sessionsCache.find((s) => s.id === compareSessionA.value);
+    const b = state.sessionsCache.find((s) => s.id === compareSessionB?.value);
+    if (a && b) renderSessionComparison(a, b);
+  });
+  compareSessionB?.addEventListener('change', () => {
+    const a = state.sessionsCache.find((s) => s.id === compareSessionA?.value);
+    const b = state.sessionsCache.find((s) => s.id === compareSessionB.value);
+    if (a && b) renderSessionComparison(a, b);
+  });
   sessionsList?.addEventListener('click', (e) => {
     const card = e.target.closest('.session-card');
     if (!card) return;

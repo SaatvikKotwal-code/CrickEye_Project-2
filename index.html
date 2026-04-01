@@ -114,6 +114,32 @@
     </div>
   </div>
 
+  <!-- Session-to-session comparison -->
+  <div id="sessionCompareModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="sessionCompareTitle" hidden>
+    <div class="ce-modal-backdrop" data-close-modal="sessionCompareModal"></div>
+    <div class="ce-modal-dialog ce-modal-dialog--compare">
+      <button type="button" class="ce-modal-close" data-close-modal="sessionCompareModal" aria-label="Close">&times;</button>
+      <h2 id="sessionCompareTitle" class="ce-modal-title">Session Comparison</h2>
+      <p class="ce-modal-lead">Pick two completed sessions to see if performance improved or dropped.</p>
+      <div class="compare-picker-grid">
+        <label class="compare-picker-field">
+          <span>Session 1 (baseline)</span>
+          <select id="compareSessionA"></select>
+        </label>
+        <label class="compare-picker-field">
+          <span>Session 2 (latest)</span>
+          <select id="compareSessionB"></select>
+        </label>
+      </div>
+      <div id="sessionCompareBody" class="session-compare-body">
+        <p class="session-item-empty">Select two completed sessions to compare.</p>
+      </div>
+      <div class="ce-modal-actions">
+        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="sessionCompareModal">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ───────────────── MAIN GRID ───────────────── -->
   <main class="main-grid">
 
@@ -290,6 +316,9 @@
     <section class="user-sessions-panel">
       <div class="panel-header">
         <span class="panel-label">My Sessions</span>
+        <button type="button" class="compare-sessions-btn" id="openSessionCompareBtn" aria-haspopup="dialog" aria-controls="sessionCompareModal">
+          Compare Sessions
+        </button>
       </div>
       <div id="sessionsList" class="sessions-list">
         <div class="session-item-empty">Login to view your sessions.</div>
