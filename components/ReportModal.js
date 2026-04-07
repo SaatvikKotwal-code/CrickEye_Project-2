@@ -69,7 +69,7 @@ const ReportModal = (() => {
     const R = 52, cx = 64, cy = 64;
     const circ = 2 * Math.PI * R;
     const offset = circ * (1 - pct / 100);
-    const quality = pct >= 70 ? 'Good' : pct >= 45 ? 'Average' : 'Needs Work';
+    const quality = pct >= 70 ? 'Good' : pct >= 45 ? 'Average' : 'Needs Attention';
     const qc = pct >= 70 ? '#10B981' : pct >= 45 ? '#EAB308' : '#EF4444';
     return `
       <div class="rp-pie-wrap">
@@ -160,8 +160,8 @@ const ReportModal = (() => {
     const bars = [
       // CHANGED: unit px/s → km/h, max 400 → 140, value uses toFixed(1), desc updated
       { label: 'Bat Speed', value: (shot.peak_swing_speed || 0).toFixed(1), max: 140, color: '#17B890', unit: 'km/h', desc: 'Bat tip speed in km/h — calibrated using shoulder-width pixel ruler at 30fps.' },
-      { label: 'Head Control', value: Math.round(shot.head_stability || 0), max: 100, color: '#6C63FF', unit: '/100', desc: 'How still your head stayed — critical for timing and eye on ball' },
-      { label: 'Stability', value: Math.round(shot.stability_score || 0), max: 100, color: '#FF6B35', unit: '/100', desc: 'Body balance through the stroke — prevents mistimed shots' },
+      { label: 'Head Position', value: Math.round(shot.head_stability || 0), max: 100, color: '#6C63FF', unit: '/100', desc: 'How still your head stayed through impact — critical for timing and watching the ball.' },
+      { label: 'Base & Stability', value: Math.round(shot.stability_score || 0), max: 100, color: '#FF6B35', unit: '/100', desc: 'Lower-body base and balance through contact — reduces mistimed shots.' },
     ];
 
     return `
@@ -197,7 +197,7 @@ const ReportModal = (() => {
             </div>`).join('')}
         </div>
         <div class="rp-shot-score-row">
-          <span class="rp-bar-label">Overall Shot Score</span>
+          <span class="rp-bar-label">Shot Execution Rating</span>
           <div class="rp-bar-track" style="flex:1;margin:0 12px">
             <div class="rp-bar-fill" style="width:${score*10}%;background:${sc}"></div>
           </div>
@@ -217,25 +217,25 @@ const ReportModal = (() => {
   function buildMetricCards() {
     const metrics = [
       {
-        icon: '🎯', color: '#06B6D4', title: 'Head Control',
+        icon: '🎯', color: '#06B6D4', title: 'Head Position',
         what: 'Tracks how still your head stays through contact (0-100). This is the most reliable coaching metric in the model.',
         how: 'Computed from pose keypoint variance around contact and normalized by shoulder width for scale stability.',
         tip: 'Keep chin level and eyes through the ball after contact.',
       },
       {
-        icon: '⚖️', color: '#10B981', title: 'Body Balance',
+        icon: '⚖️', color: '#10B981', title: 'Base & Stability',
         what: 'Measures lower-body stability and whole-body control through impact (0-100).',
         how: 'Built from knee/ankle jitter around contact and blended with head control for robustness.',
         tip: 'Use a wider base and hold finish position for 2 seconds after each rep.',
       },
       {
-        icon: '💥', color: '#F97316', title: 'Bat Speed (Secondary)',
-        what: 'Estimated bat-tip speed in km/h. Use trend direction over time, not absolute cross-session comparison.',
+        icon: '💥', color: '#F97316', title: 'Bat Speed',
+        what: 'Estimated bat-tip speed in km/h for session performance tracking.',
         how: 'Converted from pose-derived wrist motion using shoulder-width calibration and a bat-tip multiplier.',
         tip: 'Track whether speed rises or drops through the session; combine with Head/Balance before coaching.',
       },
       {
-        icon: '🏏', color: '#EF4444', title: 'Shot Score (/10)',
+        icon: '🏏', color: '#EF4444', title: 'Shot Execution Rating (/10)',
         what: 'A composite rating combining all metrics into a single quality score per shot.',
         how: 'Weighted: 55% speed and 45% balance. Head control influences balance internally. 8+ = Excellent, 6–7.9 = Good, 4–5.9 = Average, <4 = Poor.',
         tip: 'Focus on the metric with the lowest contribution to your score first for maximum improvement.',
@@ -256,50 +256,73 @@ const ReportModal = (() => {
     if (n >= 80) return { label: 'Elite', color: '#10B981' };
     if (n >= 65) return { label: 'Good', color: '#10B981' };
     if (n >= 50) return { label: 'Workable', color: '#EAB308' };
-    return { label: 'Needs Work', color: '#EF4444' };
+    return { label: 'Needs Attention', color: '#EF4444' };
   }
 
-  function buildCoachingFocus(summary) {
+  function buildCoachingFocus(summary, confirmedShots) {
+    const shots = Array.isArray(confirmedShots) ? confirmedShots : [];
+    const byFlag = (flagKey) => shots.find((s) => (s.flags || []).some((f) => String(f).startsWith(flagKey)));
+    const deliveryRef = (shot) =>
+      shot ? `Delivery #${shot.shot_num} · ${(SHOT_LABELS[shot.label] || shot.label || '—').toUpperCase()} · ${shot.timestamp || '—'}` : 'Multiple deliveries across session';
     const cues = [];
     const fs = summary.flagsSummary || {};
     if ((fs.HEAD_MOVING_count || 0) > 0) {
+      const sh = byFlag('HEAD_MOVING');
       cues.push({
         title: `HEAD MOVEMENT (${fs.HEAD_MOVING_count} shots flagged)`,
-        text: 'Head is moving at or through contact. Priority cue this week.',
+        happened: 'Head position drifts at or through contact.',
+        delivery: deliveryRef(sh),
+        why: 'When head position is unstable, timing and scoring arc control drop.',
         drill: 'Drill: chin level through contact, eyes track ball past hit.',
       });
     }
     if ((fs.UNSTABLE_count || 0) > 0) {
+      const sh = byFlag('UNSTABLE');
       cues.push({
         title: `BASE INSTABILITY (${fs.UNSTABLE_count} shots flagged)`,
-        text: 'Lower body is collapsing or drifting at impact.',
+        happened: 'Base collapses or drifts through impact.',
+        delivery: deliveryRef(sh),
+        why: 'Weak base reduces bat path control, especially against hard length area.',
         drill: 'Drill: wide base setup + hold finish for 2 seconds.',
       });
     }
     if (summary.fatigue) {
       cues.push({
         title: 'SECOND-HALF DECLINE (fatigue signal)',
-        text: 'Performance dropped in the second half.',
+        happened: 'Session momentum dipped in the second half.',
+        delivery: 'Comparison of 1st-half vs 2nd-half deliveries',
+        why: 'Late-session drop indicates trigger movement and intent are fading.',
         drill: 'Next session: reduce volume by 20% or add a mid-session break.',
       });
     }
     const used = Number(summary.shotsConfirmed || 0);
     if ((fs.FOOTWORK_UNCLEAR_count || 0) > used * 0.4 && used > 0) {
+      const sh = byFlag('FOOTWORK_UNCLEAR');
       cues.push({
         title: 'FOOTWORK DATA UNCLEAR',
-        text: 'Ankle keypoints were frequently uncertain.',
+        happened: 'Footwork read is uncertain on many deliveries.',
+        delivery: deliveryRef(sh),
+        why: 'Without clear crease position tracking, footwork coaching may be misleading.',
         drill: 'Verify with video before making footwork-only coaching calls.',
       });
     }
     const top = cues.slice(0, 3);
     if (!top.length) {
-      return `<div class="rp-coach-card rp-coach-card--clean">Clean session — focus on maintaining consistency next session.</div>`;
+      return `<div class="rp-coach-card rp-coach-card--clean">
+        <div class="rp-coach-title">CLEAN SESSION</div>
+        <p class="rp-coach-text"><strong>What happened:</strong> No high-priority technical flags triggered.</p>
+        <p class="rp-coach-text"><strong>Which delivery:</strong> Across confirmed deliveries.</p>
+        <p class="rp-coach-text"><strong>Why it matters:</strong> Stable base and head position support repeatable scoring arcs.</p>
+        <div class="rp-coach-drill"><strong>Drill:</strong> Keep press-and-drive rhythm and maintain soft hands through contact.</div>
+      </div>`;
     }
     return top.map((c, i) => `
       <div class="rp-coach-card ${i===0?'rp-coach-card--primary':'rp-coach-card--secondary'}">
         <div class="rp-coach-title">${i+1}. ${c.title}</div>
-        <p class="rp-coach-text">${c.text}</p>
-        <div class="rp-coach-drill">${c.drill}</div>
+        <p class="rp-coach-text"><strong>What happened:</strong> ${c.happened}</p>
+        <p class="rp-coach-text"><strong>Which delivery:</strong> ${c.delivery}</p>
+        <p class="rp-coach-text"><strong>Why it matters:</strong> ${c.why}</p>
+        <div class="rp-coach-drill"><strong>Drill:</strong> ${c.drill}</div>
       </div>`).join('');
   }
 
@@ -588,6 +611,20 @@ const ReportModal = (() => {
     const usage = summary.shotsTotalDetected > summary.shotsConfirmed
       ? `${summary.shotsConfirmed} of ${summary.shotsTotalDetected} shots used`
       : '';
+    const derivedFlags = {
+      HEAD_MOVING_count: confirmedShots.filter((s) => (s.flags || []).some((f) => String(f).startsWith('HEAD_MOVING'))).length,
+      UNSTABLE_count: confirmedShots.filter((s) => (s.flags || []).some((f) => String(f).startsWith('UNSTABLE'))).length,
+      FOOTWORK_UNCLEAR_count: confirmedShots.filter((s) => (s.flags || []).some((f) => String(f).startsWith('FOOTWORK_UNCLEAR'))).length,
+    };
+    const focusSummary = {
+      ...summary,
+      flagsSummary: {
+        HEAD_MOVING_count: summary.flagsSummary?.HEAD_MOVING_count || derivedFlags.HEAD_MOVING_count,
+        UNSTABLE_count: summary.flagsSummary?.UNSTABLE_count || derivedFlags.UNSTABLE_count,
+        FOOTWORK_UNCLEAR_count: summary.flagsSummary?.FOOTWORK_UNCLEAR_count || derivedFlags.FOOTWORK_UNCLEAR_count,
+      },
+      fatigue: Boolean(summary.fatigue || alerts.some((a) => /fatigue/i.test(String(a.metric || '')))),
+    };
 
     const bcol = SHOT_COLORS[best.label] || '#10B981';
     const wcol = SHOT_COLORS[worst.label] || '#EF4444';
@@ -610,7 +647,7 @@ const ReportModal = (() => {
           <div class="rp-header-left">
             <div class="rp-badge">${stance}</div>
             <div>
-              <div class="rp-title">Session Analysis Report</div>
+              <div class="rp-title">Net Session Report</div>
               <div class="rp-subtitle">${summary.shotsConfirmed || totalShots} confirmed shots &nbsp;·&nbsp; Avg Speed: ${avgSpeed} km/h &nbsp;·&nbsp; Avg Score: ${avgScore}/10 ${usage ? `&nbsp;·&nbsp; ${usage}` : ''}</div>
             </div>
           </div>
@@ -624,9 +661,9 @@ const ReportModal = (() => {
         <!-- Tabs -->
         <div class="rp-tabs" id="rpTabs">
           <button class="rp-tab active" data-tab="overview">Overview</button>
-          <button class="rp-tab" data-tab="shots">All Shots</button>
-          <button class="rp-tab" data-tab="trends">Trends</button>
-          <button class="rp-tab" data-tab="metrics">What Metrics Mean</button>
+          <button class="rp-tab" data-tab="shots">All Deliveries</button>
+          <button class="rp-tab" data-tab="trends">Scoring Zones</button>
+          <button class="rp-tab" data-tab="metrics">Coaching Focus</button>
         </div>
 
         <!-- Body -->
@@ -635,12 +672,12 @@ const ReportModal = (() => {
           <!-- ═══ OVERVIEW ═══ -->
           <div data-panel="overview">
 
-            <div class="rp-section-title">Highlights</div>
+            <div class="rp-section-title">Shot Highlights</div>
             <div class="rp-highlights">
               <div class="rp-highlight-card best">
                 <div class="rp-hl-icon">🔥</div>
                 <div>
-                  <div class="rp-hl-tag">Best Shot</div>
+                  <div class="rp-hl-tag">Signature Shot</div>
                   <div class="rp-hl-val" style="color:${bcol}">#${best.shot_num} ${(SHOT_LABELS[best.label]||best.label||'—').toUpperCase()}</div>
                   <div class="rp-hl-sub">Score: ${best.shot_score}/10 &nbsp;·&nbsp; ${best.shot_quality} &nbsp;·&nbsp; ${best.timestamp}</div>
                 </div>
@@ -648,7 +685,7 @@ const ReportModal = (() => {
               <div class="rp-highlight-card worst">
                 <div class="rp-hl-icon">⚠️</div>
                 <div>
-                  <div class="rp-hl-tag">Worst Shot</div>
+                  <div class="rp-hl-tag">Work-On Shot</div>
                   <div class="rp-hl-val" style="color:${wcol}">#${worst.shot_num} ${(SHOT_LABELS[worst.label]||worst.label||'—').toUpperCase()}</div>
                   <div class="rp-hl-sub">Score: ${worst.shot_score}/10 &nbsp;·&nbsp; ${worst.shot_quality} &nbsp;·&nbsp; ${worst.timestamp}</div>
                 </div>
@@ -658,16 +695,19 @@ const ReportModal = (() => {
             <div class="rp-section-title">Core Metrics</div>
             <div class="rp-pies">
               <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgHead || 0), '#06B6D4', 'Head Control', 'Most critical metric for timing and ball tracking')}
+                ${buildPieChart(Math.round(summary.avgHead || 0), '#06B6D4', 'Head Position', 'Most critical metric for timing, trigger movement, and ball tracking')}
               </div>
               <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgStability || 0), '#10B981', 'Body Balance', 'Body base through contact — reduces mishits')}
+                ${buildPieChart(Math.round(summary.avgStability || 0), '#10B981', 'Base & Stability', 'Crease position and base at contact — reduces mishits')}
+              </div>
+              <div class="rp-pie-card">
+                ${buildPieChart(Math.round((Number(avgScore) || 0) * 10), '#FAAD14', 'Avg Shot Execution Rating', `${avgScore}/10 across confirmed deliveries`)}
               </div>
             </div>
             <div class="rp-speed-note">
               <div class="rp-speed-note-title">Avg Bat Speed: ${avgSpeed} km/h</div>
               <div class="rp-speed-note-range">Range this session: ${confirmedShots.length ? Math.min(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} - ${confirmedShots.length ? Math.max(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} km/h</div>
-              <div class="rp-speed-note-sub">Speed is a calibrated estimate - use trend direction more than absolute cross-session values.</div>
+              <div class="rp-speed-note-sub">Session bat-speed snapshot.</div>
             </div>
 
             <div class="rp-section-title">Footwork Summary</div>
@@ -687,12 +727,12 @@ const ReportModal = (() => {
             </div>
 
             <div class="rp-section-title">Today's Coaching Focus</div>
-            <div class="rp-shots-grid">${buildCoachingFocus(summary)}</div>
+            <div class="rp-shots-grid">${buildCoachingFocus(focusSummary, confirmedShots)}</div>
           </div>
 
           <!-- ═══ SHOTS ═══ -->
           <div data-panel="shots" style="display:none">
-            <div class="rp-section-title">All Shots</div>
+            <div class="rp-section-title">All Deliveries</div>
             <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
               Coaching-first table. Confidence/probability is intentionally hidden from player-facing review.
             </p>
@@ -700,7 +740,7 @@ const ReportModal = (() => {
               <table class="rp-shots-table">
                 <thead>
                   <tr>
-                    <th>#</th><th>Shot Type</th><th>Score</th><th>Head</th><th>Balance</th><th>Speed</th><th>Flags</th>
+                    <th>#</th><th>Delivery Outcome</th><th>Execution Rating</th><th>Head Position</th><th>Base & Stability</th><th>Bat Speed</th><th>Work-On Flags</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -713,6 +753,12 @@ const ReportModal = (() => {
                       const fi = FLAG_INFO[f] || { label: f, color: '#64748B' };
                       return `<span style="display:inline-block;margin-right:6px;margin-top:4px;padding:2px 8px;border-radius:999px;background:${fi.color}18;color:${fi.color};font-size:11px">${fi.label}</span>`;
                     }).join('') : '<span style="color:#10B981;font-size:12px">No flags</span>';
+                    const flagDetails = (s.flags || []).length
+                      ? (s.flags || []).map((f) => {
+                          const fi = FLAG_INFO[f] || { label: f, desc: 'No description available.' };
+                          return `<div class="rp-shots-detail-text"><strong>${fi.label}:</strong> ${fi.desc}</div>`;
+                        }).join('')
+                      : '<div class="rp-shots-detail-text">No technical warning flags on this shot.</div>';
                     const speed = Number(s.peak_swing_speed || 0);
                     const speedText = speed >= 140 ? '~140+' : speed.toFixed(1);
                     return `
@@ -724,8 +770,8 @@ const ReportModal = (() => {
                       <td style="color:${sb.color}">${stab} (${sb.label})</td>
                       <td>${speedText} km/h</td>
                       <td>${fs}
-                        <details class="rp-shots-detail"><summary>details</summary>
-                          <div class="rp-shots-detail-text">Shot score breakdown: Speed contributed 55%, Balance contributed 45%.</div>
+                        <details class="rp-shots-detail"><summary>coaching detail</summary>
+                          ${flagDetails}
                         </details>
                       </td>
                     </tr>`;
@@ -737,20 +783,20 @@ const ReportModal = (() => {
 
           <!-- ═══ TRENDS ═══ -->
           <div data-panel="trends" style="display:none">
-            <div class="rp-section-title">Performance Trends Across Shots</div>
+            <div class="rp-section-title">Scoring Arc Trends</div>
             <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
               These graphs show how each metric changed shot-by-shot through your session. Look for patterns — are you getting tired later? Do scores drop after a certain shot?
             </p>
-            ${buildLineGraph(trendShots, 'head',  '#6C63FF', 'Head Control (0–100) — stillness through contact', 100)}
-            ${buildLineGraph(trendShots, 'stab',  '#F97316', 'Stability Score (0–100) — body balance and minimal sway', 100)}
-            ${buildLineGraph(trendShots, 'speed', '#17B890', 'Bat Speed (km/h) — calibrated estimate, use for trend only', 140)}
-            ${buildLineGraph(trendShots, 'score', '#FAAD14', 'Overall Shot Score (/10) — composite quality rating per shot', 10)}
+            ${buildLineGraph(trendShots, 'head',  '#6C63FF', 'Head Position (0–100) — stillness through contact', 100)}
+            ${buildLineGraph(trendShots, 'stab',  '#F97316', 'Base & Stability (0–100) — balance and base through contact', 100)}
+            ${buildLineGraph(trendShots, 'speed', '#17B890', 'Bat Speed (km/h) — calibrated bat-tip speed', 140)}
+            ${buildLineGraph(trendShots, 'score', '#FAAD14', 'Shot Execution Rating (/10) — composite quality by delivery', 10)}
             ${summary.shotsConfirmed >= 6 ? `
               <div class="rp-trend-summary">
-                <div class="rp-trend-summary-title">Session Trend Summary</div>
+                <div class="rp-trend-summary-title">Session Momentum (1st vs 2nd Half)</div>
                 <div class="rp-trend-summary-body">
-                  Head Control: ${Math.round(summary.trend.first_half_head_stability || 0)} → ${Math.round(summary.trend.second_half_head_stability || 0)}<br/>
-                  Body Balance: ${Math.round(summary.trend.first_half_stability_score || 0)} → ${Math.round(summary.trend.second_half_stability_score || 0)}<br/>
+                  Head Position: ${Math.round(summary.trend.first_half_head_stability || 0)} → ${Math.round(summary.trend.second_half_head_stability || 0)}<br/>
+                  Base & Stability: ${Math.round(summary.trend.first_half_stability_score || 0)} → ${Math.round(summary.trend.second_half_stability_score || 0)}<br/>
                   Bat Speed: ${Math.round(summary.trend.first_half_speed || 0)} → ${Math.round(summary.trend.second_half_speed || 0)} km/h
                 </div>
                 ${summary.fatigue ? '<div class="rp-trend-summary-note">Performance declined in second half — likely fatigue or focus drop.</div>' : ''}
@@ -759,9 +805,9 @@ const ReportModal = (() => {
 
           <!-- ═══ METRICS ═══ -->
           <div data-panel="metrics" style="display:none">
-            <div class="rp-section-title">Understanding Your Metrics</div>
+            <div class="rp-section-title">Coaching Focus Playbook</div>
             <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
-              CrickEye tracks pose geometry at 30fps. Head control and body balance are primary coaching metrics; speed is secondary and best used as a trend signal.
+              Cricket-first interpretation: read dominant hand, head position, base stability, and scoring arc together before setting work-on drills.
             </p>
             <p style="font-family:Inter,sans-serif;font-size:0.78rem;color:#94A3B8;margin:-8px 0 16px;line-height:1.5">
               ${summary.shotsConfirmed} of ${summary.shotsTotalDetected} shots confirmed (confidence filter at 60%).

@@ -109,6 +109,29 @@
 # 8) footwork            — lower reliability (ankle keypoints often weak)
 # 9) classifier conf %   — NOT player-facing coaching metric
 
+## ── CRICKET TERMINOLOGY MAP (UI copy standard) ───────────────────────────
+# Use these labels consistently in player/coach-facing UI:
+# - "Session Summary" (practice)  → "Net Session Report"
+# - "Session Summary" (match play) → "Innings Summary"
+# - "Best Shot"   → "Signature Shot"
+# - "Worst Shot"  → "Work-On Shot"
+# - "Shot Distribution" → "Wagon Wheel Coverage"
+# - "Head Control" → "Head Position"
+# - "Body Balance" → "Base & Stability"
+# - "Shot Score"   → "Shot Execution Rating"
+# - "Needs Work"   → "Needs Attention"
+
+## ── COACHING NOTE FORMAT (mandatory tone) ────────────────────────────────
+# Every player-facing coaching cue should follow:
+# 1) What happened
+# 2) Which delivery (or session segment)
+# 3) Why it matters
+# 4) Drill to fix
+#
+# Keep voice coach-like, not sensor dump style. Prefer cricket terms:
+# dominant hand, trigger movement, crease position, hard hands / soft hands,
+# wagon wheel, scoring arc, press and drive, hard length area.
+
 ## ── METRIC SCHEMA (v6.5+) ────────────────────────────────────────────────
 # run_session_analysis() returns:
 # - best_shot / worst_shot / footwork_summary / coaching_alerts (kept)

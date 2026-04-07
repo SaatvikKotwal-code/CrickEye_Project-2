@@ -482,6 +482,15 @@ function getAnalysisSummary(analysis) {
   };
 }
 
+function getAvgShotScoreFromResults(results) {
+  const replay = getSessionReplay(results);
+  if (!replay || !Array.isArray(replay.shots)) return null;
+  const confirmed = replay.shots.filter((s) => Number(s.conf) > 0.5 && s.shot_score != null && !Number.isNaN(Number(s.shot_score)));
+  if (!confirmed.length) return null;
+  const sum = confirmed.reduce((acc, s) => acc + Number(s.shot_score || 0), 0);
+  return sum / confirmed.length;
+}
+
 /**
  * Find latest completed session for this user that matches file hash and has replay data.
  * Uses DB column file_hash first, then scans recent rows for results.file_fingerprint (backfill).
@@ -900,27 +909,28 @@ function buildSessionDetailHtml(session) {
   let metrics = '';
   if (r && typeof r === 'object' && !r.error) {
     const sm = getAnalysisSummary(r);
+    const avgShotScoreResolved = sm.avgShotScore != null ? Number(sm.avgShotScore) : getAvgShotScoreFromResults(session.results);
     const hand = r.session_handedness || '—';
     const stance = r.stance_conf != null ? `${Math.round(Number(r.stance_conf) * 100)}%` : '—';
-    metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Performance summary</h3>
+    metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Net Session Report</h3>
       <div class="session-metric-grid">
-        <div class="session-metric"><span class="session-metric-label">Stance</span><span class="session-metric-val">${escapeHtml(hand)}</span><span class="session-metric-sub">confidence ${escapeHtml(stance)}</span></div>
+        <div class="session-metric"><span class="session-metric-label">Dominant hand</span><span class="session-metric-val">${escapeHtml(hand)}</span><span class="session-metric-sub">confidence ${escapeHtml(stance)}</span></div>
         <div class="session-metric"><span class="session-metric-label">Shots used</span><span class="session-metric-val">${sm.shotsConfirmed != null ? escapeHtml(String(sm.shotsConfirmed)) : '—'}</span><span class="session-metric-sub">of ${sm.shotsTotalDetected != null ? escapeHtml(String(sm.shotsTotalDetected)) : '—'} detected</span></div>
         <div class="session-metric"><span class="session-metric-label">Avg bat speed</span><span class="session-metric-val">${sm.avgSpeed != null ? escapeHtml(Number(sm.avgSpeed).toFixed(1)) : '—'}</span><span class="session-metric-sub">km/h</span></div>
-        <div class="session-metric"><span class="session-metric-label">Head control</span><span class="session-metric-val">${sm.avgHead != null ? escapeHtml(Math.round(Number(sm.avgHead)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
-        <div class="session-metric"><span class="session-metric-label">Body balance</span><span class="session-metric-val">${sm.avgStability != null ? escapeHtml(Math.round(Number(sm.avgStability)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
-        <div class="session-metric"><span class="session-metric-label">Avg shot score</span><span class="session-metric-val">${sm.avgShotScore != null ? escapeHtml(Number(sm.avgShotScore).toFixed(1)) : '—'}</span><span class="session-metric-sub">/10</span></div>
+        <div class="session-metric"><span class="session-metric-label">Head position</span><span class="session-metric-val">${sm.avgHead != null ? escapeHtml(Math.round(Number(sm.avgHead)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
+        <div class="session-metric"><span class="session-metric-label">Base & stability</span><span class="session-metric-val">${sm.avgStability != null ? escapeHtml(Math.round(Number(sm.avgStability)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
+        <div class="session-metric"><span class="session-metric-label">Shot execution rating</span><span class="session-metric-val">${avgShotScoreResolved != null ? escapeHtml(Number(avgShotScoreResolved).toFixed(1)) : '—'}</span><span class="session-metric-sub">/10</span></div>
       </div></section>`;
 
     const best = r.best_shot;
     const worst = r.worst_shot;
     if (best || worst) {
-      metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Shot highlights</h3><div class="session-highlight-row">`;
+      metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Delivery highlights</h3><div class="session-highlight-row">`;
       if (best && best.label) {
-        metrics += `<div class="session-highlight session-highlight--best"><span class="session-highlight-tag">Best shot</span><strong>${escapeHtml(shotLabelPretty(best.label))}</strong><span class="session-highlight-meta">#${escapeHtml(String(best.shot_num))} · ${escapeHtml(best.timestamp || '')} · score ${escapeHtml(String(best.shot_score != null ? best.shot_score : '—'))}</span></div>`;
+        metrics += `<div class="session-highlight session-highlight--best"><span class="session-highlight-tag">Signature shot</span><strong>${escapeHtml(shotLabelPretty(best.label))}</strong><span class="session-highlight-meta">#${escapeHtml(String(best.shot_num))} · ${escapeHtml(best.timestamp || '')} · rating ${escapeHtml(String(best.shot_score != null ? best.shot_score : '—'))}</span></div>`;
       }
       if (worst && worst.label) {
-        metrics += `<div class="session-highlight session-highlight--worst"><span class="session-highlight-tag">Needs work</span><strong>${escapeHtml(shotLabelPretty(worst.label))}</strong><span class="session-highlight-meta">#${escapeHtml(String(worst.shot_num))} · ${escapeHtml(worst.timestamp || '')}</span></div>`;
+        metrics += `<div class="session-highlight session-highlight--worst"><span class="session-highlight-tag">Work-on shot</span><strong>${escapeHtml(shotLabelPretty(worst.label))}</strong><span class="session-highlight-meta">#${escapeHtml(String(worst.shot_num))} · ${escapeHtml(worst.timestamp || '')}</span></div>`;
       }
       metrics += '</div></section>';
     }
@@ -929,8 +939,8 @@ function buildSessionDetailHtml(session) {
     if (trend && typeof trend === 'object') {
       const rows = [
         ['Bat speed (km/h)', trend.first_half_speed, trend.second_half_speed],
-        ['Head control', trend.first_half_head_stability, trend.second_half_head_stability],
-        ['Body balance', trend.first_half_stability_score, trend.second_half_stability_score],
+        ['Head position', trend.first_half_head_stability, trend.second_half_head_stability],
+        ['Base & stability', trend.first_half_stability_score, trend.second_half_stability_score],
       ].map(([label, a, b]) => {
         if (a == null && b == null) return '';
         const u1 = a != null ? Number(a).toFixed(1) : '—';
@@ -938,9 +948,9 @@ function buildSessionDetailHtml(session) {
         return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(u1)}</td><td>${escapeHtml(u2)}</td></tr>`;
       }).join('');
       if (rows) {
-        metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">First half vs second half</h3>
+        metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Session momentum (1st vs 2nd half)</h3>
           <table class="session-trend-table"><thead><tr><th>Metric</th><th>1st half</th><th>2nd half</th></tr></thead><tbody>${rows}</tbody></table>
-          ${sm.fatigueDetected ? '<p class="session-fatigue-note">Fatigue pattern suggested (speed dropped in second half).</p>' : ''}</section>`;
+          ${sm.fatigueDetected ? '<p class="session-fatigue-note">Momentum dipped in the second half (possible fatigue/focus drop).</p>' : ''}</section>`;
       }
     }
 
@@ -957,7 +967,7 @@ function buildSessionDetailHtml(session) {
       const lis = alerts.slice(0, 6).map((a) =>
         `<li class="session-alert session-alert--${escapeHtml((a.severity || 'low').toLowerCase())}"><span class="session-alert-sev">${escapeHtml(a.severity || '')}</span> <strong>${escapeHtml(a.metric || '')}</strong> — ${escapeHtml(a.message || '')} <em>${escapeHtml(a.action || '')}</em></li>`
       ).join('');
-      metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Coaching notes</h3><ul class="session-alert-list">${lis}</ul></section>`;
+      metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Coaching focus</h3><ul class="session-alert-list">${lis}</ul></section>`;
     }
   } else if (r && r.error) {
     metrics += `<section class="session-detail-section"><p class="session-no-results">${escapeHtml(String(r.error))}</p></section>`;
@@ -1915,10 +1925,9 @@ function setProgressBar(pct) {
 function updateProcStat(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
 
 function forceHand(handLower, handLabel, conf) {
-  const pct = Math.round((conf||0)*100);
   if (batsmanLabel) {
-    if (handLabel==='LHB')      {batsmanLabel.textContent=`Left-Handed · ${pct}%`; batsmanLabel.style.color='#F97316';}
-    else if (handLabel==='RHB') {batsmanLabel.textContent=`Right-Handed · ${pct}%`;batsmanLabel.style.color='#F97316';}
+    if (handLabel==='LHB')      {batsmanLabel.textContent='Left-Handed';  batsmanLabel.style.color='#F97316';}
+    else if (handLabel==='RHB') {batsmanLabel.textContent='Right-Handed'; batsmanLabel.style.color='#F97316';}
     else                        {batsmanLabel.textContent='Stance Uncertain';        batsmanLabel.style.color='#EAB308';}
   }
   if (state.currentHand !== handLower) { state.currentHand=handLower; WagonWheel.setHand(handLower); }

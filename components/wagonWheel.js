@@ -437,7 +437,7 @@ const WagonWheel = (() => {
     const speed = Number(sp.batSpeed || 0);
     const speedTxt = speed >= 140 ? '~140+ km/h' : `${speed.toFixed(1)} km/h`;
     const line1 = `${type}  Score: ${score}/10`;
-    const line2 = `Head Control: ${head}/100  ·  Speed: ${speedTxt}`;
+    const line2 = `Head Position: ${head}/100  ·  Speed: ${speedTxt}`;
 
     ctx.save();
     ctx.font = "600 11px 'Manrope', Arial, sans-serif";

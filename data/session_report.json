@@ -1,179 +1,152 @@
 {
-  "total_frames": 441,
+  "total_frames": 456,
   "fps": 30.0,
   "session_handedness": "RHB",
-  "stance_conf": 1.0,
+  "stance_conf": 0.88,
   "speed_unit": "km/h",
   "analysis": {
     "session_handedness": "RHB",
-    "stance_conf": 1.0,
-    "shots_total": 6,
+    "stance_conf": 0.88,
+    "shots_total": 5,
     "shots_confirmed": 5,
     "best_shot": {
       "shot_num": 5,
-      "label": "sweep",
-      "shot_score": 7.3,
-      "shot_quality": "Good",
-      "timestamp": "00:14.00"
+      "label": "pull",
+      "shot_score": 9.4,
+      "shot_quality": "Excellent",
+      "timestamp": "00:10.47"
     },
     "worst_shot": {
       "shot_num": 3,
       "label": "flick",
-      "shot_score": 4.0,
+      "shot_score": 5.6,
       "shot_quality": "Average",
       "timestamp": "00:06.00"
     },
-    "session_scores": {
-      "power": 77.8,
-      "head_discipline": 44.9,
-      "stability": 56.92
-    },
-    "session_averages": {
-      "peak_swing_speed": 108.88,
-      "head_stability": 44.9,
-      "stability_score": 56.92
+    "session_summary": {
+      "shots_confirmed": 5,
+      "shots_total_detected": 5,
+      "avg_bat_speed_kmh": 134.2,
+      "avg_head_stability": 48.0,
+      "avg_stability_score": 59.02,
+      "avg_shot_score": 7.94,
+      "fatigue_detected": false,
+      "trend": {
+        "first_half_speed": 127.35,
+        "second_half_speed": 138.83,
+        "first_half_head_stability": 47.7,
+        "second_half_head_stability": 48.2,
+        "first_half_stability_score": 71.1,
+        "second_half_stability_score": 50.97
+      },
+      "flags_summary": {
+        "HEAD_MOVING_count": 2,
+        "UNSTABLE_count": 1,
+        "FOOTWORK_UNCLEAR_count": 2
+      },
+      "by_shot_type": {
+        "pull": {
+          "count": 2,
+          "avg_conf": 0.86,
+          "peak_swing_speed": {
+            "mean": 125.6,
+            "std": 10.9,
+            "n": 2
+          },
+          "head_stability": {
+            "mean": 91.15,
+            "std": 2.45,
+            "n": 2
+          },
+          "stability_score": {
+            "mean": 82.15,
+            "std": 7.05,
+            "n": 2
+          },
+          "footwork_counts": {
+            "front_foot": 1,
+            "back_foot": 0,
+            "neutral": 1
+          }
+        },
+        "straight": {
+          "count": 1,
+          "avg_conf": 0.8,
+          "peak_swing_speed": {
+            "mean": 140.0,
+            "std": null,
+            "n": 1
+          },
+          "head_stability": {
+            "mean": 6.7,
+            "std": null,
+            "n": 1
+          },
+          "stability_score": {
+            "mean": 67.1,
+            "std": null,
+            "n": 1
+          },
+          "footwork_counts": {
+            "front_foot": 1,
+            "back_foot": 0,
+            "neutral": 0
+          }
+        },
+        "flick": {
+          "count": 1,
+          "avg_conf": 0.8,
+          "peak_swing_speed": {
+            "mean": 140.0,
+            "std": null,
+            "n": 1
+          },
+          "head_stability": {
+            "mean": 6.9,
+            "std": null,
+            "n": 1
+          },
+          "stability_score": {
+            "mean": 2.1,
+            "std": null,
+            "n": 1
+          },
+          "footwork_counts": {
+            "front_foot": 0,
+            "back_foot": 1,
+            "neutral": 0
+          }
+        },
+        "cover": {
+          "count": 1,
+          "avg_conf": 0.81,
+          "peak_swing_speed": {
+            "mean": 140.0,
+            "std": null,
+            "n": 1
+          },
+          "head_stability": {
+            "mean": 44.1,
+            "std": null,
+            "n": 1
+          },
+          "stability_score": {
+            "mean": 61.6,
+            "std": null,
+            "n": 1
+          },
+          "footwork_counts": {
+            "front_foot": 0,
+            "back_foot": 0,
+            "neutral": 1
+          }
+        }
+      }
     },
     "footwork_summary": {
-      "front_foot_count": 1,
+      "front_foot_count": 2,
       "back_foot_count": 1,
-      "neutral_count": 3
-    },
-    "trend": {
-      "peak_swing_speed": {
-        "first_half": 105.35,
-        "second_half": 111.23
-      },
-      "head_stability": {
-        "first_half": 47.7,
-        "second_half": 43.03
-      },
-      "stability_score": {
-        "first_half": 71.1,
-        "second_half": 47.47
-      }
-    },
-    "fatigue_detected": false,
-    "by_shot_type": {
-      "pull": {
-        "count": 1,
-        "avg_conf": 0.83,
-        "peak_swing_speed": {
-          "mean": 80.7,
-          "std": null,
-          "n": 1
-        },
-        "head_stability": {
-          "mean": 88.7,
-          "std": null,
-          "n": 1
-        },
-        "stability_score": {
-          "mean": 75.1,
-          "std": null,
-          "n": 1
-        },
-        "footwork_counts": {
-          "front_foot": 0,
-          "back_foot": 0,
-          "neutral": 1
-        }
-      },
-      "straight": {
-        "count": 1,
-        "avg_conf": 0.8,
-        "peak_swing_speed": {
-          "mean": 130.0,
-          "std": null,
-          "n": 1
-        },
-        "head_stability": {
-          "mean": 6.7,
-          "std": null,
-          "n": 1
-        },
-        "stability_score": {
-          "mean": 67.1,
-          "std": null,
-          "n": 1
-        },
-        "footwork_counts": {
-          "front_foot": 1,
-          "back_foot": 0,
-          "neutral": 0
-        }
-      },
-      "flick": {
-        "count": 1,
-        "avg_conf": 0.8,
-        "peak_swing_speed": {
-          "mean": 130.0,
-          "std": null,
-          "n": 1
-        },
-        "head_stability": {
-          "mean": 6.9,
-          "std": null,
-          "n": 1
-        },
-        "stability_score": {
-          "mean": 2.1,
-          "std": null,
-          "n": 1
-        },
-        "footwork_counts": {
-          "front_foot": 0,
-          "back_foot": 1,
-          "neutral": 0
-        }
-      },
-      "cover": {
-        "count": 1,
-        "avg_conf": 0.62,
-        "peak_swing_speed": {
-          "mean": 130.0,
-          "std": null,
-          "n": 1
-        },
-        "head_stability": {
-          "mean": 40.2,
-          "std": null,
-          "n": 1
-        },
-        "stability_score": {
-          "mean": 51.3,
-          "std": null,
-          "n": 1
-        },
-        "footwork_counts": {
-          "front_foot": 0,
-          "back_foot": 0,
-          "neutral": 1
-        }
-      },
-      "sweep": {
-        "count": 1,
-        "avg_conf": 0.9,
-        "peak_swing_speed": {
-          "mean": 73.7,
-          "std": null,
-          "n": 1
-        },
-        "head_stability": {
-          "mean": 82.0,
-          "std": null,
-          "n": 1
-        },
-        "stability_score": {
-          "mean": 89.0,
-          "std": null,
-          "n": 1
-        },
-        "footwork_counts": {
-          "front_foot": 0,
-          "back_foot": 0,
-          "neutral": 1
-        }
-      }
+      "neutral_count": 2
     },
     "coaching_alerts": [
       {
@@ -194,12 +167,12 @@
       "timestamp": "00:00.43",
       "peak_frame": 13,
       "travel_px": 249.0,
-      "peak_swing_speed": 80.7,
+      "peak_swing_speed": 114.7,
       "footwork": "neutral",
       "footwork_conf": "low",
       "head_stability": 88.7,
       "stability_score": 75.1,
-      "shot_score": 7.2,
+      "shot_score": 7.9,
       "shot_quality": "Good",
       "flags": [
         "FOOTWORK_UNCLEAR"
@@ -221,13 +194,13 @@
       "timestamp": "00:03.70",
       "peak_frame": 111,
       "travel_px": 605.8,
-      "peak_swing_speed": 130.0,
+      "peak_swing_speed": 140.0,
       "footwork": "front_foot",
       "footwork_conf": "high",
       "head_stability": 6.7,
       "stability_score": 67.1,
-      "shot_score": 6.2,
-      "shot_quality": "Good",
+      "shot_score": 8.5,
+      "shot_quality": "Excellent",
       "flags": [
         "HEAD_MOVING"
       ],
@@ -248,12 +221,12 @@
       "timestamp": "00:06.00",
       "peak_frame": 180,
       "travel_px": 460.8,
-      "peak_swing_speed": 130.0,
+      "peak_swing_speed": 140.0,
       "footwork": "back_foot",
       "footwork_conf": "high",
       "head_stability": 6.9,
       "stability_score": 2.1,
-      "shot_score": 4.0,
+      "shot_score": 5.6,
       "shot_quality": "Average",
       "flags": [
         "HEAD_MOVING",
@@ -271,79 +244,52 @@
       "shot_num": 4,
       "display_num": 4,
       "label": "cover",
-      "confidence": 0.6157,
+      "confidence": 0.8065,
       "confirmed": true,
-      "timestamp": "00:09.43",
-      "peak_frame": 283,
-      "travel_px": 310.8,
-      "peak_swing_speed": 130.0,
+      "timestamp": "00:08.73",
+      "peak_frame": 262,
+      "travel_px": 182.2,
+      "peak_swing_speed": 140.0,
       "footwork": "neutral",
       "footwork_conf": "low",
-      "head_stability": 40.2,
-      "stability_score": 51.3,
-      "shot_score": 6.5,
-      "shot_quality": "Good",
+      "head_stability": 44.1,
+      "stability_score": 61.6,
+      "shot_score": 8.3,
+      "shot_quality": "Excellent",
       "flags": [
         "FOOTWORK_UNCLEAR"
       ],
       "probs": {
-        "cover": 0.6157,
-        "flick": 0.0857,
-        "pull": 0.0759,
-        "straight": 0.208,
-        "sweep": 0.0146
+        "cover": 0.8065,
+        "flick": 0.0833,
+        "pull": 0.0067,
+        "straight": 0.0949,
+        "sweep": 0.0086
       }
     },
     {
       "shot_num": 5,
-      "display_num": null,
+      "display_num": 5,
       "label": "pull",
-      "confidence": 0.5662,
-      "confirmed": false,
-      "timestamp": "00:11.10",
-      "peak_frame": 333,
-      "travel_px": 103.6,
-      "peak_swing_speed": 91.4,
+      "confidence": 0.892,
+      "confirmed": true,
+      "timestamp": "00:10.47",
+      "peak_frame": 314,
+      "travel_px": 160.4,
+      "peak_swing_speed": 136.5,
       "footwork": "front_foot",
       "footwork_conf": "high",
-      "head_stability": 83.9,
-      "stability_score": 83.8,
-      "shot_score": 7.6,
-      "shot_quality": "Good",
+      "head_stability": 93.6,
+      "stability_score": 89.2,
+      "shot_score": 9.4,
+      "shot_quality": "Excellent",
       "flags": [],
       "probs": {
-        "cover": 0.0506,
-        "flick": 0.1132,
-        "pull": 0.5662,
-        "straight": 0.0197,
-        "sweep": 0.2503
-      }
-    },
-    {
-      "shot_num": 6,
-      "display_num": 5,
-      "label": "sweep",
-      "confidence": 0.8968,
-      "confirmed": true,
-      "timestamp": "00:14.00",
-      "peak_frame": 420,
-      "travel_px": 145.6,
-      "peak_swing_speed": 73.7,
-      "footwork": "neutral",
-      "footwork_conf": "low",
-      "head_stability": 82.0,
-      "stability_score": 89.0,
-      "shot_score": 7.3,
-      "shot_quality": "Good",
-      "flags": [
-        "FOOTWORK_UNCLEAR"
-      ],
-      "probs": {
-        "cover": 0.0197,
-        "flick": 0.0575,
-        "pull": 0.0211,
-        "straight": 0.0049,
-        "sweep": 0.8968
+        "cover": 0.0082,
+        "flick": 0.0242,
+        "pull": 0.892,
+        "straight": 0.0157,
+        "sweep": 0.06
       }
     }
   ]
