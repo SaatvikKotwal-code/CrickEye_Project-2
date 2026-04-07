@@ -1,111 +1,142 @@
-# 🏏 CrickEye Dashboard
+# CrickEye Dashboard
 
-An AI-powered cricket analytics system for **shot classification, pose-based analysis, and session tracking**.
+CrickEye is a cricket batting analytics system that combines:
+- YOLOv8 pose estimation
+- Swin3D shot classification
+- real-time WebSocket feedback
+- coaching-first frontend visualizations
 
----
+This repo includes the dashboard frontend, FastAPI runtime, and Node API helpers.
 
-## 📌 Overview
+## What Changed (Current Feature Set)
 
-CrickEye is designed to analyze cricket batting sessions using computer vision and deep learning.  
-It processes videos, detects player poses, classifies shots, and generates meaningful analytics via an interactive dashboard.
+### Metrics and scoring overhaul
+- Bat speed calibration updated:
+  - `BAT_TIP_MULTIPLIER = 1.35`
+  - `SPEED_SANITY_CAP_KMH = 140.0`
+  - `SHOULDER_FALLBACK_PX = 60.0`
+- Shot score formula updated to avoid hidden double counting:
+  - `shot_score = (0.55 * speed_norm + 0.45 * stability_norm) * 10`
+- Output schema now exposes a coaching summary block:
+  - `analysis.session_summary`
+  - includes `shots_confirmed`, `shots_total_detected`, averages, fatigue, trend, and flags summary
 
----
+### Player-facing UI redesign
+- Confidence percentages are hidden from player-facing shot cards/report cards.
+- Coaching priority order in UI:
+  1. Head control (`head_stability`)
+  2. Body balance (`stability_score`)
+  3. Shot score
+  4. Flags
+  5. Trend/fatigue
+  6. Bat-speed trend (secondary)
+- Report modal updated:
+  - coaching focus block
+  - trends ordered by reliability
+  - all-shots coaching table (head, balance, speed, flags)
+  - usage transparency (`X of Y shots used`)
 
-## ⚙️ Features
+### Wagon wheel enhancements
+- `drawSpoke` signature now supports metric metadata:
+  - `drawSpoke(shotType, shotScore, headStability, batSpeed, onDone)`
+- Spoke thickness encodes shot score.
+- Spoke opacity encodes head stability.
+- Hover tooltip shows type, score, head control, and speed.
 
-- 🎯 Shot Classification (Cover, Straight, Pull, Sweep, Flick)
-- 🧍 Pose Detection using YOLOv8
-- 📊 Session Analytics Dashboard
-- 🌀 Wagon Wheel Visualization
-- 📁 Session Logging (CSV/JSON)
-- 🎥 Video-based Analysis Pipeline
+## Captured Metrics (Current System)
 
----
+## Per-shot metrics
+- `label` (shot class)
+- `conf` (classifier confidence; kept internally, not player-facing)
+- `probs` (class probabilities)
+- `timestamp`, `peak_frame`
+- `peak_swing_speed` (km/h)
+- `footwork`, `footwork_conf`
+- `head_stability` (0-100)
+- `stability_score` (0-100)
+- `shot_score` (0-10)
+- `shot_quality` (Excellent/Good/Average/Poor)
+- `flags` (`HEAD_MOVING`, `UNSTABLE`, `FOOTWORK_UNCLEAR`)
 
-## 🧠 Tech Stack
+## Session-level metrics
+- `best_shot`, `worst_shot`
+- `footwork_summary`
+- `coaching_alerts`
+- `session_summary`:
+  - `shots_confirmed`
+  - `shots_total_detected`
+  - `avg_bat_speed_kmh`
+  - `avg_head_stability`
+  - `avg_stability_score`
+  - `avg_shot_score`
+  - `fatigue_detected`
+  - `trend` (first-half vs second-half for speed/head/balance)
+  - `flags_summary` (flag counts)
+  - `by_shot_type` (per-shot-type aggregates)
 
-- **Frontend:** HTML, CSS, JavaScript
-- **Backend:** Python (Flask/FastAPI style)
-- **AI Models:** YOLOv8 Pose, Custom `.pth` Model
-- **Visualization:** Custom JS Components
+## Run After Clone (Seamless Setup)
 
----
+## 1) Prerequisites
+- Python 3.10+
+- Node.js 18+
+- pip
+- npm
 
-## 📂 Project Structure
-crickeye-dashboard/
-│
-├── backend/
-├── components/
-├── assets/ # (models + videos - not included)
-├── data/
-├── uploads/
-├── App.js
-├── index.html
-├── style.css
-├── analyse_session.py
-└── README.md
+## 2) Install dependencies
 
-
----
-
-## 📦 Model & Dataset Setup
-
-⚠️ Due to size constraints, models and videos are not included in this repository.
-
-👉 Download required files from:  
-**https://drive.google.com/drive/folders/1A40FmCcU3x0_6iB9l3eiY5iB-bm335HZ?usp=sharing**
-
-After downloading, place them inside:
-assets/
-
-Required files:
-- `yolov8n-pose.pt` — must live in `assets/`; the pipeline loads this path only (no Ultralytics auto-download).
-- `crickeye_best.pth`
-- Sample input videos
-
----
-
-
-This drive link contains all the assets video and trained model as well.
-
-## ▶️ How to Run
-
-### 1. Install dependencies
-
+### Python
 ```bash
 pip install -r requirements.txt
 ```
 
-From the **project root** (`crickeye-dashboard/`, not inside `backend/`):
+### Node
+```bash
+cd backend
+npm install
+cd ..
+```
 
+## 3) Add required assets
+Place these files in `assets/`:
+- `yolov8n-pose.pt`
+- `crickeye_best.pth`
+- test video(s)
+
+## 4) Environment variables
+Create `backend/.env` (copy from `backend/.env.example`) and set:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_KEY`
+- `PORT=8080`
+
+## 5) Start services
+
+### FastAPI (required)
+From repo root:
 ```bash
 py -m uvicorn backend.main:app --reload --port 8000
 ```
 
-If your shell is already in `backend/`, use the module name `main` instead:
-
-```bash
-py -m uvicorn main:app --reload --port 8000
-```
-
-Open frontend at `http://localhost:8000`.
-
-The dashboard uses a **WebSocket** at `/ws`. `requirements.txt` includes **`uvicorn[standard]`** (pulls in `websockets`). If you see `No supported WebSocket library` or `GET /ws` **404**, run `pip install "uvicorn[standard]"` and restart uvicorn.
-
-## Supabase Phase-1 (multi-user)
-
-1. Create a Supabase project and run **`backend/supabase_schema.sql`** in the SQL Editor (includes **RLS policies**). If you already created the table earlier, run **only the RLS block** from that file (from `alter table public.sessions enable row level security` through the storage policies). Without policies, you get **`new row violates row-level security policy`** on insert/update.
-2. **Storage bucket (required):** In Supabase go to **Storage → New bucket**. Set the name to **`videos`** exactly (lowercase). Enable **Public bucket** so `getPublicUrl` works for playback links. If you see **“Bucket not found”** in the app, this bucket was never created or the name does not match. Under **Policies**, allow authenticated users to **insert** and **read** objects in `videos` (or use the dashboard policy templates for “authenticated upload”).
-3. Put **`SUPABASE_URL`** and **`SUPABASE_ANON_KEY`** in **`backend/.env`** (see `backend/.env.example`). FastAPI loads that file and exposes them to the browser via **`GET /api/public-config`** (anon key only; service role stays server-side).
-4. Optional: for local overrides without `.env`, set `window.SUPABASE_URL` / `window.SUPABASE_ANON_KEY` before `app.js` (advanced).
-5. Optional Node server (only if you use `POST /process-session`):
-
+### Node API (recommended)
+In a second terminal:
 ```bash
 cd backend
 npm start
 ```
 
-### Sign Up / Login does nothing (no network, console errors)
+## 6) Open app
+- Use `http://localhost:8000`
+- WebSocket endpoint: `ws://localhost:8000/ws`
 
-The Supabase UMD script defines a global named `supabase`. The app stores the **logged-in client** in `supabaseClient` so the script is not blocked by a duplicate `let supabase` declaration. Hard-refresh after updating (`Ctrl+Shift+R`).
+## 7) Quick health checks
+- `http://localhost:8080/health` returns `{ ok: true }` (if Node is running)
+- Upload starts pipeline and streams stage/progress updates
+- Session saves include `results.analysis.session_summary`
+
+## Repository Notes
+- Frontend: `App.js`, `components/ReportModal.js`, `components/wagonWheel.js`, `style.css`
+- Backend pipeline: `analyse_session.py`
+- FastAPI app: `backend/main.py`
+- Node server: `backend/server.js`
+- Project guidance: `cursorrules`
 

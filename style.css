@@ -522,7 +522,7 @@ body {
 
 .biomech-metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -577,9 +577,39 @@ body {
   text-align: right;
 }
 
-/* Hide flags and footwork — kept in DOM, hidden visually */
-.biomech-flags { display: none; }
+/* Keep footwork hidden (low reliability), show flags prominently */
+.biomech-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .biomech-footwork { display: none; }
+.biomech-flag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(100,116,139,0.28);
+  color: #64748B;
+  background: rgba(148,163,184,0.12);
+}
+.biomech-flag[data-flag="HEAD_MOVING"] {
+  color: #DC2626;
+  border-color: rgba(239,68,68,0.32);
+  background: rgba(239,68,68,0.12);
+}
+.biomech-flag[data-flag="UNSTABLE"] {
+  color: #D97706;
+  border-color: rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.14);
+}
+.biomech-flag[data-flag="FOOTWORK_UNCLEAR"] {
+  color: #64748B;
+  border-color: rgba(148,163,184,0.34);
+  background: rgba(148,163,184,0.14);
+}
+.biomech-flag-ok { color: #10B981; border: 1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.12); }
 
 /* ═══════════════════ SESSION REPORT (light) ═══════════════════ */
 #session-report { display: none; flex-direction: column; gap: 0; animation: procFadeIn .6s ease; }

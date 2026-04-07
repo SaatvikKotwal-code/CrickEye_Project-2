@@ -1,5 +1,5 @@
 # ╔══════════════════════════════════════════════════════════════╗
-# ║              CrickEyePro — .cursorrules v1.1                 ║
+# ║              CrickEyePro — .cursorrules v1.2                 ║
 # ║   AI Cricket Batting Analytics · Full-Stack + ML Rules       ║
 # ╚══════════════════════════════════════════════════════════════╝
 
@@ -97,6 +97,43 @@
 # When extending: keep SVG geometry aligned with ReportModal line-graph conventions; escapeHtml() on all
 # dynamic labels and insight bullets.
 
+## ── COACHING-FIRST METRIC PRIORITY (player-facing UI) ────────────────────
+# Display/review priority (do not reorder without explicit approval):
+# 1) head_stability      — primary coaching metric
+# 2) stability_score     — secondary core metric
+# 3) shot_score          — composite quality
+# 4) flags               — binary coaching cues
+# 5) trend/fatigue       — within-session consistency
+# 6) bat_speed trend     — secondary, camera-calibration dependent
+# 7) bat_speed absolute  — secondary with caveat
+# 8) footwork            — lower reliability (ankle keypoints often weak)
+# 9) classifier conf %   — NOT player-facing coaching metric
+
+## ── METRIC SCHEMA (v6.5+) ────────────────────────────────────────────────
+# run_session_analysis() returns:
+# - best_shot / worst_shot / footwork_summary / coaching_alerts (kept)
+# - session_summary (authoritative block):
+#   {
+#     shots_confirmed: int,
+#     shots_total_detected: int,
+#     avg_bat_speed_kmh: float,
+#     avg_head_stability: float,
+#     avg_stability_score: float,
+#     avg_shot_score: float,
+#     fatigue_detected: bool,
+#     trend: {
+#       first_half_speed, second_half_speed,
+#       first_half_head_stability, second_half_head_stability,
+#       first_half_stability_score, second_half_stability_score
+#     },
+#     flags_summary: {
+#       HEAD_MOVING_count, UNSTABLE_count, FOOTWORK_UNCLEAR_count
+#     },
+#     by_shot_type: { ...existing per-shot-type stats... }
+#   }
+# - Legacy session_scores/session_averages are deprecated; frontend should read
+#   session_summary first and only fallback for legacy saved sessions.
+
 ## ── ARCHITECTURE RULES ──────────────────────────────────────────
 
 ### Two separate servers run in parallel:
@@ -155,9 +192,10 @@
 
 ### Speed calibration constants (tune, never delete):
 # SHOULDER_WIDTH_M    = 0.45   (pixel ruler baseline)
-# BAT_TIP_MULTIPLIER  = 0.95   (wrist → tip lever correction)
-# SPEED_SANITY_CAP_KMH = 130.0
+# BAT_TIP_MULTIPLIER  = 1.35   (wrist → tip lever correction)
+# SPEED_SANITY_CAP_KMH = 140.0
 # POWER_SCORE_CEILING_KMH = 140.0
+# SHOULDER_FALLBACK_PX = 60.0
 
 ### Shot classes (fixed, model was trained on these):
 # SHOT_CLASSES = ['cover', 'flick', 'pull', 'straight', 'sweep']
@@ -168,7 +206,7 @@
 
 ### If adding a new biomechanics metric:
 # 1. Add it to extract_biomechanics() return dict
-# 2. Add it to run_session_analysis() session_averages
+# 2. Add it to run_session_analysis() session_summary (or nested trend/flags_summary)
 # 3. Emit it in the shot WebSocket message in run_pipeline_ws_sync()
 # 4. Update renderBiomechCard() in App.js to display it
 # 5. Update buildShotCard() in ReportModal.js
@@ -198,7 +236,10 @@
 
 ### Wagon Wheel API (wagonWheel.js public methods):
 # WagonWheel.init(canvasEl)        ← call once on init
-# WagonWheel.drawSpoke(shotType, onDone)   ← animates one spoke
+# WagonWheel.drawSpoke(shotType, shotScore, headStability, batSpeed, onDone)
+#   - line width encodes shotScore (1.5px → 5px)
+#   - alpha encodes headStability (min 0.25)
+#   - tooltip uses shotType + shotScore + headStability + batSpeed
 # WagonWheel.clearAll()            ← resets canvas + state
 # WagonWheel.setHand('left'|'right')       ← flips angle configs
 # WagonWheel.getSpokeCount()       ← returns number of drawn spokes
@@ -252,11 +293,8 @@
 ## ── KNOWN ISSUES TO FIX ─────────────────────────────────────────
 
 ### 1. Login Page
-# PROBLEM: Login uses alert() for errors — bad UX. gateMessage div exists
-# but is not always populated before alert() fires.
-# FIX: Remove all alert() calls in signup()/login(). Show errors only
-# in #gateMessage div. Add loading state to gateLoginBtn during async call.
-# After successful login, smoothly hide authGate (add CSS transition).
+# PROBLEM: Login flow still contains alert() fallback paths.
+# TARGET: Remove alert-based UX; keep errors in #gateMessage only.
 
 ### 2. Session Comparison View — fixed (see SESSION COMPARISON MODAL)
 # Prior issues (single-session compare, empty states) are handled in refreshCompareSessionOptions()
@@ -341,3 +379,4 @@
 # ✗ Hard-code localhost URLs in frontend — use relative paths or config
 # ✗ Modify the WS message field names that the frontend switch-cases on
 # ✗ Rename the `results` jsonb structure without migrating all readers
+# ✗ Re-introduce classifier confidence % into player-facing shot cards/reports

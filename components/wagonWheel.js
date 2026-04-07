@@ -41,10 +41,21 @@ const WagonWheel = (() => {
 
   const spokes   = [];
   const zoneHits = { cover: 0, straight: 0, pull: 0, flick: 0, sweep: 0 };
+  let hoveredSpoke = null;
 
   function toCanvasAngle(deg) { return (deg - 90) * (Math.PI / 180); }
   function randomAngle(min, max) { return Math.random() * (max - min) + min; }
   function randomDistance()      { return 0.70 + Math.random() * 0.30; }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function hexToRgba(hex, alpha) {
+    if (!hex || typeof hex !== 'string' || !hex.startsWith('#') || hex.length !== 7) {
+      return `rgba(255,255,255,${alpha})`;
+    }
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
 
   // ── Field ──────────────────────────────────────────────────────────────────
   function drawField() {
@@ -329,7 +340,7 @@ const WagonWheel = (() => {
   }
 
   // ── Spoke animation ───────────────────────────────────────────────────────
-  function animateSpoke(angleDeg, color, glow, distanceFactor, onDone) {
+  function animateSpoke(shotType, shotScore, headStability, batSpeed, angleDeg, color, glow, distanceFactor, onDone) {
     const angleRad = toCanvasAngle(angleDeg);
     const spokeEnd = radius * 0.92 * distanceFactor;
     const endX     = cx + Math.cos(angleRad) * spokeEnd;
@@ -338,6 +349,12 @@ const WagonWheel = (() => {
     const startY   = impactY;
     const FRAMES   = 9;
     let frame      = 0;
+    const safeScore = clamp(Number(shotScore) || 0, 0, 10);
+    const safeHead = clamp(Number(headStability) || 0, 0, 100);
+    const safeSpeed = Number(batSpeed) || 0;
+    const lineW = 1.5 + (safeScore / 10) * 3.5;
+    const alpha = Math.max(0.25, safeHead / 100);
+    const strokeColor = hexToRgba(color, alpha);
 
     function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
@@ -353,8 +370,8 @@ const WagonWheel = (() => {
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.lineTo(curX, curY);
-      ctx.strokeStyle = color;
-      ctx.lineWidth   = 2.8;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth   = lineW;
       ctx.shadowColor = glow;
       ctx.shadowBlur  = 14;
       ctx.lineCap     = 'round';
@@ -363,7 +380,7 @@ const WagonWheel = (() => {
       const tipR = 3.5 + (1 - frame / FRAMES) * 3.5;
       ctx.beginPath();
       ctx.arc(curX, curY, tipR, 0, Math.PI * 2);
-      ctx.fillStyle   = color;
+      ctx.fillStyle   = strokeColor;
       ctx.shadowColor = glow;
       ctx.shadowBlur  = 22;
       ctx.fill();
@@ -372,7 +389,11 @@ const WagonWheel = (() => {
       if (frame < FRAMES) {
         requestAnimationFrame(step);
       } else {
-        spokes.push({ angleDeg, color, glow, distanceFactor, endX, endY });
+        spokes.push({
+          angleDeg, color, glow, distanceFactor, endX, endY,
+          shotType, shotScore: safeScore, headStability: safeHead, batSpeed: safeSpeed,
+          lineW, alpha,
+        });
         redrawAll();
         if (onDone) onDone();
       }
@@ -382,19 +403,20 @@ const WagonWheel = (() => {
 
   function drawAllSpokes() {
     spokes.forEach(sp => {
+      const strokeColor = hexToRgba(sp.color, sp.alpha != null ? sp.alpha : 0.75);
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(impactX, impactY);
       ctx.lineTo(sp.endX, sp.endY);
-      ctx.strokeStyle = sp.color;
-      ctx.lineWidth   = 2.5;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth   = sp.lineW || 2.5;
       ctx.shadowColor = sp.glow;
       ctx.shadowBlur  = 10;
       ctx.lineCap     = 'round';
       ctx.stroke();
       ctx.beginPath();
       ctx.arc(sp.endX, sp.endY, 4.5, 0, Math.PI * 2);
-      ctx.fillStyle   = sp.color;
+      ctx.fillStyle   = strokeColor;
       ctx.shadowColor = sp.glow;
       ctx.shadowBlur  = 16;
       ctx.fill();
@@ -407,12 +429,53 @@ const WagonWheel = (() => {
     });
   }
 
+  function drawTooltip(sp) {
+    if (!sp) return;
+    const type = String(sp.shotType || '').toUpperCase() || 'SHOT';
+    const score = Number(sp.shotScore || 0).toFixed(1);
+    const head = Math.round(Number(sp.headStability || 0));
+    const speed = Number(sp.batSpeed || 0);
+    const speedTxt = speed >= 140 ? '~140+ km/h' : `${speed.toFixed(1)} km/h`;
+    const line1 = `${type}  Score: ${score}/10`;
+    const line2 = `Head Control: ${head}/100  ·  Speed: ${speedTxt}`;
+
+    ctx.save();
+    ctx.font = "600 11px 'Manrope', Arial, sans-serif";
+    const w = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) + 24;
+    const h = 46;
+    let x = sp.endX + 12;
+    let y = sp.endY - h - 10;
+    if (x + w > canvas.width / (window.devicePixelRatio || 1) - 8) x = sp.endX - w - 12;
+    if (y < 8) y = sp.endY + 10;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    const dotColor = sp.shotScore >= 8 ? '#10B981' : sp.shotScore >= 6 ? '#06B6D4' : sp.shotScore >= 4 ? '#EAB308' : '#EF4444';
+    ctx.beginPath();
+    ctx.arc(x + 10, y + 14, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = dotColor;
+    ctx.fill();
+
+    ctx.fillStyle = '#E2E8F0';
+    ctx.fillText(line1, x + 18, y + 18);
+    ctx.fillStyle = '#CBD5E1';
+    ctx.fillText(line2, x + 10, y + 35);
+    ctx.restore();
+  }
+
   function redrawAll() {
     drawField();
     drawHeatZones();
     drawAllSpokes();
     drawPitch();
     drawImpactPoint();
+    drawTooltip(hoveredSpoke);
   }
 
   // ── Resize ────────────────────────────────────────────────────────────────
@@ -452,6 +515,26 @@ const WagonWheel = (() => {
     ctx    = canvas.getContext('2d');
     resize();
     redrawAll();
+    canvas.addEventListener('mousemove', (evt) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = evt.clientX - rect.left;
+      const my = evt.clientY - rect.top;
+      hoveredSpoke = null;
+      for (let i = spokes.length - 1; i >= 0; i--) {
+        const sp = spokes[i];
+        const dx = mx - sp.endX;
+        const dy = my - sp.endY;
+        if (Math.hypot(dx, dy) <= 10) {
+          hoveredSpoke = sp;
+          break;
+        }
+      }
+      redrawAll();
+    });
+    canvas.addEventListener('mouseleave', () => {
+      hoveredSpoke = null;
+      redrawAll();
+    });
     window.addEventListener('resize', () => { resize(); redrawAll(); });
   }
 
@@ -460,13 +543,14 @@ const WagonWheel = (() => {
     currentHand = hand;
     SHOT_CONFIG  = hand === 'right' ? SHOT_CONFIG_RIGHT : SHOT_CONFIG_LEFT;
     // Clear previous session marks
+    hoveredSpoke = null;
     spokes.length = 0;
     zoneHits.cover = zoneHits.straight = zoneHits.pull =
     zoneHits.flick = zoneHits.sweep    = 0;
     redrawAll();
   }
 
-  function drawSpoke(shotType, onDone) {
+  function drawSpoke(shotType, shotScore, headStability, batSpeed, onDone) {
     const cfg = SHOT_CONFIG[shotType];
     if (!cfg) {
       console.warn(`[WagonWheel] Unknown shot type: "${shotType}" for hand: ${currentHand}`);
@@ -476,10 +560,11 @@ const WagonWheel = (() => {
     if (zoneHits[shotType] !== undefined) zoneHits[shotType]++;
     const angle = randomAngle(cfg.min, cfg.max);
     const dist  = randomDistance();
-    animateSpoke(angle, cfg.color, cfg.glowColor, dist, onDone);
+    animateSpoke(shotType, shotScore, headStability, batSpeed, angle, cfg.color, cfg.glowColor, dist, onDone);
   }
 
   function clearAll() {
+    hoveredSpoke = null;
     spokes.length = 0;
     zoneHits.cover = zoneHits.straight = zoneHits.pull =
     zoneHits.flick = zoneHits.sweep    = 0;

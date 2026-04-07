@@ -88,12 +88,12 @@ SHOULDER_WIDTH_M         = 0.45
 # Wrist velocity underestimates bat-tip speed because the bat is a lever.
 # 1.35 is a conservative midpoint (range 1.25-1.50).
 # Replace with a measured value once you have radar or Hawk-Eye ground truth.
-BAT_TIP_MULTIPLIER       = 0.95
+BAT_TIP_MULTIPLIER       = 1.35
 # km/h ceiling for power_score = 100.  120 km/h = hard attacking shot.
 POWER_SCORE_CEILING_KMH  = 140.0
 
-SPEED_SANITY_CAP_KMH     = 130.0
-SHOULDER_FALLBACK_PX     = 89.0          # session-avg, not fixed 60
+SPEED_SANITY_CAP_KMH     = 140.0
+SHOULDER_FALLBACK_PX     = 60.0
 MIN_SHOULDER_PX          = 25.0
 
 # -- COCO keypoint indices
@@ -618,9 +618,8 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
 
     # 5. SHOT SCORE  (speed component uses km/h, ceiling = POWER_SCORE_CEILING_KMH)
     speed_norm = min(1.0, peak_swing_speed_kmh / POWER_SCORE_CEILING_KMH)
-    head_norm  = head_stability / 100
     stab_norm  = stability_score / 100
-    shot_score = round((0.4*speed_norm + 0.25*head_norm + 0.35*stab_norm)*10, 1)
+    shot_score = round((0.55*speed_norm + 0.45*stab_norm)*10, 1)
 
     if shot_score >= 8:   shot_quality = "Excellent"
     elif shot_score >= 6: shot_quality = "Good"
@@ -699,22 +698,16 @@ def run_session_analysis(shot_log, session_info):
         return safe_mean([s.get(key) for s in shots])
 
     trend = {
-        'peak_swing_speed': {
-            'first_half' : half_mean(first_half,  'peak_swing_speed'),
-            'second_half': half_mean(second_half, 'peak_swing_speed'),
-        },
-        'head_stability': {
-            'first_half' : half_mean(first_half,  'head_stability'),
-            'second_half': half_mean(second_half, 'head_stability'),
-        },
-        'stability_score': {
-            'first_half' : half_mean(first_half,  'stability_score'),
-            'second_half': half_mean(second_half, 'stability_score'),
-        },
+        'first_half_speed'          : half_mean(first_half,  'peak_swing_speed'),
+        'second_half_speed'         : half_mean(second_half, 'peak_swing_speed'),
+        'first_half_head_stability' : half_mean(first_half,  'head_stability'),
+        'second_half_head_stability': half_mean(second_half, 'head_stability'),
+        'first_half_stability_score': half_mean(first_half,  'stability_score'),
+        'second_half_stability_score': half_mean(second_half, 'stability_score'),
     }
 
-    s1 = trend['peak_swing_speed']['first_half']
-    s2 = trend['peak_swing_speed']['second_half']
+    s1 = trend['first_half_speed']
+    s2 = trend['second_half_speed']
     fatigue_flag = (s1 is not None and s2 is not None and s2 < s1 * 0.80)
 
     front_count   = sum(1 for e in confirmed if e.get('footwork') == 'front_foot')
@@ -723,10 +716,9 @@ def run_session_analysis(shot_log, session_info):
 
     valid_speeds = [s for s in all_speeds if s is not None]
     avg_speed    = round(float(np.mean(valid_speeds)), 1) if valid_speeds else None
-    power_score  = round(min(100.0, (avg_speed / POWER_SCORE_CEILING_KMH) * 100), 1) if avg_speed else None
-
-    head_score  = safe_mean(all_head)
-    stab_score  = safe_mean(all_stab)
+    avg_head = safe_mean(all_head)
+    avg_stab = safe_mean(all_stab)
+    avg_shot_score = safe_mean([e.get('shot_score') for e in confirmed])
 
     alerts = []
     all_flags   = [f for e in confirmed for f in e.get('flags', [])]
@@ -794,24 +786,27 @@ def run_session_analysis(shot_log, session_info):
             'shot_quality': worst_shot.get('shot_quality', '-'),
             'timestamp'   : worst_shot['timestamp'],
         },
-        'session_scores'     : {
-            'power'           : power_score,
-            'head_discipline' : head_score,
-            'stability'       : stab_score,
-        },
-        'session_averages'   : {
-            'peak_swing_speed': safe_mean(all_speeds),   # km/h
-            'head_stability'  : safe_mean(all_head),
-            'stability_score' : safe_mean(all_stab),
+        'session_summary'    : {
+            'shots_confirmed'      : len(confirmed),
+            'shots_total_detected' : len(shot_log),
+            'avg_bat_speed_kmh'    : avg_speed,
+            'avg_head_stability'   : avg_head,
+            'avg_stability_score'  : avg_stab,
+            'avg_shot_score'       : avg_shot_score,
+            'fatigue_detected'     : fatigue_flag,
+            'trend'                : trend,
+            'flags_summary'        : {
+                'HEAD_MOVING_count'      : flag_counts.get('HEAD_MOVING', 0),
+                'UNSTABLE_count'         : flag_counts.get('UNSTABLE', 0),
+                'FOOTWORK_UNCLEAR_count' : flag_counts.get('FOOTWORK_UNCLEAR', 0),
+            },
+            'by_shot_type'         : type_stats,
         },
         'footwork_summary'   : {
             'front_foot_count': front_count,
             'back_foot_count' : back_count,
             'neutral_count'   : neutral_count,
         },
-        'trend'              : trend,
-        'fatigue_detected'   : fatigue_flag,
-        'by_shot_type'       : type_stats,
         'coaching_alerts'    : alerts,
     }
 
@@ -1211,14 +1206,20 @@ def print_summary(shot_log, session_info, analysis):
         wr = analysis.get('worst_shot', {})
         if b:  print(f"\n  Best Shot:  #{b['shot_num']} {b['label']} ({b['shot_score']}/10)")
         if wr: print(f"  Worst Shot: #{wr['shot_num']} {wr['label']} ({wr['shot_score']}/10)")
-        scores = analysis.get('session_scores', {})
-        avgs   = analysis.get('session_averages', {})
-        print("\n  Session Scores (confirmed shots only):")
-        for k, v in scores.items():
-            if v is not None: print(f"    {k}: {v:.1f}")
-        # CALIBRATION: avg speed in km/h
-        spd = avgs.get('peak_swing_speed')
-        if spd: print(f"  Avg bat speed: {spd:.1f} km/h")
+        summary = analysis.get('session_summary', {})
+        print("\n  Session Summary (confirmed shots only):")
+        used = summary.get('shots_confirmed')
+        total = summary.get('shots_total_detected')
+        if used is not None and total is not None:
+            print(f"    shots used: {used}/{total}")
+        hs = summary.get('avg_head_stability')
+        st = summary.get('avg_stability_score')
+        ss = summary.get('avg_shot_score')
+        spd = summary.get('avg_bat_speed_kmh')
+        if hs is not None: print(f"    avg_head_stability: {hs:.1f}/100")
+        if st is not None: print(f"    avg_stability_score: {st:.1f}/100")
+        if ss is not None: print(f"    avg_shot_score: {ss:.1f}/10")
+        if spd is not None: print(f"    avg_bat_speed_kmh: {spd:.1f}")
     print("="*60 + "\n")
 
 # -----------------------------------------------------------------

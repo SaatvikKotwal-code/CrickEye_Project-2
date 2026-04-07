@@ -207,11 +207,22 @@ function renderBiomechCard(shot) {
   if (!feed) return;
   const color  = SHOT_COLORS[shot.label]  || '#888';
   const qcolor = QUALITY_COLORS[shot.shot_quality] || '#888';
-  const conf   = Math.round(shot.conf * 100);
   const score  = shot.shot_score || 0;
   const sc = score>=8?'#10B981':score>=6?'#06B6D4':score>=4?'#EAB308':'#EF4444';
   const fl = FOOTWORK_LABELS[shot.footwork] || shot.footwork || '—';
-  const fh = (shot.flags||[]).map(f=>`<span class="biomech-flag">${f}</span>`).join('');
+  const head = Math.round(shot.head_stability || 0);
+  const stab = Math.round(shot.stability_score || 0);
+  const speedRaw = Number(shot.peak_swing_speed || 0);
+  const speedTxt = speedRaw >= 140 ? '~140+' : speedRaw.toFixed(1);
+  const metricBand = (v) => {
+    if (v >= 80) return { label: 'Elite', color: '#10B981' };
+    if (v >= 65) return { label: 'Good', color: '#10B981' };
+    if (v >= 50) return { label: 'Workable', color: '#EAB308' };
+    return { label: 'Needs Work', color: '#EF4444' };
+  };
+  const hb = metricBand(head);
+  const sb = metricBand(stab);
+  const fh = (shot.flags||[]).map(f=>`<span class="biomech-flag" data-flag="${escapeHtml(String(f).split(':')[0])}">${escapeHtml(f)}</span>`).join('');
   const card = document.createElement('div');
   card.className = 'biomech-card';
   card.id = `biomech-card-${shot.shot_num}`;
@@ -221,7 +232,6 @@ function renderBiomechCard(shot) {
       <div class="biomech-card-title">
         <span class="biomech-shot-num">#${shot.shot_num}</span>
         <span class="biomech-shot-label">${(SHOT_LABELS[shot.label]||shot.label).toUpperCase()}</span>
-        <span class="biomech-conf-badge" style="color:${color};border-color:${color}40;background:${color}18">${conf}%</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span class="biomech-footwork">${fl}</span>
@@ -229,17 +239,16 @@ function renderBiomechCard(shot) {
       </div>
     </div>
     <div class="biomech-metrics">
-      <div class="biomech-metric"><span class="biomech-metric-val">${(shot.peak_swing_speed||0).toFixed(1)}</span><span class="biomech-metric-lbl">BAT SPEED (km/h)</span></div>
-      <div class="biomech-metric"><span class="biomech-metric-val">${Math.round(shot.head_stability||0)}</span><span class="biomech-metric-lbl">HEAD STAB</span></div>
-      <div class="biomech-metric"><span class="biomech-metric-val">${Math.round(shot.stability_score||0)}</span><span class="biomech-metric-lbl">STABILITY</span></div>
-      <div class="biomech-metric"><span class="biomech-metric-val">${shot.timestamp||'—'}</span><span class="biomech-metric-lbl">TIME</span></div>
+      <div class="biomech-metric"><span class="biomech-metric-val">${head}</span><span class="biomech-metric-lbl">HEAD · ${hb.label}</span></div>
+      <div class="biomech-metric"><span class="biomech-metric-val">${stab}</span><span class="biomech-metric-lbl">BALANCE · ${sb.label}</span></div>
+      <div class="biomech-metric"><span class="biomech-metric-val">${speedTxt}</span><span class="biomech-metric-lbl">BAT SPEED (km/h)</span></div>
     </div>
     <div class="biomech-score-row">
       <span class="biomech-score-label">SHOT SCORE</span>
       <div class="biomech-score-track"><div class="biomech-score-fill" style="width:${score*10}%;background:${sc}"></div></div>
       <span class="biomech-score-num">${score}<span style="font-size:.6em;color:#94A3B8">/10</span></span>
     </div>
-    ${fh?`<div class="biomech-flags">${fh}</div>`:''}`;
+    ${fh?`<div class="biomech-flags">${fh}</div>`:'<div class="biomech-flags"><span class="biomech-flag biomech-flag-ok">NO FLAGS</span></div>'}`;
   feed.appendChild(card);
   feed.scrollTop = feed.scrollHeight;
 }
@@ -274,21 +283,21 @@ function updateSessionRating(avgScore) {
 function renderSessionReport(analysis) {
   const container = document.getElementById('session-report');
   if (!container || !analysis || analysis.error) return;
-  const sc = analysis.session_scores||{};
+  const sm = getAnalysisSummary(analysis);
   const best  = analysis.best_shot||{};
   const worst = analysis.worst_shot||{};
   const fw    = analysis.footwork_summary||{};
   const alerts= analysis.coaching_alerts||[];
-  const trend = analysis.trend||{};
-  const pv = sc.power!=null ? Math.round(sc.power) : '—';
-  const hv = sc.head_discipline!=null ? Math.round(sc.head_discipline) : '—';
-  const sv = sc.stability!=null ? Math.round(sc.stability) : '—';
+  const trend = sm.trend||{};
+  const hv = sm.avgHead!=null ? Math.round(sm.avgHead) : '—';
+  const sv = sm.avgStability!=null ? Math.round(sm.avgStability) : '—';
+  const avgSpeed = sm.avgSpeed!=null ? Number(sm.avgSpeed).toFixed(1) : '—';
   function trendBar(key) {
-    const t=trend[key]||{}; const f1=t.first_half||0; const f2=t.second_half||0;
+    const f1 = trend[`first_half_${key}`] || 0;
+    const f2 = trend[`second_half_${key}`] || 0;
     const mx=Math.max(f1,f2,1); const w1=Math.round((f1/mx)*100); const w2=Math.round((f2/mx)*100);
     const arr=f2>f1?'↑':f2<f1?'↓':'→'; const ac=f2>f1?'#10B981':f2<f1?'#EF4444':'#EAB308';
-    // CALIBRATION: swing speed trend label now shows km/h unit
-    const lbl=key==='peak_swing_speed'?'BAT SPEED (km/h)':key==='head_stability'?'HEAD STAB':'STABILITY';
+    const lbl=key==='speed'?'BAT SPEED (km/h)':key==='head_stability'?'HEAD CONTROL':'BALANCE';
     return `<div class="trend-row"><span class="trend-label">${lbl}</span><div class="trend-halves"><div class="trend-half" style="width:${w1}px;max-width:80px"></div><div class="trend-half second" style="width:${w2}px;max-width:80px"></div></div><span class="trend-arrow" style="color:${ac}">${arr}</span><span class="trend-val">${Math.round(f1||0)} → ${Math.round(f2||0)}</span></div>`;
   }
   const ah = alerts.map((a,i)=>`<div class="report-alert ${a.severity}" style="animation-delay:${i*.1}s"><div class="report-alert-header"><span class="report-alert-sev">${a.severity}</span><span class="report-alert-metric">${a.metric}</span></div><div class="report-alert-msg">${a.message}</div><div class="report-alert-action">▸ ${a.action}</div></div>`).join('');
@@ -296,9 +305,9 @@ function renderSessionReport(analysis) {
   container.innerHTML = `
     <div class="report-section-title">SESSION SCORES</div>
     <div class="report-grid">
-      <div class="report-score-card" style="--accent:#F97316"><div class="report-score-val" style="color:#F97316">${pv}<span style="font-size:.6em">/100</span></div><div class="report-score-lbl">POWER</div></div>
-      <div class="report-score-card" style="--accent:#06B6D4"><div class="report-score-val" style="color:#06B6D4">${hv}<span style="font-size:.6em">/100</span></div><div class="report-score-lbl">HEAD DISCIPLINE</div></div>
-      <div class="report-score-card" style="--accent:#10B981"><div class="report-score-val" style="color:#10B981">${sv}<span style="font-size:.6em">/100</span></div><div class="report-score-lbl">STABILITY</div></div>
+      <div class="report-score-card" style="--accent:#06B6D4"><div class="report-score-val" style="color:#06B6D4">${hv}<span style="font-size:.6em">/100</span></div><div class="report-score-lbl">HEAD CONTROL</div></div>
+      <div class="report-score-card" style="--accent:#10B981"><div class="report-score-val" style="color:#10B981">${sv}<span style="font-size:.6em">/100</span></div><div class="report-score-lbl">BALANCE</div></div>
+      <div class="report-score-card" style="--accent:#F97316"><div class="report-score-val" style="color:#F97316">${avgSpeed}<span style="font-size:.45em">km/h</span></div><div class="report-score-lbl">BAT SPEED (SECONDARY)</div></div>
     </div>
     <div class="report-section-title">HIGHLIGHTS</div>
     <div class="report-highlight-row">
@@ -311,21 +320,20 @@ function renderSessionReport(analysis) {
       <div class="report-fw-cell"><div class="report-fw-count" style="color:#F97316">${fw.back_foot_count||0}</div><div class="report-fw-lbl">BACK FOOT</div></div>
       <div class="report-fw-cell"><div class="report-fw-count" style="color:#EAB308">${fw.neutral_count||0}</div><div class="report-fw-lbl">NEUTRAL</div></div>
     </div>
-    <div class="report-section-title">SESSION TREND${analysis.fatigue_detected?' &nbsp;<span class="fatigue-tag">⚡ FATIGUE DETECTED</span>':''}</div>
-    ${trendBar('peak_swing_speed')}${trendBar('head_stability')}${trendBar('stability_score')}
+    <div class="report-section-title">SESSION TREND${sm.fatigueDetected?' &nbsp;<span class="fatigue-tag">⚡ FATIGUE DETECTED</span>':''}</div>
+    ${trendBar('head_stability')}${trendBar('stability_score')}${trendBar('speed')}
     ${alerts.length?`<div class="report-section-title">COACHING ALERTS</div><div class="report-alerts">${ah}</div>`:''}`;
   container.classList.add('visible');
 }
 
 function updateStatRingsFromAnalysis(analysis) {
   if (!analysis) return;
-  const sc = analysis.session_scores||{}; const av = analysis.session_averages||{};
+  const sm = getAnalysisSummary(analysis);
   const cfgs = [
-    {id:'ring-timing',  pct:Math.min(100,sc.head_discipline||89),numVal:Math.round(sc.head_discipline||89),suffix:'%',label:'HEAD DISC.'},
-    {id:'ring-middling',pct:Math.min(100,sc.stability||88),      numVal:Math.round(sc.stability||88),      suffix:'%',label:'STABILITY'},
-    {id:'ring-impact',  pct:Math.min(100,sc.power||78),          numVal:Math.round(sc.power||78),          suffix:'', label:'POWER'},
-    // CALIBRATION: AVG SPEED ring — value is now km/h, ceiling 130 km/h = full ring
-    {id:'ring-backlift',pct:Math.min(100,((av.peak_swing_speed||0)/130)*100),numVal:Math.round(av.peak_swing_speed||0),suffix:'km/h',label:'AVG SPEED'},
+    {id:'ring-timing',  pct:Math.min(100,sm.avgHead||89),numVal:Math.round(sm.avgHead||89),suffix:'%',label:'HEAD CTRL'},
+    {id:'ring-middling',pct:Math.min(100,sm.avgStability||88),numVal:Math.round(sm.avgStability||88),suffix:'%',label:'BALANCE'},
+    {id:'ring-impact',  pct:Math.min(100,((sm.avgSpeed||0)/140)*100),numVal:Math.round(sm.avgSpeed||0),suffix:'km/h',label:'AVG SPEED'},
+    {id:'ring-backlift',pct:Math.min(100,(sm.avgShotScore||0)*10),numVal:Number(sm.avgShotScore||0).toFixed(1),suffix:'/10',label:'SHOT SCORE'},
   ];
   const circ = 2*Math.PI*32;
   cfgs.forEach((c,i)=>{
@@ -351,11 +359,10 @@ function replaceAnalysisCards(analysis) {
     c.querySelector('.analysis-body').textContent=a.message+' '+a.action;
     const se=c.querySelector('.analysis-score');se.textContent=LBLS[a.severity]||a.severity;se.className=`analysis-score ${CLS[a.severity]||''}`;
   });
-  const av=analysis.session_averages||{};
+  const sm=getAnalysisSummary(analysis);
   const fills=[
     {icon:'🏃',title:'FOOTWORK BREAKDOWN',score:'INFO',cls:'good',body:(()=>{const fw=analysis.footwork_summary||{};const tot=(fw.front_foot_count||0)+(fw.back_foot_count||0)+(fw.neutral_count||0);if(!tot)return'No data.';const fp=Math.round((fw.front_foot_count||0)/tot*100);const bp=Math.round((fw.back_foot_count||0)/tot*100);return`Front foot ${fp}% · Back foot ${bp}% · Neutral ${100-fp-bp}%.`;})()},
-    // CALIBRATION: session averages card now shows km/h for bat speed
-    {icon:'📊',title:'SESSION AVERAGES',score:'STATS',cls:'good',body:`Bat Speed: ${(av.peak_swing_speed||0).toFixed(1)} km/h · Head: ${Math.round(av.head_stability||0)}/100 · Stab: ${Math.round(av.stability_score||0)}/100`},
+    {icon:'📊',title:'SESSION AVERAGES',score:'STATS',cls:'good',body:`Bat Speed: ${(sm.avgSpeed||0).toFixed(1)} km/h · Head: ${Math.round(sm.avgHead||0)}/100 · Balance: ${Math.round(sm.avgStability||0)}/100`},
   ];
   fills.forEach((fc,j)=>{
     const c=cards[alerts.length+j];
@@ -444,6 +451,35 @@ function getSessionAnalysis(results) {
   if (!results || typeof results !== 'object') return null;
   if (results.replay && results.analysis && typeof results.analysis === 'object') return results.analysis;
   return results;
+}
+
+function getAnalysisSummary(analysis) {
+  const ss = analysis?.session_summary || {};
+  const av = analysis?.session_averages || {};
+  const tr = ss.trend || analysis?.trend || {};
+  const flags = ss.flags_summary || {};
+  return {
+    shotsConfirmed: ss.shots_confirmed ?? analysis?.shots_confirmed ?? 0,
+    shotsTotalDetected: ss.shots_total_detected ?? analysis?.shots_total ?? 0,
+    avgSpeed: ss.avg_bat_speed_kmh ?? av.peak_swing_speed ?? null,
+    avgHead: ss.avg_head_stability ?? av.head_stability ?? null,
+    avgStability: ss.avg_stability_score ?? av.stability_score ?? null,
+    avgShotScore: ss.avg_shot_score ?? null,
+    fatigueDetected: ss.fatigue_detected ?? analysis?.fatigue_detected ?? false,
+    trend: {
+      first_half_speed: tr.first_half_speed ?? tr.peak_swing_speed?.first_half ?? null,
+      second_half_speed: tr.second_half_speed ?? tr.peak_swing_speed?.second_half ?? null,
+      first_half_head_stability: tr.first_half_head_stability ?? tr.head_stability?.first_half ?? null,
+      second_half_head_stability: tr.second_half_head_stability ?? tr.head_stability?.second_half ?? null,
+      first_half_stability_score: tr.first_half_stability_score ?? tr.stability_score?.first_half ?? null,
+      second_half_stability_score: tr.second_half_stability_score ?? tr.stability_score?.second_half ?? null,
+    },
+    flagsSummary: {
+      HEAD_MOVING_count: flags.HEAD_MOVING_count ?? 0,
+      UNSTABLE_count: flags.UNSTABLE_count ?? 0,
+      FOOTWORK_UNCLEAR_count: flags.FOOTWORK_UNCLEAR_count ?? 0,
+    },
+  };
 }
 
 /**
@@ -842,9 +878,12 @@ function buildMultiLineCompareGraph(entries, dataKey, label, maxVal) {
 function formatSessionCardSummary(r) {
   if (!r || typeof r !== 'object' || r.error) return '';
   const parts = [];
-  if (r.shots_confirmed != null) parts.push(`${r.shots_confirmed} confirmed shots`);
-  const av = r.session_averages || {};
-  if (av.peak_swing_speed != null) parts.push(`Avg ${Number(av.peak_swing_speed).toFixed(1)} km/h`);
+  const sm = getAnalysisSummary(r);
+  if (sm.shotsConfirmed != null) {
+    if (sm.shotsTotalDetected && sm.shotsTotalDetected !== sm.shotsConfirmed) parts.push(`${sm.shotsConfirmed}/${sm.shotsTotalDetected} used`);
+    else parts.push(`${sm.shotsConfirmed} confirmed shots`);
+  }
+  if (sm.avgSpeed != null) parts.push(`Avg ${Number(sm.avgSpeed).toFixed(1)} km/h`);
   const best = r.best_shot;
   if (best && best.label) parts.push(`Best: ${shotLabelPretty(best.label)}`);
   return parts.join(' · ');
@@ -860,18 +899,17 @@ function buildSessionDetailHtml(session) {
 
   let metrics = '';
   if (r && typeof r === 'object' && !r.error) {
-    const av = r.session_averages || {};
-    const sc = r.session_scores || {};
+    const sm = getAnalysisSummary(r);
     const hand = r.session_handedness || '—';
     const stance = r.stance_conf != null ? `${Math.round(Number(r.stance_conf) * 100)}%` : '—';
     metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Performance summary</h3>
       <div class="session-metric-grid">
         <div class="session-metric"><span class="session-metric-label">Stance</span><span class="session-metric-val">${escapeHtml(hand)}</span><span class="session-metric-sub">confidence ${escapeHtml(stance)}</span></div>
-        <div class="session-metric"><span class="session-metric-label">Confirmed shots</span><span class="session-metric-val">${r.shots_confirmed != null ? escapeHtml(String(r.shots_confirmed)) : '—'}</span><span class="session-metric-sub">of ${r.shots_total != null ? escapeHtml(String(r.shots_total)) : '—'} detected</span></div>
-        <div class="session-metric"><span class="session-metric-label">Avg bat speed</span><span class="session-metric-val">${av.peak_swing_speed != null ? escapeHtml(Number(av.peak_swing_speed).toFixed(1)) : '—'}</span><span class="session-metric-sub">km/h</span></div>
-        <div class="session-metric"><span class="session-metric-label">Head stability</span><span class="session-metric-val">${av.head_stability != null ? escapeHtml(Math.round(Number(av.head_stability)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
-        <div class="session-metric"><span class="session-metric-label">Stability score</span><span class="session-metric-val">${av.stability_score != null ? escapeHtml(Math.round(Number(av.stability_score)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
-        <div class="session-metric"><span class="session-metric-label">Power / discipline</span><span class="session-metric-val">${sc.power != null ? escapeHtml(String(sc.power)) : '—'} / ${sc.head_discipline != null ? escapeHtml(String(sc.head_discipline)) : '—'}</span><span class="session-metric-sub">session scores</span></div>
+        <div class="session-metric"><span class="session-metric-label">Shots used</span><span class="session-metric-val">${sm.shotsConfirmed != null ? escapeHtml(String(sm.shotsConfirmed)) : '—'}</span><span class="session-metric-sub">of ${sm.shotsTotalDetected != null ? escapeHtml(String(sm.shotsTotalDetected)) : '—'} detected</span></div>
+        <div class="session-metric"><span class="session-metric-label">Avg bat speed</span><span class="session-metric-val">${sm.avgSpeed != null ? escapeHtml(Number(sm.avgSpeed).toFixed(1)) : '—'}</span><span class="session-metric-sub">km/h</span></div>
+        <div class="session-metric"><span class="session-metric-label">Head control</span><span class="session-metric-val">${sm.avgHead != null ? escapeHtml(Math.round(Number(sm.avgHead)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
+        <div class="session-metric"><span class="session-metric-label">Body balance</span><span class="session-metric-val">${sm.avgStability != null ? escapeHtml(Math.round(Number(sm.avgStability)).toString()) : '—'}</span><span class="session-metric-sub">avg / 100</span></div>
+        <div class="session-metric"><span class="session-metric-label">Avg shot score</span><span class="session-metric-val">${sm.avgShotScore != null ? escapeHtml(Number(sm.avgShotScore).toFixed(1)) : '—'}</span><span class="session-metric-sub">/10</span></div>
       </div></section>`;
 
     const best = r.best_shot;
@@ -887,20 +925,22 @@ function buildSessionDetailHtml(session) {
       metrics += '</div></section>';
     }
 
-    const trend = r.trend;
+    const trend = sm.trend;
     if (trend && typeof trend === 'object') {
-      const rows = ['peak_swing_speed', 'head_stability', 'stability_score'].map((key) => {
-        const o = trend[key];
-        if (!o || (o.first_half == null && o.second_half == null)) return '';
-        const label = key === 'peak_swing_speed' ? 'Bat speed (km/h)' : key === 'head_stability' ? 'Head stability' : 'Stability score';
-        const u1 = o.first_half != null ? Number(o.first_half).toFixed(1) : '—';
-        const u2 = o.second_half != null ? Number(o.second_half).toFixed(1) : '—';
+      const rows = [
+        ['Bat speed (km/h)', trend.first_half_speed, trend.second_half_speed],
+        ['Head control', trend.first_half_head_stability, trend.second_half_head_stability],
+        ['Body balance', trend.first_half_stability_score, trend.second_half_stability_score],
+      ].map(([label, a, b]) => {
+        if (a == null && b == null) return '';
+        const u1 = a != null ? Number(a).toFixed(1) : '—';
+        const u2 = b != null ? Number(b).toFixed(1) : '—';
         return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(u1)}</td><td>${escapeHtml(u2)}</td></tr>`;
       }).join('');
       if (rows) {
         metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">First half vs second half</h3>
           <table class="session-trend-table"><thead><tr><th>Metric</th><th>1st half</th><th>2nd half</th></tr></thead><tbody>${rows}</tbody></table>
-          ${r.fatigue_detected ? '<p class="session-fatigue-note">Fatigue pattern suggested (speed dropped in second half).</p>' : ''}</section>`;
+          ${sm.fatigueDetected ? '<p class="session-fatigue-note">Fatigue pattern suggested (speed dropped in second half).</p>' : ''}</section>`;
       }
     }
 
@@ -1021,7 +1061,13 @@ function buildMonthPlayerInsightHtml(monthSessions, analyses) {
   const last = analyses[n - 1];
 
   function sav(r, k) {
-    const v = r.session_averages?.[k];
+    const sm = getAnalysisSummary(r);
+    const map = {
+      peak_swing_speed: sm.avgSpeed,
+      head_stability: sm.avgHead,
+      stability_score: sm.avgStability,
+    };
+    const v = map[k];
     return v != null && !Number.isNaN(Number(v)) ? Number(v) : null;
   }
 
@@ -1045,12 +1091,7 @@ function buildMonthPlayerInsightHtml(monthSessions, analyses) {
     if (stL - stF > 4) improved += 1;
     else if (stF - stL > 4) declined += 1;
   }
-  const powerF = Number(first.session_scores?.power);
-  const powerL = Number(last.session_scores?.power);
-  if (!Number.isNaN(powerF) && !Number.isNaN(powerL)) {
-    if (powerL - powerF > 5) improved += 1;
-    else if (powerF - powerL > 5) declined += 1;
-  }
+  // Power score removed from backend schema; momentum uses direct speed/head/stability deltas.
 
   let tone = 'mixed';
   let headline = 'Up and down this month — here is what stood out';
@@ -1100,7 +1141,7 @@ function buildMonthPlayerInsightHtml(monthSessions, analyses) {
     if (coachingAdded >= 2) break;
   }
 
-  const fatN = analyses.filter((x) => x.fatigue_detected).length;
+  const fatN = analyses.filter((x) => getAnalysisSummary(x).fatigueDetected).length;
   if (fatN >= 2) {
     bullets.push(
       `In ${fatN} of ${n} sessions, bat speed fell in the second half — shorter blocks or a quick break mid-session can help.`
@@ -1229,7 +1270,7 @@ function renderSessionComparison(sessionA, sessionB) {
       'head',
       colorA,
       colorB,
-      'Head Discipline (0–100) — stillness of head through stroke',
+      'Head Control (0–100) — stillness of head through stroke',
       100,
       legendA,
       legendB
@@ -1341,7 +1382,7 @@ function renderMonthSessionsComparison() {
       'Bat Speed (km/h) — calibrated bat tip speed across shots',
       140
     ),
-    buildMultiLineCompareGraph(entries, 'head', 'Head Discipline (0–100) — stillness of head through stroke', 100),
+    buildMultiLineCompareGraph(entries, 'head', 'Head Control (0–100) — stillness of head through stroke', 100),
     buildMultiLineCompareGraph(entries, 'stab', 'Stability Score (0–100) — body balance and minimal sway', 100),
     buildMultiLineCompareGraph(entries, 'score', 'Overall Shot Score (/10) — composite quality rating per shot', 10),
   ].join('');
@@ -1817,8 +1858,8 @@ function flushDashboard() {
     updateStatRingsFromAnalysis(state.sessionAnalysis);
     replaceAnalysisCards(state.sessionAnalysis);
 
-    const av = state.sessionAnalysis.session_averages || {};
-    let avgScore = av.shot_score != null ? av.shot_score : null;
+    const sm = getAnalysisSummary(state.sessionAnalysis);
+    let avgScore = sm.avgShotScore != null ? sm.avgShotScore : null;
     if (avgScore === null && state.shotLog.length > 0) {
       const confirmed = state.shotLog.filter(s => s.conf > 0.5);
       if (confirmed.length > 0) {
@@ -2176,7 +2217,12 @@ function drawSpokeNow(spoke, onSpokeDrawn) {
   if (zone) state.displayedZoneCounts[zone]++;
   updateOverTableLive();
   updateDistributionLive();
-  WagonWheel.drawSpoke(spoke.label, () => {
+  WagonWheel.drawSpoke(
+    spoke.label,
+    Number(spoke.msg?.shot_score || 0),
+    Number(spoke.msg?.head_stability || 0),
+    Number(spoke.msg?.peak_swing_speed || 0),
+    () => {
     shotCount.textContent = WagonWheel.getSpokeCount();
     if (onSpokeDrawn) onSpokeDrawn();
   });
