@@ -85,6 +85,7 @@ const sessionCompareModal = document.getElementById('sessionCompareModal');
 const compareSessionA = document.getElementById('compareSessionA');
 const compareSessionB = document.getElementById('compareSessionB');
 const sessionCompareBody = document.getElementById('sessionCompareBody');
+const compareThisMonthBtn = document.getElementById('compareThisMonthBtn');
 const authGate         = document.getElementById('authGate');
 const gateEmail        = document.getElementById('gateEmail');
 const gatePassword     = document.getElementById('gatePassword');
@@ -496,6 +497,348 @@ function getSessionReplay(results) {
   return results.replay;
 }
 
+/** Per-shot rows for compare charts (same shape as ReportModal trendShots). */
+function getConfirmedTrendShotsFromResults(results) {
+  const replay = getSessionReplay(results);
+  if (!replay || !Array.isArray(replay.shots)) return [];
+  return replay.shots
+    .filter((s) => s.conf > 0.5)
+    .map((s) => ({
+      shot_num: s.shot_num,
+      speed: parseFloat((s.peak_swing_speed || 0).toFixed(1)),
+      head: Math.round(s.head_stability || 0),
+      stab: Math.round(s.stability_score || 0),
+      score: s.shot_score || 0,
+    }));
+}
+
+let _compareChartGradSeq = 0;
+
+/**
+ * Dual area-spline chart (SVG) — same geometry/style as ReportModal.buildLineGraph.
+ */
+function buildDualLineCompareGraph(seriesA, seriesB, dataKey, colorA, colorB, label, maxVal, legendA, legendB) {
+  const W = 520;
+  const H = 130;
+  const PL = 46;
+  const PR = 16;
+  const PT = 12;
+  const PB = 28;
+  const cW = W - PL - PR;
+  const cH = H - PT - PB;
+  const n = Math.max(seriesA.length, seriesB.length);
+  if (n === 0) {
+    return `<div class="compare-graph-empty">No per-shot replay data for this session.</div>`;
+  }
+
+  const allVals = [];
+  seriesA.forEach((s) => allVals.push(Number(s[dataKey]) || 0));
+  seriesB.forEach((s) => allVals.push(Number(s[dataKey]) || 0));
+  const max = Math.max(maxVal || 0, ...allVals, 1);
+
+  function xAt(i) {
+    if (n === 1) return PL + cW / 2;
+    return PL + (i / (n - 1)) * cW;
+  }
+
+  function buildPts(series) {
+    return series.map((s, i) => {
+      const x = xAt(i);
+      const v = Number(s[dataKey]) || 0;
+      const y = PT + cH - Math.max(0, Math.min(1, v / max)) * cH;
+      return { x, y, v, lbl: `#${s.shot_num}` };
+    });
+  }
+
+  const ptsA = buildPts(seriesA);
+  const ptsB = buildPts(seriesB);
+
+  function linePath(pts) {
+    if (!pts.length) return '';
+    return pts.reduce((acc, pt, i) => {
+      if (i === 0) return `M${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+      const prev = pts[i - 1];
+      const cpx = ((prev.x + pt.x) / 2).toFixed(1);
+      return `${acc} C${cpx},${prev.y.toFixed(1)} ${cpx},${pt.y.toFixed(1)} ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+    }, '');
+  }
+
+  function areaPath(linePathStr, pts) {
+    if (!linePathStr || !pts.length) return '';
+    return (
+      linePathStr +
+      ` L${pts[pts.length - 1].x.toFixed(1)},${(PT + cH).toFixed(1)}` +
+      ` L${pts[0].x.toFixed(1)},${(PT + cH).toFixed(1)} Z`
+    );
+  }
+
+  const pathA = linePath(ptsA);
+  const pathB = linePath(ptsB);
+  const areaA = areaPath(pathA, ptsA);
+  const areaB = areaPath(pathB, ptsB);
+
+  const ticks = [0, 0.5, 1].map((t) => ({
+    y: (PT + cH - t * cH).toFixed(1),
+    v: Math.round(t * max),
+  }));
+
+  const gidA = `cg_${++_compareChartGradSeq}_a`;
+  const gidB = `cg_${_compareChartGradSeq}_b`;
+
+  const xLabels = Array.from({ length: n }, (_, i) => ({
+    x: xAt(i),
+    lbl: `#${i + 1}`,
+  }));
+
+  function avgStr(series, digits) {
+    if (!series.length) return '—';
+    const sum = series.reduce((a, s) => a + (Number(s[dataKey]) || 0), 0);
+    return (sum / series.length).toFixed(digits);
+  }
+  const unit =
+    dataKey === 'speed' ? ' km/h' : dataKey === 'score' ? '/10' : '';
+  const digits = 1;
+  const sub = `Session avg · ${escapeHtml(legendA)}: ${avgStr(seriesA, digits)}${unit} → ${escapeHtml(legendB)}: ${avgStr(seriesB, digits)}${unit}`;
+
+  const grid = ticks
+    .map(
+      (t) => `
+          <line x1="${PL}" y1="${t.y}" x2="${PL + cW}" y2="${t.y}" stroke="rgba(15,23,42,0.08)" stroke-width="1"/>
+          <text x="${PL - 6}" y="${t.y}" text-anchor="end" dominant-baseline="central"
+            style="font-size:10px;fill:#64748B;font-family:JetBrains Mono,monospace;font-weight:500">${t.v}</text>`
+    )
+    .join('');
+
+  function shotDots(pts, color) {
+    return pts
+      .map(
+        (pt) => `<g>
+      <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2.5" fill="${color}" opacity="0.14"/>
+      <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="1.75" fill="${color}" stroke="#fff" stroke-width="0.75"/>
+      <title>${escapeHtml(String(pt.lbl))}: ${escapeHtml(String(pt.v))}</title>
+    </g>`
+      )
+      .join('');
+  }
+
+  const xAxis = xLabels
+    .map(
+      (xl) => `
+          <text x="${xl.x.toFixed(1)}" y="${(PT + cH + 16).toFixed(1)}" text-anchor="middle"
+            style="font-size:10px;fill:#64748B;font-family:JetBrains Mono,monospace;font-weight:500">${escapeHtml(xl.lbl)}</text>`
+    )
+    .join('');
+
+  return `
+    <div class="compare-trend-card">
+      <div class="compare-trend-head">
+        <div>
+          <div class="compare-graph-title">${escapeHtml(label)}</div>
+          <div class="compare-trend-sub">${sub}</div>
+        </div>
+        <div class="compare-trend-legend">
+          <span class="compare-leg-i"><i style="background:${colorA}"></i>${escapeHtml(legendA)}</span>
+          <span class="compare-leg-i"><i style="background:${colorB}"></i>${escapeHtml(legendB)}</span>
+        </div>
+      </div>
+      <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${escapeHtml(label)}">
+        <defs>
+          <linearGradient id="${gidA}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${colorA}" stop-opacity="0.11"/>
+            <stop offset="100%" stop-color="${colorA}" stop-opacity="0.02"/>
+          </linearGradient>
+          <linearGradient id="${gidB}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${colorB}" stop-opacity="0.11"/>
+            <stop offset="100%" stop-color="${colorB}" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        ${grid}
+        ${areaB ? `<path d="${areaB}" fill="url(#${gidB})"/>` : ''}
+        ${areaA ? `<path d="${areaA}" fill="url(#${gidA})"/>` : ''}
+        ${pathB ? `<path d="${pathB}" fill="none" stroke="${colorB}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        ${pathA ? `<path d="${pathA}" fill="none" stroke="${colorA}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        ${shotDots(ptsB, colorB)}
+        ${shotDots(ptsA, colorA)}
+        ${xAxis}
+      </svg>
+    </div>`;
+}
+
+/**
+ * Overlay N sessions on one chart. Filled areas only when at most two sessions have shot data (readability).
+ * @param {Array<{ series: Array, color: string, legend: string }>} entries
+ */
+function buildMultiLineCompareGraph(entries, dataKey, label, maxVal) {
+  const W = 520;
+  const H = 130;
+  const PL = 46;
+  const PR = 16;
+  const PT = 12;
+  const PB = 28;
+  const cW = W - PL - PR;
+  const cH = H - PT - PB;
+
+  const nonEmpty = entries.filter((e) => e.series && e.series.length > 0);
+  const n = nonEmpty.length ? Math.max(...nonEmpty.map((e) => e.series.length)) : 0;
+  if (n === 0) {
+    return `<div class="compare-graph-empty">No per-shot replay data for these sessions.</div>`;
+  }
+
+  const allVals = [];
+  entries.forEach((e) => {
+    (e.series || []).forEach((s) => allVals.push(Number(s[dataKey]) || 0));
+  });
+  const max = Math.max(maxVal || 0, ...allVals, 1);
+
+  function xAt(i) {
+    if (n === 1) return PL + cW / 2;
+    return PL + (i / (n - 1)) * cW;
+  }
+
+  function buildPts(series) {
+    return (series || []).map((s, i) => {
+      const x = xAt(i);
+      const v = Number(s[dataKey]) || 0;
+      const y = PT + cH - Math.max(0, Math.min(1, v / max)) * cH;
+      return { x, y, v, lbl: `#${s.shot_num}` };
+    });
+  }
+
+  const withPts = entries.map((e) => ({
+    ...e,
+    pts: buildPts(e.series),
+  }));
+
+  function linePath(pts) {
+    if (!pts.length) return '';
+    return pts.reduce((acc, pt, i) => {
+      if (i === 0) return `M${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+      const prev = pts[i - 1];
+      const cpx = ((prev.x + pt.x) / 2).toFixed(1);
+      return `${acc} C${cpx},${prev.y.toFixed(1)} ${cpx},${pt.y.toFixed(1)} ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+    }, '');
+  }
+
+  function areaPath(linePathStr, pts) {
+    if (!linePathStr || !pts.length) return '';
+    return (
+      linePathStr +
+      ` L${pts[pts.length - 1].x.toFixed(1)},${(PT + cH).toFixed(1)}` +
+      ` L${pts[0].x.toFixed(1)},${(PT + cH).toFixed(1)} Z`
+    );
+  }
+
+  const useAreas = nonEmpty.length <= 2;
+
+  const ticks = [0, 0.5, 1].map((t) => ({
+    y: (PT + cH - t * cH).toFixed(1),
+    v: Math.round(t * max),
+  }));
+
+  const xLabels = Array.from({ length: n }, (_, i) => ({
+    x: xAt(i),
+    lbl: `#${i + 1}`,
+  }));
+
+  const grid = ticks
+    .map(
+      (t) => `
+          <line x1="${PL}" y1="${t.y}" x2="${PL + cW}" y2="${t.y}" stroke="rgba(15,23,42,0.08)" stroke-width="1"/>
+          <text x="${PL - 6}" y="${t.y}" text-anchor="end" dominant-baseline="central"
+            style="font-size:10px;fill:#64748B;font-family:JetBrains Mono,monospace;font-weight:500">${t.v}</text>`
+    )
+    .join('');
+
+  function shotDots(pts, color) {
+    return pts
+      .map(
+        (pt) => `<g>
+      <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2.5" fill="${color}" opacity="0.14"/>
+      <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="1.75" fill="${color}" stroke="#fff" stroke-width="0.75"/>
+      <title>${escapeHtml(String(pt.lbl))}: ${escapeHtml(String(pt.v))}</title>
+    </g>`
+      )
+      .join('');
+  }
+
+  const defsChunks = [];
+  const areaChunks = [];
+  withPts.forEach((e, idx) => {
+    const pathStr = linePath(e.pts);
+    if (!pathStr || !useAreas) return;
+    const gid = `cg_m_${++_compareChartGradSeq}_${idx}`;
+    defsChunks.push(`<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${e.color}" stop-opacity="0.11"/>
+            <stop offset="100%" stop-color="${e.color}" stop-opacity="0.02"/>
+          </linearGradient>`);
+    const ar = areaPath(pathStr, e.pts);
+    if (ar) areaChunks.push(`<path d="${ar}" fill="url(#${gid})"/>`);
+  });
+
+  const lineChunks = [];
+  withPts.forEach((e) => {
+    const pathStr = linePath(e.pts);
+    if (pathStr) {
+      lineChunks.push(
+        `<path d="${pathStr}" fill="none" stroke="${e.color}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>`
+      );
+    }
+  });
+
+  const dotChunks = [];
+  withPts.forEach((e) => {
+    if (e.pts.length) dotChunks.push(shotDots(e.pts, e.color));
+  });
+
+  const unit = dataKey === 'speed' ? ' km/h' : dataKey === 'score' ? '/10' : '';
+  const digits = 1;
+  const avgParts = withPts.map((e) => {
+    if (!e.series || !e.series.length) {
+      return `${escapeHtml(e.legend)}: —`;
+    }
+    const sum = e.series.reduce((a, s) => a + (Number(s[dataKey]) || 0), 0);
+    const avg = (sum / e.series.length).toFixed(digits);
+    return `${escapeHtml(e.legend)}: ${avg}${unit}`;
+  });
+  const sub = `Session avg · ${avgParts.join(' · ')}`;
+
+  const legendHtml = withPts
+    .map(
+      (e) =>
+        `<span class="compare-leg-i" title="${escapeHtml(e.legend)}"><i style="background:${e.color}"></i>${escapeHtml(
+          e.legend
+        )}</span>`
+    )
+    .join('');
+
+  const xAxis = xLabels
+    .map(
+      (xl) => `
+          <text x="${xl.x.toFixed(1)}" y="${(PT + cH + 16).toFixed(1)}" text-anchor="middle"
+            style="font-size:10px;fill:#64748B;font-family:JetBrains Mono,monospace;font-weight:500">${escapeHtml(xl.lbl)}</text>`
+    )
+    .join('');
+
+  return `
+    <div class="compare-trend-card">
+      <div class="compare-trend-head">
+        <div>
+          <div class="compare-graph-title">${escapeHtml(label)}</div>
+          <div class="compare-trend-sub">${sub}</div>
+        </div>
+        <div class="compare-trend-legend compare-trend-legend--multi">${legendHtml}</div>
+      </div>
+      <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${escapeHtml(label)}">
+        <defs>${defsChunks.join('')}</defs>
+        ${grid}
+        ${areaChunks.join('')}
+        ${lineChunks.join('')}
+        ${dotChunks.join('')}
+        ${xAxis}
+      </svg>
+    </div>`;
+}
+
 function formatSessionCardSummary(r) {
   if (!r || typeof r !== 'object' || r.error) return '';
   const parts = [];
@@ -621,71 +964,298 @@ function sessionLabel(s) {
   return `${dt} · ${sessionVideoFilename(s.video_url)}`;
 }
 
-function numOrNull(v) {
-  if (v == null || Number.isNaN(Number(v))) return null;
-  return Number(v);
+/** Completed sessions (for compare dropdowns + date disambiguation). */
+function getCompletedSessionsForCompare() {
+  return state.sessionsCache
+    .filter((s) => (s.status || '').toLowerCase() === 'completed' && getSessionAnalysis(s.results))
+    .sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
 }
 
-function signedDelta(v1, v2, digits = 1) {
-  const a = numOrNull(v1);
-  const b = numOrNull(v2);
-  if (a == null || b == null) return '—';
-  const d = b - a;
-  const sign = d > 0 ? '+' : '';
-  return `${sign}${d.toFixed(digits)}`;
+/**
+ * Date-only label for compare UI (dropdowns, legends, headers). If several sessions share a calendar day, appends a short time.
+ */
+function sessionCompareDisplayLabel(session, peerSessions) {
+  if (!session) return '—';
+  const d = new Date(session.created_at);
+  const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const peers = Array.isArray(peerSessions) ? peerSessions : [];
+  const dayKey = d.toDateString();
+  const sameDay = peers.filter((p) => p && new Date(p.created_at).toDateString() === dayKey);
+  if (sameDay.length <= 1) return dateStr;
+  const t = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${dateStr}, ${t}`;
 }
 
-function compareTile(label, base, newer, unit = '', higherIsBetter = true, digits = 1) {
-  const a = numOrNull(base);
-  const b = numOrNull(newer);
-  const showA = a == null ? '—' : a.toFixed(digits);
-  const showB = b == null ? '—' : b.toFixed(digits);
-  const deltaStr = signedDelta(a, b, digits);
-  let cls = 'neutral';
-  if (a != null && b != null) {
-    const improved = higherIsBetter ? b >= a : b <= a;
-    cls = improved ? 'up' : 'down';
+/** Completed sessions with analysis whose `created_at` falls in the current calendar month (local time). */
+function getCompletedSessionsThisMonth(sessions) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  return (sessions || [])
+    .filter((s) => {
+      if ((s.status || '').toLowerCase() !== 'completed') return false;
+      if (!getSessionAnalysis(s.results)) return false;
+      const created = new Date(s.created_at);
+      return created >= start && created <= end;
+    })
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+}
+
+const COMPARE_MULTI_COLORS = [
+  '#06B6D4',
+  '#10B981',
+  '#A855F7',
+  '#F97316',
+  '#EAB308',
+  '#EC4899',
+  '#3B82F6',
+  '#84CC16',
+];
+
+/** Plain-language summary for “this month · all sessions” (first vs last session + alerts + shot flags). */
+function buildMonthPlayerInsightHtml(monthSessions, analyses) {
+  const n = analyses.length;
+  if (n < 2) return '';
+
+  const first = analyses[0];
+  const last = analyses[n - 1];
+
+  function sav(r, k) {
+    const v = r.session_averages?.[k];
+    return v != null && !Number.isNaN(Number(v)) ? Number(v) : null;
   }
+
+  let improved = 0;
+  let declined = 0;
+  const spF = sav(first, 'peak_swing_speed');
+  const spL = sav(last, 'peak_swing_speed');
+  if (spF != null && spL != null) {
+    if (spL - spF > 2) improved += 1;
+    else if (spF - spL > 2) declined += 1;
+  }
+  const hF = sav(first, 'head_stability');
+  const hL = sav(last, 'head_stability');
+  if (hF != null && hL != null) {
+    if (hL - hF > 4) improved += 1;
+    else if (hF - hL > 4) declined += 1;
+  }
+  const stF = sav(first, 'stability_score');
+  const stL = sav(last, 'stability_score');
+  if (stF != null && stL != null) {
+    if (stL - stF > 4) improved += 1;
+    else if (stF - stL > 4) declined += 1;
+  }
+  const powerF = Number(first.session_scores?.power);
+  const powerL = Number(last.session_scores?.power);
+  if (!Number.isNaN(powerF) && !Number.isNaN(powerL)) {
+    if (powerL - powerF > 5) improved += 1;
+    else if (powerF - powerL > 5) declined += 1;
+  }
+
+  let tone = 'mixed';
+  let headline = 'Up and down this month — here is what stood out';
+  if (improved >= 3 || (improved >= 2 && declined === 0)) {
+    tone = 'up';
+    headline = 'You are building momentum this month';
+  } else if (declined >= 3 || (declined >= 2 && improved === 0)) {
+    tone = 'down';
+    headline = 'A tougher stretch — focus on these basics';
+  }
+
+  const bullets = [];
+
+  if (spF != null && spL != null && Math.abs(spL - spF) > 1) {
+    if (spL >= spF) {
+      bullets.push(
+        `Bat speed averaged higher in your latest session than at the start of the month (${spF.toFixed(1)} → ${spL.toFixed(1)} km/h).`
+      );
+    } else {
+      bullets.push(
+        `Bat speed averaged lower than earlier in the month (${spF.toFixed(1)} → ${spL.toFixed(1)} km/h).`
+      );
+    }
+  } else if (hF != null && hL != null && Math.abs(hL - hF) > 3) {
+    bullets.push(
+      hL >= hF
+        ? `Head discipline scores improved from your first to your latest session this month.`
+        : `Head discipline dipped from your first to your latest session — extra ball-watching work will help.`
+    );
+  }
+
+  const sevOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  const allAlerts = [];
+  analyses.forEach((r) => (r.coaching_alerts || []).forEach((a) => allAlerts.push(a)));
+  allAlerts.sort((x, y) => (sevOrder[x.severity] ?? 9) - (sevOrder[y.severity] ?? 9));
+  const seenMetric = new Set();
+  let coachingAdded = 0;
+  for (const a of allAlerts) {
+    const m = a.metric || 'Session note';
+    if (seenMetric.has(m)) continue;
+    seenMetric.add(m);
+    let msg = (a.message || '').replace(/\s+/g, ' ').trim();
+    if (!msg) continue;
+    if (msg.length > 130) msg = `${msg.slice(0, 127)}…`;
+    bullets.push(`${m}: ${msg}`);
+    coachingAdded += 1;
+    if (coachingAdded >= 2) break;
+  }
+
+  const fatN = analyses.filter((x) => x.fatigue_detected).length;
+  if (fatN >= 2) {
+    bullets.push(
+      `In ${fatN} of ${n} sessions, bat speed fell in the second half — shorter blocks or a quick break mid-session can help.`
+    );
+  } else if (fatN === 1) {
+    bullets.push(`One session showed late-session fade — try a short pause between net blocks.`);
+  }
+
+  let headFlags = 0;
+  let unstableFlags = 0;
+  let totalShots = 0;
+  monthSessions.forEach((s) => {
+    const replay = getSessionReplay(s.results);
+    if (!replay?.shots) return;
+    for (const sh of replay.shots) {
+      if (Number(sh.conf) <= 0.5) continue;
+      totalShots += 1;
+      for (const f of sh.flags || []) {
+        const base = String(f).split(':')[0];
+        if (base === 'HEAD_MOVING') headFlags += 1;
+        if (base === 'UNSTABLE') unstableFlags += 1;
+      }
+    }
+  });
+
+  if (totalShots > 0) {
+    const hp = Math.round((headFlags / totalShots) * 100);
+    if (hp >= 30) {
+      bullets.push(
+        `Head movement was flagged on about ${hp}% of your shots this month — stay still through contact.`
+      );
+    }
+    const up = Math.round((unstableFlags / totalShots) * 100);
+    if (up >= 30) {
+      bullets.push(
+        `Balance issues showed up on about ${up}% of shots — widen your base slightly and stay tall.`
+      );
+    }
+  }
+
+  const deduped = [];
+  const keys = new Set();
+  for (const b of bullets) {
+    const k = b.slice(0, 48).toLowerCase();
+    if (keys.has(k)) continue;
+    keys.add(k);
+    deduped.push(b);
+    if (deduped.length >= 5) break;
+  }
+
+  if (!deduped.length) {
+    deduped.push('Keep recording sessions this month so trends and tips get sharper over time.');
+  }
+
+  const sub = `Compared your first session (${escapeHtml(
+    sessionCompareDisplayLabel(monthSessions[0], monthSessions)
+  )}) with your latest (${escapeHtml(sessionCompareDisplayLabel(monthSessions[n - 1], monthSessions))}).`;
+
+  const lis = deduped.map((b) => `<li>${escapeHtml(b)}</li>`).join('');
+
   return `
-    <div class="compare-tile compare-${cls}">
-      <div class="compare-metric">${escapeHtml(label)}</div>
-      <div class="compare-values">${escapeHtml(showA)}${unit} → ${escapeHtml(showB)}${unit}</div>
-      <div class="compare-delta">Δ ${escapeHtml(deltaStr)}${unit}</div>
-    </div>
-  `;
+    <section class="compare-month-insight compare-month-insight--${tone}" aria-label="Monthly summary">
+      <div class="compare-month-insight-kicker">Your month at a glance</div>
+      <h3 class="compare-month-insight-title">${escapeHtml(headline)}</h3>
+      <p class="compare-month-insight-sub">${sub}</p>
+      <ul class="compare-month-insight-list">${lis}</ul>
+    </section>`;
 }
 
 function renderSessionComparison(sessionA, sessionB) {
   if (!sessionCompareBody) return;
-  const a = getSessionAnalysis(sessionA?.results);
-  const b = getSessionAnalysis(sessionB?.results);
-  if (!a || !b || a.error || b.error) {
-    sessionCompareBody.innerHTML = '<p class="session-item-empty">Selected sessions need completed analysis results.</p>';
+  const completedPeers = getCompletedSessionsForCompare();
+  if (!sessionA || !sessionB || sessionA.id === sessionB.id) {
+    sessionCompareBody.innerHTML =
+      '<p class="session-item-empty">Pick two different completed sessions to compare.</p>';
     return;
   }
 
-  const avA = a.session_averages || {};
-  const avB = b.session_averages || {};
-  const scA = a.session_scores || {};
-  const scB = b.session_scores || {};
-  const cA = numOrNull(a.shots_confirmed) || 0;
-  const cB = numOrNull(b.shots_confirmed) || 0;
+  const a = getSessionAnalysis(sessionA?.results);
+  const b = getSessionAnalysis(sessionB?.results);
+  if (!a || !b || a.error || b.error) {
+    sessionCompareBody.innerHTML =
+      '<p class="session-item-empty">Selected sessions need completed analysis results.</p>';
+    return;
+  }
 
-  const fwA = a.footwork_summary || {};
-  const fwB = b.footwork_summary || {};
-  const fwTotA = (fwA.front_foot_count || 0) + (fwA.back_foot_count || 0) + (fwA.neutral_count || 0);
-  const fwTotB = (fwB.front_foot_count || 0) + (fwB.back_foot_count || 0) + (fwB.neutral_count || 0);
-  const frontPctA = fwTotA ? (fwA.front_foot_count || 0) * 100 / fwTotA : null;
-  const frontPctB = fwTotB ? (fwB.front_foot_count || 0) * 100 / fwTotB : null;
+  const seriesA = getConfirmedTrendShotsFromResults(sessionA.results);
+  const seriesB = getConfirmedTrendShotsFromResults(sessionB.results);
 
-  const cards = [
-    compareTile('Confirmed shots', cA, cB, '', true, 0),
-    compareTile('Avg bat speed', avA.peak_swing_speed, avB.peak_swing_speed, ' km/h', true, 1),
-    compareTile('Head stability', avA.head_stability, avB.head_stability, '', true, 1),
-    compareTile('Stability score', avA.stability_score, avB.stability_score, '', true, 1),
-    compareTile('Power score', scA.power, scB.power, '', true, 1),
-    compareTile('Head discipline', scA.head_discipline, scB.head_discipline, '', true, 1),
-    compareTile('Front-foot usage', frontPctA, frontPctB, '%', true, 1),
+  if (!seriesA.length && !seriesB.length) {
+    const bestA = a.best_shot?.label ? shotLabelPretty(a.best_shot.label) : '—';
+    const bestB = b.best_shot?.label ? shotLabelPretty(b.best_shot.label) : '—';
+    sessionCompareBody.innerHTML = `
+    <div class="compare-header-row">
+      <div><strong>Session 1:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionA, completedPeers))}</div>
+      <div><strong>Session 2:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionB, completedPeers))}</div>
+    </div>
+    <p class="session-item-empty">No per-shot replay data in these session records, so trend charts cannot be drawn. Re-run analysis and ensure results include shot replay, or compare sessions processed with the current pipeline.</p>
+    <div class="compare-meta-row">
+      <div><span class="compare-meta-k">Best shot (S1):</span> ${escapeHtml(bestA)}</div>
+      <div><span class="compare-meta-k">Best shot (S2):</span> ${escapeHtml(bestB)}</div>
+    </div>`;
+    return;
+  }
+
+  const colorA = '#06B6D4';
+  const colorB = '#10B981';
+  const legendA = sessionCompareDisplayLabel(sessionA, completedPeers);
+  const legendB = sessionCompareDisplayLabel(sessionB, completedPeers);
+
+  const charts = [
+    buildDualLineCompareGraph(
+      seriesA,
+      seriesB,
+      'speed',
+      colorA,
+      colorB,
+      'Bat Speed (km/h) — calibrated bat tip speed across shots',
+      140,
+      legendA,
+      legendB
+    ),
+    buildDualLineCompareGraph(
+      seriesA,
+      seriesB,
+      'head',
+      colorA,
+      colorB,
+      'Head Discipline (0–100) — stillness of head through stroke',
+      100,
+      legendA,
+      legendB
+    ),
+    buildDualLineCompareGraph(
+      seriesA,
+      seriesB,
+      'stab',
+      colorA,
+      colorB,
+      'Stability Score (0–100) — body balance and minimal sway',
+      100,
+      legendA,
+      legendB
+    ),
+    buildDualLineCompareGraph(
+      seriesA,
+      seriesB,
+      'score',
+      colorA,
+      colorB,
+      'Overall Shot Score (/10) — composite quality rating per shot',
+      10,
+      legendA,
+      legendB
+    ),
   ].join('');
 
   const bestA = a.best_shot?.label ? shotLabelPretty(a.best_shot.label) : '—';
@@ -693,10 +1263,10 @@ function renderSessionComparison(sessionA, sessionB) {
 
   sessionCompareBody.innerHTML = `
     <div class="compare-header-row">
-      <div><strong>Session 1:</strong> ${escapeHtml(sessionLabel(sessionA))}</div>
-      <div><strong>Session 2:</strong> ${escapeHtml(sessionLabel(sessionB))}</div>
+      <div><strong>Session 1:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionA, completedPeers))}</div>
+      <div><strong>Session 2:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionB, completedPeers))}</div>
     </div>
-    <div class="compare-grid">${cards}</div>
+    <div class="compare-trends-stack">${charts}</div>
     <div class="compare-meta-row">
       <div><span class="compare-meta-k">Best shot (S1):</span> ${escapeHtml(bestA)}</div>
       <div><span class="compare-meta-k">Best shot (S2):</span> ${escapeHtml(bestB)}</div>
@@ -704,11 +1274,105 @@ function renderSessionComparison(sessionA, sessionB) {
   `;
 }
 
+function updateCompareMonthButton() {
+  if (!compareThisMonthBtn) return;
+  const monthSessions = getCompletedSessionsThisMonth(state.sessionsCache);
+  const n = monthSessions.length;
+  if (n < 2) {
+    compareThisMonthBtn.disabled = true;
+    compareThisMonthBtn.textContent = 'This month · all sessions';
+    compareThisMonthBtn.title =
+      'Complete at least two sessions this calendar month with saved results to overlay trends.';
+  } else {
+    compareThisMonthBtn.disabled = false;
+    compareThisMonthBtn.textContent = `This month · all sessions (${n})`;
+    compareThisMonthBtn.title = `Overlay shot-by-shot trends for all ${n} completed sessions from this month.`;
+  }
+}
+
+function renderMonthSessionsComparison() {
+  if (!sessionCompareBody) return;
+  const monthSessions = getCompletedSessionsThisMonth(state.sessionsCache);
+  if (monthSessions.length < 2) {
+    sessionCompareBody.innerHTML =
+      '<p class="session-item-empty">Need at least two completed sessions from this calendar month.</p>';
+    return;
+  }
+
+  const analyses = monthSessions.map((s) => getSessionAnalysis(s.results));
+  if (analyses.some((a) => !a || a.error)) {
+    sessionCompareBody.innerHTML =
+      '<p class="session-item-empty">Some sessions are missing valid analysis results.</p>';
+    return;
+  }
+
+  const bannerTitle = `${new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} · ${monthSessions.length} sessions`;
+
+  const seriesList = monthSessions.map((s) => getConfirmedTrendShotsFromResults(s.results));
+  if (seriesList.every((ser) => !ser.length)) {
+    const meta = monthSessions
+      .map((s, i) => {
+        const r = analyses[i];
+        const best = r.best_shot?.label ? shotLabelPretty(r.best_shot.label) : '—';
+        return `<div><span class="compare-meta-k">${escapeHtml(sessionCompareDisplayLabel(s, monthSessions))}</span><span class="compare-meta-note">Best: ${escapeHtml(best)}</span></div>`;
+      })
+      .join('');
+    sessionCompareBody.innerHTML = `
+      <div class="compare-view-banner">
+        <button type="button" class="ce-btn ce-btn--ghost compare-back-pair-btn" data-compare-back>← Two-session compare</button>
+        <span class="compare-view-banner-title">${escapeHtml(bannerTitle)}</span>
+      </div>
+      ${buildMonthPlayerInsightHtml(monthSessions, analyses)}
+      <p class="session-item-empty">No per-shot replay data for any of these sessions, so charts cannot be drawn.</p>
+      <div class="compare-meta-row compare-meta-row--month">${meta}</div>`;
+    return;
+  }
+
+  const entries = monthSessions.map((s, i) => ({
+    series: seriesList[i],
+    color: COMPARE_MULTI_COLORS[i % COMPARE_MULTI_COLORS.length],
+    legend: sessionCompareDisplayLabel(s, monthSessions),
+  }));
+
+  const charts = [
+    buildMultiLineCompareGraph(
+      entries,
+      'speed',
+      'Bat Speed (km/h) — calibrated bat tip speed across shots',
+      140
+    ),
+    buildMultiLineCompareGraph(entries, 'head', 'Head Discipline (0–100) — stillness of head through stroke', 100),
+    buildMultiLineCompareGraph(entries, 'stab', 'Stability Score (0–100) — body balance and minimal sway', 100),
+    buildMultiLineCompareGraph(entries, 'score', 'Overall Shot Score (/10) — composite quality rating per shot', 10),
+  ].join('');
+
+  const bestCells = monthSessions
+    .map((s, i) => {
+      const r = analyses[i];
+      const best = r.best_shot?.label ? shotLabelPretty(r.best_shot.label) : '—';
+      return `<div><span class="compare-meta-k">Best shot</span> ${escapeHtml(best)}<span class="compare-meta-note">${escapeHtml(
+        sessionCompareDisplayLabel(s, monthSessions)
+      )}</span></div>`;
+    })
+    .join('');
+
+  sessionCompareBody.innerHTML = `
+    <div class="compare-view-banner">
+      <button type="button" class="ce-btn ce-btn--ghost compare-back-pair-btn" data-compare-back>← Two-session compare</button>
+      <span class="compare-view-banner-title">${escapeHtml(bannerTitle)}</span>
+    </div>
+    ${buildMonthPlayerInsightHtml(monthSessions, analyses)}
+    <div class="compare-trends-stack">${charts}</div>
+    <div class="compare-meta-row compare-meta-row--month">${bestCells}</div>
+  `;
+}
+
 function refreshCompareSessionOptions() {
-  if (!compareSessionA || !compareSessionB) return;
-  const completed = state.sessionsCache
-    .filter((s) => (s.status || '').toLowerCase() === 'completed' && getSessionAnalysis(s.results))
-    .sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+  if (!compareSessionA || !compareSessionB) {
+    updateCompareMonthButton();
+    return;
+  }
+  const completed = getCompletedSessionsForCompare();
 
   if (!completed.length) {
     compareSessionA.innerHTML = '<option value="">No completed sessions</option>';
@@ -716,11 +1380,24 @@ function refreshCompareSessionOptions() {
     if (sessionCompareBody) {
       sessionCompareBody.innerHTML = '<p class="session-item-empty">No completed sessions available for comparison yet.</p>';
     }
+    updateCompareMonthButton();
+    return;
+  }
+
+  if (completed.length < 2) {
+    const opt = `<option value="${escapeHtml(completed[0].id)}">${escapeHtml(sessionCompareDisplayLabel(completed[0], completed))}</option>`;
+    compareSessionA.innerHTML = opt;
+    compareSessionB.innerHTML = opt;
+    if (sessionCompareBody) {
+      sessionCompareBody.innerHTML =
+        '<p class="session-item-empty">You need at least two completed sessions to compare. Run another analysis first.</p>';
+    }
+    updateCompareMonthButton();
     return;
   }
 
   const options = completed
-    .map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(sessionLabel(s))}</option>`)
+    .map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(sessionCompareDisplayLabel(s, completed))}</option>`)
     .join('');
   compareSessionA.innerHTML = options;
   compareSessionB.innerHTML = options;
@@ -731,6 +1408,7 @@ function refreshCompareSessionOptions() {
   const a = completed.find((s) => s.id === compareSessionA.value);
   const b = completed.find((s) => s.id === compareSessionB.value);
   if (a && b) renderSessionComparison(a, b);
+  updateCompareMonthButton();
 }
 
 function openSessionCompareModal() {
@@ -1547,6 +2225,14 @@ function init() {
   compareSessionB?.addEventListener('change', () => {
     const a = state.sessionsCache.find((s) => s.id === compareSessionA?.value);
     const b = state.sessionsCache.find((s) => s.id === compareSessionB.value);
+    if (a && b) renderSessionComparison(a, b);
+  });
+  compareThisMonthBtn?.addEventListener('click', renderMonthSessionsComparison);
+  sessionCompareBody?.addEventListener('click', (e) => {
+    const back = e.target.closest('[data-compare-back]');
+    if (!back) return;
+    const a = state.sessionsCache.find((s) => s.id === compareSessionA?.value);
+    const b = state.sessionsCache.find((s) => s.id === compareSessionB?.value);
     if (a && b) renderSessionComparison(a, b);
   });
   sessionsList?.addEventListener('click', (e) => {

@@ -1,0 +1,343 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║              CrickEyePro — .cursorrules v1.1                 ║
+# ║   AI Cricket Batting Analytics · Full-Stack + ML Rules       ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+## ── PROJECT IDENTITY ────────────────────────────────────────────
+# CrickEyePro is a real-time cricket batting analytics platform.
+# It uses YOLOv8 pose estimation + a custom Swin3D shot classifier
+# to analyse batting sessions via video. The stack is:
+#
+#   Frontend  : Vanilla JS (App.js, ReportModal.js, wagonWheel.js)
+#               + plain CSS (style.css) + HTML (index.html)
+#   Backend   : Node.js/Express (server.js, routes/, services/)
+#                  + Python/FastAPI (main.py, analyse_session.py)
+#   Database  : Supabase (Postgres + Auth + Storage)
+#   ML Models : crickeye_best.pth (Swin3D shot classifier)
+#               yolov8n-pose.pt   (YOLOv8 pose estimation)
+#   Realtime  : WebSocket (ws://localhost:8000/ws)
+
+## ── CRITICAL: NEVER TOUCH THESE ────────────────────────────────
+# - /assets/crickeye_best.pth       — shot classifier weights
+# - /assets/yolov8n-pose.pt         — pose model weights
+# - /assets/*.mp4                   — video files
+# - Any function signature in analyse_session.py unless asked
+# - run_pipeline() / run_pipeline_ws_sync() entry points
+# - Supabase schema (sessions table, RLS policies, storage bucket)
+#   unless you show the ALTER TABLE SQL first and wait for approval
+# - The WebSocket message protocol (type: stage/progress/shot/
+#   complete/analysis/error) — frontend depends on exact field names
+
+## ── FILE STRUCTURE (authoritative) ─────────────────────────────
+#
+# /assets/                    ← model weights + video files (READ ONLY)
+# /backend/
+#   /node_modules/            ← do not edit
+#   /routes/
+#     processSession.js       ← Express route handlers (one per resource)
+#   /services/
+#     supabaseAdmin.js        ← Supabase admin/service-role client
+#     yolo_runner.py          ← Python subprocess runner
+#     yoloRunner.js           ← JS wrapper that spawns Python
+#   .env                      ← ALL secrets live here, never hardcode
+#   main.py                   ← FastAPI app + /ws WebSocket + /upload
+#   server.js                 ← Express entry point (port 8080)
+#   package.json
+#   supabase_schema.sql       ← source of truth for DB schema
+# /components/
+#   ReportModal.js            ← self-contained report modal (IIFE)
+#   wagonWheel.js             ← canvas wagon wheel (IIFE)
+# /data/                      ← session_log.csv, session_report.json (output)
+# /uploads/                   ← temp video upload landing dir
+# analyse_session.py          ← ML pipeline entry point (root level)
+# App.js                      ← main frontend JS (v6.4)
+# index.html
+# style.css
+# requirements.txt
+# readme.md
+# cursorrules                 ← project + AI conventions (this file)
+
+## ── SESSION COMPARISON MODAL (feature: two sessions + monthly overlay) ──
+# UI lives in index.html (#sessionCompareModal), styles in style.css (.ce-modal--compare,
+# .compare-trend-card, .compare-month-insight, etc.), logic in App.js.
+#
+# Entry: header button #openSessionCompareBtn → openSessionCompareModal() →
+# refreshCompareSessionOptions().
+#
+# DOM (authoritative):
+#   #sessionCompareModal     — modal shell (.ce-modal--compare)
+#   #compareSessionA         — Session 1 (baseline), options = completed sessions w/ analysis
+#   #compareSessionB         — Session 2
+#   #compareThisMonthBtn     — "This month · all sessions" (count in label when enabled)
+#   #sessionCompareBody      — charts, banners, empty-state copy
+#
+# Data rules:
+#   - Comparison charts need per-shot replay rows: results.replay.shots (same source as
+#     ReportModal trend graphs). Confirmed shots use conf > 0.5 → getConfirmedTrendShotsFromResults().
+#   - If both sessions lack replay shots, UI shows best-shot fallback text (no SVG charts).
+#
+# Two-session compare:
+#   - getCompletedSessionsForCompare() — status completed + getSessionAnalysis(results), newest first
+#   - refreshCompareSessionOptions() — if 0 completed: empty message; if 1: both dropdowns same +
+#     "need at least two…"; if ≥2: options for both, default A = second-newest, B = newest (different IDs)
+#   - renderSessionComparison(a,b) — blocks same id; four dual charts via buildDualLineCompareGraph:
+#     speed (km/h), head, stab, score — colors #06B6D4 vs #10B981; legends use sessionCompareDisplayLabel()
+#   - sessionCompareDisplayLabel(session, peerSessions) — date string; if multiple sessions share a
+#     calendar day, appends short time to disambiguate
+#
+# This month · all sessions:
+#   - getCompletedSessionsThisMonth(state.sessionsCache) — created_at within current calendar month (local)
+#   - updateCompareMonthButton() — disables button when < 2 month sessions; tooltip explains requirement
+#   - renderMonthSessionsComparison() — banner + buildMonthPlayerInsightHtml() + buildMultiLineCompareGraph
+#     for each metric (palette COMPARE_MULTI_COLORS, up to N distinct session lines)
+#   - buildMonthPlayerInsightHtml — narrative "Your month at a glance" (momentum, bat speed, coaching
+#     alerts, fatigue_detected, HEAD_MOVING/UNSTABLE shot flags across the month)
+#   - "← Two-session compare" (data-compare-back) restores renderSessionComparison for current A/B picks
+#
+# When extending: keep SVG geometry aligned with ReportModal line-graph conventions; escapeHtml() on all
+# dynamic labels and insight bullets.
+
+## ── ARCHITECTURE RULES ──────────────────────────────────────────
+
+### Two separate servers run in parallel:
+# 1. FastAPI (Python) — port 8000
+#    uvicorn backend.main:app --reload --port 8000
+#    Handles: WebSocket /ws, POST /upload, GET /assets/*
+#
+# 2. Express (Node) — port 8080
+#    node backend/server.js
+#    Handles: REST API /process-session, /health
+
+### Frontend connects to:
+# - ws://localhost:8000/ws         (WebSocket, real-time pipeline)
+# - http://localhost:8000/upload   (multipart video upload)
+# - http://localhost:8000/assets/  (serve analysed_out.mp4)
+# - http://localhost:8080/         (REST for session management)
+# - Supabase directly via JS client (auth, DB reads, storage upload)
+
+## ── BACKEND RULES (Node/Express) ───────────────────────────────
+- Routes live in /backend/routes/, one file per resource
+- Services in /backend/services/ are pure functions: take input, return output
+- All route handlers validate input before calling services
+- All responses must follow: { success: bool, data: any, error: string|null }
+- Use async/await everywhere — no .then() chains
+- Catch all errors with try/catch, log with context (route name + operation)
+- Never log secrets or full video paths in production logs
+- CORS is already configured in server.js — don't add it again per-route
+- Environment variables are read only via process.env.* from .env
+- Never hardcode Supabase URL, keys, or ports
+
+## ── BACKEND RULES (Python/FastAPI) ─────────────────────────────
+- main.py owns the FastAPI app, /ws WebSocket, and /upload endpoint
+- analyse_session.py is the pipeline — do not restructure its top-level flow
+- run_pipeline_ws_sync() is the WebSocket entry point — preserve its signature
+- WebSocket messages must always include "type" field (stage/progress/shot/
+  complete/analysis/error/warning/onsets_found/session)
+- New pipeline stages must emit { type: "stage", stage: str, message: str }
+- All pip installs must use --break-system-packages
+- Keep requirements.txt updated when adding Python dependencies
+- Python subprocess calls from Node use services/yoloRunner.js
+
+## ── ML PIPELINE RULES ───────────────────────────────────────────
+### Shot classification output shape (DO NOT CHANGE FIELD NAMES):
+# {
+#   shot_num, label, conf, confirmed, timestamp, peak_frame,
+#   peak_swing_speed,   ← ALWAYS km/h (calibrated)
+#   footwork,           ← 'front_foot' | 'back_foot' | 'neutral'
+#   footwork_conf,      ← 'high' | 'low'
+#   head_stability,     ← 0–100
+#   stability_score,    ← 0–100
+#   shot_score,         ← 0–10
+#   shot_quality,       ← 'Excellent' | 'Good' | 'Average' | 'Poor'
+#   flags,              ← ['HEAD_MOVING', 'UNSTABLE', 'FOOTWORK_UNCLEAR']
+#   probs               ← { cover, flick, pull, straight, sweep }
+# }
+
+### Speed calibration constants (tune, never delete):
+# SHOULDER_WIDTH_M    = 0.45   (pixel ruler baseline)
+# BAT_TIP_MULTIPLIER  = 0.95   (wrist → tip lever correction)
+# SPEED_SANITY_CAP_KMH = 130.0
+# POWER_SCORE_CEILING_KMH = 140.0
+
+### Shot classes (fixed, model was trained on these):
+# SHOT_CLASSES = ['cover', 'flick', 'pull', 'straight', 'sweep']
+
+### COCO keypoint indices — use the named constants, not raw numbers:
+# KP_NOSE=0, KP_LS=5, KP_RS=6, KP_LE=7, KP_RE=8,
+# KP_LW=9, KP_RW=10, KP_LH=11, KP_RH=12 (etc.)
+
+### If adding a new biomechanics metric:
+# 1. Add it to extract_biomechanics() return dict
+# 2. Add it to run_session_analysis() session_averages
+# 3. Emit it in the shot WebSocket message in run_pipeline_ws_sync()
+# 4. Update renderBiomechCard() in App.js to display it
+# 5. Update buildShotCard() in ReportModal.js
+
+## ── FRONTEND RULES ───────────────────────────────────────────────
+- Vanilla JS only — no React, no Vue, no build tools
+- All styles in style.css — no runtime style injection except
+  ReportModal.js (which injects its own scoped #rp-styles once)
+- WagonWheel and ReportModal are IIFEs — do not convert to modules
+- State lives in the global `state` object in App.js:
+  shotLog, shotStats, zoneCounts, currentHand, sessionAnalysis,
+  completePayload, currentUser, activeSessionId, sessionsCache
+- Never fetch data directly inside event handlers — call named async functions
+- All DOM queries use getElementById / querySelector — no jQuery
+- Supabase client is `supabaseClient` (NOT `supabase` — that's the UMD lib)
+- Auth state always routed through updateAuthUi() after login/logout
+- Session cards rendered via renderSessions(items) — never build card HTML inline
+
+### WebSocket message handling (handleMessage switch):
+# - 'stage'        → onStage(msg)
+# - 'progress'     → onProgress(msg)
+# - 'shot'         → onShotReceived(msg)
+# - 'complete'     → onComplete(msg)
+# - 'analysis'     → state.sessionAnalysis = msg.analysis
+# - 'error'        → onError(msg)
+# Never add blocking operations inside handleMessage
+
+### Wagon Wheel API (wagonWheel.js public methods):
+# WagonWheel.init(canvasEl)        ← call once on init
+# WagonWheel.drawSpoke(shotType, onDone)   ← animates one spoke
+# WagonWheel.clearAll()            ← resets canvas + state
+# WagonWheel.setHand('left'|'right')       ← flips angle configs
+# WagonWheel.getSpokeCount()       ← returns number of drawn spokes
+
+### Shot types + colors (canonical — used in App.js, wagonWheel, ReportModal):
+# cover    → #06B6D4   (cyan)
+# straight → #10B981   (green)
+# pull     → #F97316   (orange)
+# flick    → #A855F7   (purple)
+# sweep    → #EAB308   (yellow)
+
+## ── DATABASE RULES ──────────────────────────────────────────────
+### sessions table columns:
+# id uuid, user_id uuid, video_url text, status text,
+# results jsonb, created_at timestamptz, file_hash text
+
+### results jsonb shape (DO NOT CHANGE):
+# {
+#   analysis: { ...run_session_analysis() output },
+#   replay: {
+#     complete: { type, total_shots, confirmed, unclear, output_video,
+#                 handedness, stance_conf, shot_counts, avg_conf,
+#                 total_frames, fps, speed_unit },
+#     shots: [ ...confirmed shot log array ]
+#   },
+#   file_fingerprint: string (SHA-256 hex)
+# }
+
+### Status flow: uploaded → processing → completed | failed
+
+### RLS is enabled — always query with the Supabase JS client
+### (which automatically sends the user's JWT). Never bypass RLS
+### by using the service-role key from the frontend.
+
+### Before any schema change:
+# 1. Write the ALTER TABLE / CREATE INDEX SQL
+# 2. Show it to the user and wait for approval
+# 3. Add it to supabase_schema.sql after running
+
+## ── AUTHENTICATION RULES ────────────────────────────────────────
+- Auth is Supabase email+password (supabase.auth.signInWithPassword)
+- supabaseClient is initialised in bootstrapSupabase() from /api/public-config
+- Login flow: signInWithPassword → getUser → state.currentUser → updateAuthUi()
+  → fetchUserSessions()
+- Logout flow: signOut → state.currentUser = null → updateAuthUi() →
+  renderSessions([])
+- authGate div is hidden when logged in, shown when logged out
+- profileModal shows user email, id, created_at
+- Never store passwords, tokens, or keys in localStorage
+
+## ── KNOWN ISSUES TO FIX ─────────────────────────────────────────
+
+### 1. Login Page
+# PROBLEM: Login uses alert() for errors — bad UX. gateMessage div exists
+# but is not always populated before alert() fires.
+# FIX: Remove all alert() calls in signup()/login(). Show errors only
+# in #gateMessage div. Add loading state to gateLoginBtn during async call.
+# After successful login, smoothly hide authGate (add CSS transition).
+
+### 2. Session Comparison View — fixed (see SESSION COMPARISON MODAL)
+# Prior issues (single-session compare, empty states) are handled in refreshCompareSessionOptions()
+# and renderSessionComparison(). Monthly overlay and insight copy are documented there.
+
+## ── ADDING NEW FEATURES CHECKLIST ──────────────────────────────
+# When asked to add a new feature, always follow this order:
+# 1. Does it need a new DB column? → write + show migration SQL first
+# 2. Does it need a new API endpoint?
+#    → add route in /backend/routes/
+#    → add service function in /backend/services/
+# 3. Does it need a new WebSocket message type?
+#    → add to handleMessage() switch in App.js
+#    → emit in run_pipeline_ws_sync() in analyse_session.py
+# 4. Does it need new UI?
+#    → add to index.html (structure)
+#    → add styles to style.css
+#    → wire up in App.js init()
+# 5. Update readme.md and requirements.txt / package.json as needed
+
+## ── DEPENDENCY RULES ────────────────────────────────────────────
+### Node (backend/package.json already has):
+# express, cors, dotenv, body-parser, ws, @supabase/supabase-js,
+# multer (check before adding for file uploads)
+#
+### Python (requirements.txt must include):
+# ultralytics, torch, torchvision, opencv-python-headless,
+# numpy, fastapi, uvicorn, python-multipart, imageio-ffmpeg
+#
+### Frontend (loaded via CDN in index.html):
+# @supabase/supabase-js UMD bundle — referenced as window.supabase
+# No other frontend frameworks or build tools
+
+## ── CODE STYLE ──────────────────────────────────────────────────
+### JavaScript:
+# - const/let only — never var
+# - async/await — never .then()
+# - Arrow functions for callbacks, named functions for top-level
+# - Descriptive names: shotData not data, sessionId not id
+# - Template literals for HTML string building
+# - escapeHtml() for any user-supplied string rendered as innerHTML
+
+### Python:
+# - Type hints on new functions
+# - f-strings for formatting
+# - ws_emit() for all WebSocket messages — never await ws.send_json() directly
+# - All file paths via pathlib.Path — never raw string concatenation
+# - No bare except: clauses — always catch specific exceptions
+
+## ── ENVIRONMENT VARIABLES (backend/.env) ───────────────────────
+# SUPABASE_URL=          ← Supabase project URL
+# SUPABASE_ANON_KEY=     ← public anon key (safe for frontend)
+# SUPABASE_SERVICE_KEY=  ← service role key (backend ONLY, never expose)
+# PORT=8080              ← Express port
+# (FastAPI always runs on 8000 via uvicorn command)
+
+## ── TESTING GUIDANCE ────────────────────────────────────────────
+# Before considering any backend change done:
+# 1. Run: curl http://localhost:8080/health → expect { ok: true }
+# 2. Confirm WebSocket connects (check ws-dot turns green in UI)
+# 3. Upload a test video and verify stage messages stream in overlay
+# 4. Confirm Supabase session row created with status='processing'
+# 5. After pipeline, confirm status='completed' and results jsonb populated
+
+## ── WHAT CURSOR SHOULD ALWAYS DO ────────────────────────────────
+# ✓ Read this file before making any change
+# ✓ Preserve existing function signatures unless explicitly told to change them
+# ✓ Keep all speed values in km/h — never revert to px/s
+# ✓ Use escapeHtml() for any user data rendered as innerHTML
+# ✓ Run both servers (port 8000 FastAPI + port 8080 Express) mentally
+#   when tracing a feature end-to-end
+# ✓ When adding UI, check if the element ID already exists in index.html
+# ✓ Show schema migrations before applying them
+
+## ── WHAT CURSOR MUST NEVER DO ───────────────────────────────────
+# ✗ Change SHOT_CLASSES order or values (model is trained on this order)
+# ✗ Move or rename model weight files
+# ✗ Add React, Vue, Svelte, Webpack, Vite, or any build tool
+# ✗ Use localStorage for auth tokens (Supabase handles this internally)
+# ✗ Add alert() calls — use #gateMessage or a toast system
+# ✗ Bypass RLS by querying with service-role key from the browser
+# ✗ Hard-code localhost URLs in frontend — use relative paths or config
+# ✗ Modify the WS message field names that the frontend switch-cases on
+# ✗ Rename the `results` jsonb structure without migrating all readers

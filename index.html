@@ -115,12 +115,12 @@
   </div>
 
   <!-- Session-to-session comparison -->
-  <div id="sessionCompareModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="sessionCompareTitle" hidden>
+  <div id="sessionCompareModal" class="ce-modal ce-modal--compare" role="dialog" aria-modal="true" aria-labelledby="sessionCompareTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="sessionCompareModal"></div>
     <div class="ce-modal-dialog ce-modal-dialog--compare">
       <button type="button" class="ce-modal-close" data-close-modal="sessionCompareModal" aria-label="Close">&times;</button>
       <h2 id="sessionCompareTitle" class="ce-modal-title">Session Comparison</h2>
-      <p class="ce-modal-lead">Pick two completed sessions to see if performance improved or dropped.</p>
+      <p class="ce-modal-lead">Pick two completed sessions to compare, or overlay every completed session from this calendar month on the same charts.</p>
       <div class="compare-picker-grid">
         <label class="compare-picker-field">
           <span>Session 1 (baseline)</span>
@@ -130,6 +130,11 @@
           <span>Session 2 (latest)</span>
           <select id="compareSessionB"></select>
         </label>
+      </div>
+      <div class="compare-month-row">
+        <button type="button" id="compareThisMonthBtn" class="compare-month-all-btn" disabled>
+          This month · all sessions
+        </button>
       </div>
       <div id="sessionCompareBody" class="session-compare-body">
         <p class="session-item-empty">Select two completed sessions to compare.</p>
