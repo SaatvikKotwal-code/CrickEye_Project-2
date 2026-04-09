@@ -43,6 +43,15 @@ This repo includes the dashboard frontend, FastAPI runtime, and Node API helpers
 - Spoke opacity encodes head stability.
 - Hover tooltip shows type, score, head control, and speed.
 
+### Coach dashboard + role-based auth
+- Signup and login are now mode-based:
+  - Login mode uses `email + password` only.
+  - Signup mode captures `full_name + age + gender + email + password`.
+- Added `profiles` table support for role-aware routing:
+  - `role='player'` -> player dashboard
+  - `role='coach'` -> coach dashboard (global player/session tracking)
+- Coach dashboard aggregates player performance from `sessions.results.analysis.session_summary`.
+
 ## Captured Metrics (Current System)
 
 ## Per-shot metrics
@@ -106,7 +115,7 @@ Place these files in `assets/`:
 Create `backend/.env` (copy from `backend/.env.example`) and set:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_SERVICE_KEY` as legacy alias)
 - `PORT=8080`
 
 ## 5) Start services
@@ -132,6 +141,41 @@ npm start
 - `http://localhost:8080/health` returns `{ ok: true }` (if Node is running)
 - Upload starts pipeline and streams stage/progress updates
 - Session saves include `results.analysis.session_summary`
+
+## 8) Coach account setup (single coach)
+After running `backend/supabase_schema.sql`, create/login your coach user once, then mark that user as coach:
+
+```sql
+update public.profiles
+set role = 'coach'
+where email = 'coach@example.com';
+```
+
+This enables coach-global read access (all player profiles and sessions) through RLS.
+
+## 9) Policy hotfix (important)
+If coach dashboard shows this error:
+`infinite recursion detected in policy for relation "profiles"`
+
+Run the policy helper fix from `backend/supabase_schema.sql` (function `public.is_coach(uuid)` and updated SELECT policies).
+
+## 10) Legacy data backfill (if coach sees no players)
+If older users have sessions but no profile rows, backfill player profiles:
+
+```sql
+insert into public.profiles (id, email, full_name, age, gender, role)
+select
+  u.id,
+  u.email,
+  coalesce(nullif(split_part(u.email, '@', 1), ''), 'Player'),
+  null,
+  'prefer_not_to_say',
+  'player'
+from auth.users u
+left join public.profiles p on p.id = u.id
+where p.id is null
+on conflict (id) do nothing;
+```
 
 ## Repository Notes
 - Frontend: `App.js`, `components/ReportModal.js`, `components/wagonWheel.js`, `style.css`

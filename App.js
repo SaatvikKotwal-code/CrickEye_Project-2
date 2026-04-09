@@ -87,16 +87,28 @@ const compareSessionB = document.getElementById('compareSessionB');
 const sessionCompareBody = document.getElementById('sessionCompareBody');
 const compareThisMonthBtn = document.getElementById('compareThisMonthBtn');
 const authGate         = document.getElementById('authGate');
+const gateTitle        = document.getElementById('gateTitle');
+const gateSubtitle     = document.getElementById('gateSubtitle');
+const signupFields     = document.getElementById('signupFields');
+const gateFullName     = document.getElementById('gateFullName');
+const gateAge          = document.getElementById('gateAge');
+const gateGender       = document.getElementById('gateGender');
 const gateEmail        = document.getElementById('gateEmail');
 const gatePassword     = document.getElementById('gatePassword');
-const gateSignupBtn    = document.getElementById('gateSignupBtn');
-const gateLoginBtn     = document.getElementById('gateLoginBtn');
+const gatePrimaryBtn   = document.getElementById('gatePrimaryBtn');
+const gateSwitchMode   = document.getElementById('gateSwitchMode');
 const gateMessage      = document.getElementById('gateMessage');
+const playerAppShell   = document.getElementById('playerAppShell');
+const coachDashboard   = document.getElementById('coachDashboard');
+const coachStatsRow    = document.getElementById('coachStatsRow');
+const coachPlayersList = document.getElementById('coachPlayersList');
+const coachLogoutBtn   = document.getElementById('coachLogoutBtn');
 
 // ── Supabase (frontend auth + storage + db) ────────────────
 // Use supabaseClient (not "supabase"): the UMD bundle already defines global `supabase` = library API.
 // Populated from GET /api/public-config (reads backend/.env) or optional window.* override.
 let supabaseClient = null;
+const COACH_EMAIL_OVERRIDES = new Set(['coach9259@gmail.com']);
 
 function getSupabaseUmd() {
   const g = typeof globalThis !== 'undefined' ? globalThis : window;
@@ -152,6 +164,9 @@ let state = {
   completePayload:       null,
   videoFlushed:          false,
   currentUser:           null,
+  currentProfile:        null,
+  currentRole:           'player',
+  authMode:              'login',
   activeSessionId:       null,
   sessionsCache:         [],
   /** SHA-256 hex for current run; used on save so cache can find this session later. */
@@ -378,12 +393,287 @@ function updateAuthUi() {
   const loggedIn = !!state.currentUser;
   if (authGate) authGate.classList.toggle('hidden', loggedIn);
   if (headerProfileBtn) headerProfileBtn.hidden = !loggedIn;
-  if (headerAuthHint) headerAuthHint.hidden = true;
+  if (headerAuthHint) {
+    headerAuthHint.hidden = false;
+    headerAuthHint.textContent = loggedIn
+      ? `Role: ${isCoachRole() ? 'coach' : 'player'}`
+      : 'Not logged in';
+  }
+  // Keep role-based app shell switching centralized and always enforced.
+  setPlayerAppVisible(!(loggedIn && isCoachRole()));
   if (loggedIn && state.currentUser) {
     const em = state.currentUser.email || '';
     if (headerProfileAvatar) headerProfileAvatar.textContent = (em.trim()[0] || '?').toUpperCase();
     if (headerProfileEmail) headerProfileEmail.textContent = em;
   }
+}
+
+function setGateMessage(msg, isError = true) {
+  if (!gateMessage) return;
+  gateMessage.textContent = msg || '';
+  gateMessage.style.color = isError ? '#fda4af' : '#86efac';
+}
+
+function setAuthMode(mode) {
+  state.authMode = mode === 'signup' ? 'signup' : 'login';
+  const signup = state.authMode === 'signup';
+  if (signupFields) signupFields.hidden = !signup;
+  if (gateTitle) gateTitle.textContent = signup ? 'Create Player Account' : 'CrickEye Login';
+  if (gateSubtitle) gateSubtitle.textContent = signup
+    ? 'Register to start tracking your cricket sessions.'
+    : 'Login to continue your batting analytics.';
+  if (gatePrimaryBtn) gatePrimaryBtn.textContent = signup ? 'Create Account' : 'Login';
+  if (gateSwitchMode) gateSwitchMode.textContent = signup
+    ? 'Already have an account? Login'
+    : 'Need an account? Sign up';
+  if (gatePassword) gatePassword.autocomplete = signup ? 'new-password' : 'current-password';
+  setGateMessage('', true);
+}
+
+function setPlayerAppVisible(visible) {
+  if (playerAppShell) playerAppShell.hidden = !visible;
+  if (coachDashboard) coachDashboard.hidden = visible;
+}
+
+function isCoachRole() {
+  return String(state.currentRole || '').trim().toLowerCase() === 'coach';
+}
+
+function normalizeRole(role) {
+  return String(role || '').trim().toLowerCase() === 'coach' ? 'coach' : 'player';
+}
+
+function resolveRole(profile, user) {
+  const email = String(user?.email || '').trim().toLowerCase();
+  if (email && COACH_EMAIL_OVERRIDES.has(email)) return 'coach';
+  return normalizeRole(profile?.role);
+}
+
+function parseSessionSummary(results) {
+  const analysis = getSessionAnalysis(results);
+  const ss = analysis?.session_summary || {};
+  return {
+    avgSpeed: ss.avg_bat_speed_kmh ?? null,
+    avgHead: ss.avg_head_stability ?? null,
+    avgBalance: ss.avg_stability_score ?? null,
+    avgScore: ss.avg_shot_score ?? null,
+  };
+}
+
+function avg(nums) {
+  const vals = nums.filter((n) => typeof n === 'number' && Number.isFinite(n));
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function fmtNum(v, digits = 1, suffix = '') {
+  if (v == null || Number.isNaN(Number(v))) return '—';
+  return `${Number(v).toFixed(digits)}${suffix}`;
+}
+
+function fmtDate(v) {
+  if (!v) return '—';
+  try {
+    return new Date(v).toLocaleDateString(undefined, { dateStyle: 'medium' });
+  } catch {
+    return '—';
+  }
+}
+
+function renderCoachDashboard(players, sessions) {
+  if (!coachStatsRow || !coachPlayersList) return;
+  const sessionsByUser = new Map();
+  for (const s of sessions || []) {
+    const arr = sessionsByUser.get(s.user_id) || [];
+    arr.push(s);
+    sessionsByUser.set(s.user_id, arr);
+  }
+
+  const totalPlayers = (players || []).length;
+  const totalSessions = (sessions || []).length;
+  const totalCompleted = (sessions || []).filter((s) => s.status === 'completed').length;
+  const activeToday = (sessions || []).filter((s) => {
+    if (!s.created_at) return false;
+    const d = new Date(s.created_at);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  }).length;
+
+  coachStatsRow.innerHTML = `
+    <div class="coach-stat"><div class="coach-stat-label">Registered Players</div><div class="coach-stat-value">${totalPlayers}</div></div>
+    <div class="coach-stat"><div class="coach-stat-label">Total Sessions</div><div class="coach-stat-value">${totalSessions}</div></div>
+    <div class="coach-stat"><div class="coach-stat-label">Completed Sessions</div><div class="coach-stat-value">${totalCompleted}</div></div>
+    <div class="coach-stat"><div class="coach-stat-label">Sessions Today</div><div class="coach-stat-value">${activeToday}</div></div>
+  `;
+
+  if (!players || !players.length) {
+    coachPlayersList.innerHTML = '<div class="session-item-empty">No player profiles found yet.</div>';
+    return;
+  }
+
+  coachPlayersList.innerHTML = players.map((p) => {
+    const rows = (sessionsByUser.get(p.id) || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const completedRows = rows.filter((r) => r.status === 'completed');
+    const latest = rows[0];
+    const metrics = completedRows.map((r) => parseSessionSummary(r.results));
+    const avgSpeed = avg(metrics.map((m) => m.avgSpeed));
+    const avgHead = avg(metrics.map((m) => m.avgHead));
+    const avgBalance = avg(metrics.map((m) => m.avgBalance));
+    const avgScore = avg(metrics.map((m) => m.avgScore));
+
+    return `
+      <article class="coach-player-card">
+        <div class="coach-player-head">
+          <div>
+            <h3 class="coach-player-name">${escapeHtml(p.full_name || 'Unnamed Player')}</h3>
+            <div class="coach-player-email">${escapeHtml(p.email || '—')}</div>
+          </div>
+          <span class="coach-player-chip">${escapeHtml((p.gender || '—').replaceAll('_', ' '))} · ${p.age ?? '—'}y</span>
+        </div>
+        <div class="coach-player-grid">
+          <div class="coach-player-metric"><div class="coach-player-metric-label">Sessions</div><div class="coach-player-metric-value">${rows.length}</div></div>
+          <div class="coach-player-metric"><div class="coach-player-metric-label">Completed</div><div class="coach-player-metric-value">${completedRows.length}</div></div>
+          <div class="coach-player-metric"><div class="coach-player-metric-label">Avg Speed</div><div class="coach-player-metric-value">${fmtNum(avgSpeed, 1, ' km/h')}</div></div>
+          <div class="coach-player-metric"><div class="coach-player-metric-label">Avg Score</div><div class="coach-player-metric-value">${fmtNum(avgScore, 1, '/10')}</div></div>
+          <div class="coach-player-metric"><div class="coach-player-metric-label">Avg Head</div><div class="coach-player-metric-value">${fmtNum(avgHead, 0, '/100')}</div></div>
+          <div class="coach-player-metric"><div class="coach-player-metric-label">Avg Balance</div><div class="coach-player-metric-value">${fmtNum(avgBalance, 0, '/100')}</div></div>
+        </div>
+        <div class="coach-player-email" style="margin-top:8px">Latest session: ${fmtDate(latest?.created_at)}</div>
+      </article>
+    `;
+  }).join('');
+}
+
+async function fetchCoachDashboard() {
+  if (!supabaseClient || !state.currentUser || !isCoachRole()) return;
+  const { data: profiles, error: profilesError } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (profilesError) {
+    if (coachPlayersList) {
+      coachPlayersList.innerHTML = `<div class="session-item-empty">Coach profiles read failed: ${escapeHtml(profilesError.message)}</div>`;
+    }
+    return;
+  }
+
+  const { data: sessions, error: sessionsError } = await supabaseClient
+    .from('sessions')
+    .select('id, user_id, status, created_at, results')
+    .order('created_at', { ascending: false });
+  if (sessionsError) {
+    if (coachPlayersList) {
+      coachPlayersList.innerHTML = `<div class="session-item-empty">Coach sessions read failed: ${escapeHtml(sessionsError.message)}</div>`;
+    }
+    return;
+  }
+
+  const profileRows = Array.isArray(profiles) ? profiles : [];
+  let playerRows = profileRows.filter((p) =>
+    normalizeRole(p?.role) === 'player' && String(p?.id || '') !== String(state.currentUser?.id || '')
+  );
+
+  // Fallback: if RLS/profile reads are partial, derive players from sessions.
+  if (!playerRows.length) {
+    const userIds = [...new Set((sessions || []).map((s) => s.user_id).filter(Boolean))]
+      .filter((id) => String(id) !== String(state.currentUser?.id || ''));
+    if (userIds.length) {
+      const { data: profileByIds } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+      const byId = new Map((profileByIds || []).map((p) => [String(p.id), p]));
+      playerRows = userIds.map((id) => byId.get(String(id)) || ({
+        id,
+        full_name: `Player ${String(id).slice(0, 8)}`,
+        email: 'Profile not visible',
+        gender: 'prefer_not_to_say',
+        age: null,
+        role: 'player',
+      }));
+    }
+  }
+
+  renderCoachDashboard(playerRows, sessions || []);
+  // Defensive: if coach dashboard data loaded, force coach shell visible.
+  setPlayerAppVisible(false);
+}
+
+async function ensureProfile(user, opts = {}) {
+  if (!supabaseClient || !user) return null;
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (error) {
+    console.error('[CrickEye] profile read error:', error.message);
+    return null;
+  }
+  if (data) return data;
+
+  // Legacy repair path: role/profile may exist by email on a stale id.
+  // Re-link it to the currently authenticated user id.
+  if (user.email) {
+    const { data: byEmail, error: byEmailError } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('email', user.email)
+      .maybeSingle();
+    if (!byEmailError && byEmail) {
+      if (byEmail.id !== user.id) {
+        const { data: relinked, error: relinkErr } = await supabaseClient
+          .from('profiles')
+          .update({ id: user.id })
+          .eq('id', byEmail.id)
+          .select('*')
+          .maybeSingle();
+        if (relinkErr) {
+          console.error('[CrickEye] profile id relink error:', relinkErr.message);
+          return byEmail;
+        }
+        return relinked || { ...byEmail, id: user.id };
+      }
+      return byEmail;
+    }
+  }
+
+  if (!opts.allowCreateFallback) return null;
+
+  const fallback = {
+    id: user.id,
+    full_name: (user.email || 'Player').split('@')[0],
+    age: null,
+    gender: 'prefer_not_to_say',
+    email: user.email || '',
+    role: 'player',
+  };
+  const { error: insertError } = await supabaseClient.from('profiles').insert(fallback);
+  if (insertError) {
+    console.error('[CrickEye] fallback profile insert error:', insertError.message);
+    return null;
+  }
+  return fallback;
+}
+
+async function resolveProfileForUser(user, opts = {}) {
+  const byId = await ensureProfile(user, opts);
+  if (byId && byId.role) return byId;
+  if (!supabaseClient || !user?.email) return byId;
+
+  // Final fallback by email so coach mode cannot silently downgrade.
+  const { data: byEmailRows, error: byEmailErr } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('email', user.email)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (byEmailErr) {
+    console.error('[CrickEye] profile resolve by email error:', byEmailErr.message);
+    return byId;
+  }
+  const byEmail = byEmailRows?.[0] || null;
+  return byEmail || byId;
 }
 
 function openModal(el) {
@@ -1516,6 +1806,9 @@ async function fetchUserSessions() {
     renderSessions([]);
     return;
   }
+  if (isCoachRole()) {
+    return;
+  }
   const { data, error } = await supabaseClient
     .from('sessions')
     .select('*')
@@ -1531,51 +1824,96 @@ async function fetchUserSessions() {
 async function signup() {
   if (!supabaseClient) {
     const msg = 'Supabase not ready. Check: 1) backend/.env SUPABASE_URL + SUPABASE_ANON_KEY 2) hard refresh. See browser console.';
-    if (gateMessage) gateMessage.textContent = msg;
-    alert(msg);
+    setGateMessage(msg, true);
     return;
   }
+  if (state.authMode !== 'signup') {
+    setAuthMode('signup');
+    return;
+  }
+  const fullName = (gateFullName?.value || '').trim();
+  const ageVal = gateAge?.value ? Number(gateAge.value) : null;
+  const gender = (gateGender?.value || '').trim();
   const email = (gateEmail?.value || '').trim();
   const password = (gatePassword?.value || '').trim();
-  if (!email || !password) return alert('Enter email and password.');
-  const { error } = await supabaseClient.auth.signUp({ email, password });
-  if (error) {
-    if (gateMessage) gateMessage.textContent = error.message;
-    return alert(error.message);
+  if (!fullName || !email || !password || !gender || !ageVal) {
+    setGateMessage('Fill all signup fields: name, age, gender, email, password.', true);
+    return;
   }
-  if (gateMessage) gateMessage.textContent = 'Signup successful. Please login.';
-  alert('Signup successful. Please login.');
+  if (!Number.isInteger(ageVal) || ageVal < 8 || ageVal > 100) {
+    setGateMessage('Age must be a whole number between 8 and 100.', true);
+    return;
+  }
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if (error) {
+    setGateMessage(error.message, true);
+    return;
+  }
+  const newUser = data?.user || null;
+  if (newUser) {
+    const { error: profileError } = await supabaseClient.from('profiles').upsert({
+      id: newUser.id,
+      full_name: fullName,
+      age: ageVal,
+      gender,
+      email,
+      role: 'player',
+    });
+    if (profileError) {
+      setGateMessage(`Signup succeeded but profile save failed: ${profileError.message}`, true);
+      return;
+    }
+  }
+  setGateMessage('Signup successful. Please login.', false);
+  setAuthMode('login');
+  if (gatePassword) gatePassword.value = '';
 }
 
 async function login() {
   if (!supabaseClient) {
     const msg = 'Supabase not ready. Check backend/.env and console.';
-    if (gateMessage) gateMessage.textContent = msg;
-    alert(msg);
+    setGateMessage(msg, true);
+    return;
+  }
+  if (state.authMode !== 'login') {
+    setAuthMode('login');
     return;
   }
   const email = (gateEmail?.value || '').trim();
   const password = (gatePassword?.value || '').trim();
-  if (!email || !password) return alert('Enter email and password.');
+  if (!email || !password) {
+    setGateMessage('Enter email and password.', true);
+    return;
+  }
   const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) {
-    if (gateMessage) gateMessage.textContent = error.message;
-    return alert(error.message);
+    setGateMessage(error.message, true);
+    return;
   }
   const { data } = await supabaseClient.auth.getUser();
   state.currentUser = data?.user || null;
-  if (gateMessage) gateMessage.textContent = '';
+  state.currentProfile = await resolveProfileForUser(state.currentUser, { allowCreateFallback: true });
+  state.currentRole = resolveRole(state.currentProfile, state.currentUser);
+  setGateMessage('', true);
+  setPlayerAppVisible(!isCoachRole());
   updateAuthUi();
-  await fetchUserSessions();
+  if (isCoachRole()) {
+    await fetchCoachDashboard();
+  } else {
+    await fetchUserSessions();
+  }
 }
 
 async function logout() {
   if (!supabaseClient) return;
   await supabaseClient.auth.signOut();
   state.currentUser = null;
+  state.currentProfile = null;
+  state.currentRole = 'player';
   updateAuthUi();
+  setPlayerAppVisible(true);
   renderSessions([]);
-  if (gateMessage) gateMessage.textContent = 'Logged out.';
+  setGateMessage('Logged out.', false);
   closeModal(profileModal);
 }
 
@@ -1584,15 +1922,21 @@ async function initAuth() {
     if (headerAuthHint) headerAuthHint.hidden = false;
     if (headerProfileBtn) headerProfileBtn.hidden = true;
     if (gateMessage && !gateMessage.textContent) {
-      gateMessage.textContent = 'Add Supabase keys to backend/.env, restart uvicorn, then hard-refresh (Ctrl+Shift+R).';
+      setGateMessage('Add Supabase keys to backend/.env, restart uvicorn, then hard-refresh (Ctrl+Shift+R).', true);
     }
     return;
   }
   if (headerAuthHint) headerAuthHint.hidden = true;
   const { data } = await supabaseClient.auth.getUser();
   state.currentUser = data?.user || null;
+  state.currentProfile = await resolveProfileForUser(state.currentUser, { allowCreateFallback: !!state.currentUser });
+  state.currentRole = resolveRole(state.currentProfile, state.currentUser);
+  setPlayerAppVisible(!isCoachRole());
   updateAuthUi();
-  if (state.currentUser) await fetchUserSessions();
+  if (state.currentUser) {
+    if (isCoachRole()) await fetchCoachDashboard();
+    else await fetchUserSessions();
+  }
 }
 
 async function sha256HexFromFile(file) {
@@ -2263,8 +2607,14 @@ function formatTime(sec) { const m=String(Math.floor(sec/60)).padStart(2,'0'); c
 
 // ── Init ────────────────────────────────────────────────────
 function init() {
-  gateSignupBtn?.addEventListener('click', signup);
-  gateLoginBtn?.addEventListener('click', login);
+  gatePrimaryBtn?.addEventListener('click', () => {
+    if (state.authMode === 'signup') signup();
+    else login();
+  });
+  gateSwitchMode?.addEventListener('click', () => {
+    setAuthMode(state.authMode === 'signup' ? 'login' : 'signup');
+  });
+  coachLogoutBtn?.addEventListener('click', () => { logout(); });
   wireModalDismissals();
   headerProfileBtn?.addEventListener('click', () => {
     fillProfileModal();
@@ -2311,6 +2661,7 @@ function init() {
   setTimeout(animateStatRings, 600);
   updateDistribution();
   updateSessionRating(null);
+  setAuthMode('login');
   initAuth();
   console.log('[CrickEye Pro v6.4 — Calibrated km/h] Initialised.');
 }

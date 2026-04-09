@@ -279,6 +279,12 @@
 # id uuid, user_id uuid, video_url text, status text,
 # results jsonb, created_at timestamptz, file_hash text
 
+### profiles table columns (auth + coach dashboard):
+# id uuid (PK, references auth.users.id on delete cascade),
+# email text unique, full_name text, age int, gender text, role text, created_at timestamptz
+# role values: 'player' | 'coach'
+# gender values: 'male' | 'female' | 'other' | 'prefer_not_to_say'
+
 ### results jsonb shape (DO NOT CHANGE):
 # {
 #   analysis: { ...run_session_analysis() output },
@@ -297,6 +303,12 @@
 ### (which automatically sends the user's JWT). Never bypass RLS
 ### by using the service-role key from the frontend.
 
+### Coach RLS rule (critical):
+# - profiles SELECT policy MUST NOT self-query profiles directly via EXISTS in policy body
+#   because it can trigger "infinite recursion detected in policy for relation profiles"
+# - Use helper function public.is_coach(auth.uid()) in policies instead.
+# - sessions SELECT policy also uses public.is_coach(auth.uid()) to grant coach global read.
+
 ### Before any schema change:
 # 1. Write the ALTER TABLE / CREATE INDEX SQL
 # 2. Show it to the user and wait for approval
@@ -305,23 +317,33 @@
 ## ── AUTHENTICATION RULES ────────────────────────────────────────
 - Auth is Supabase email+password (supabase.auth.signInWithPassword)
 - supabaseClient is initialised in bootstrapSupabase() from /api/public-config
-- Login flow: signInWithPassword → getUser → state.currentUser → updateAuthUi()
-  → fetchUserSessions()
+- Login flow: signInWithPassword → getUser → resolveProfileForUser() → state.currentUser/state.currentProfile/state.currentRole
+- Route by role after login:
+  - role='player' → player dashboard + fetchUserSessions()
+  - role='coach' → coach dashboard + fetchCoachDashboard()
 - Logout flow: signOut → state.currentUser = null → updateAuthUi() →
   renderSessions([])
 - authGate div is hidden when logged in, shown when logged out
 - profileModal shows user email, id, created_at
 - Never store passwords, tokens, or keys in localStorage
+- Signup fields:
+  - Login mode: email + password only
+  - Signup mode: full_name + age + gender + email + password
 
 ## ── KNOWN ISSUES TO FIX ─────────────────────────────────────────
 
 ### 1. Login Page
-# PROBLEM: Login flow still contains alert() fallback paths.
-# TARGET: Remove alert-based UX; keep errors in #gateMessage only.
+# STATUS: fixed
+# - alert() auth fallbacks removed for login/signup path.
+# - Errors/success now use #gateMessage.
 
 ### 2. Session Comparison View — fixed (see SESSION COMPARISON MODAL)
 # Prior issues (single-session compare, empty states) are handled in refreshCompareSessionOptions()
 # and renderSessionComparison(). Monthly overlay and insight copy are documented there.
+
+### 3. Coach dashboard empty with valid sessions
+# Root cause: missing player rows in profiles table for legacy users.
+# Fix: backfill profiles from auth.users and/or sessions user_id set.
 
 ## ── ADDING NEW FEATURES CHECKLIST ──────────────────────────────
 # When asked to add a new feature, always follow this order:
@@ -370,7 +392,8 @@
 ## ── ENVIRONMENT VARIABLES (backend/.env) ───────────────────────
 # SUPABASE_URL=          ← Supabase project URL
 # SUPABASE_ANON_KEY=     ← public anon key (safe for frontend)
-# SUPABASE_SERVICE_KEY=  ← service role key (backend ONLY, never expose)
+# SUPABASE_SERVICE_ROLE_KEY=  ← preferred service role key (backend ONLY)
+# SUPABASE_SERVICE_KEY=       ← legacy alias still supported in backend/services/supabaseAdmin.js
 # PORT=8080              ← Express port
 # (FastAPI always runs on 8000 via uvicorn command)
 

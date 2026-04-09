@@ -12,13 +12,30 @@
 <body>
   <div id="authGate" class="auth-gate">
     <div class="auth-gate-card">
-      <h2>CrickEye Login</h2>
-      <p>Login or create account to continue.</p>
-      <input type="email" id="gateEmail" placeholder="Email" />
-      <input type="password" id="gatePassword" placeholder="Password" />
+      <div class="auth-gate-head">
+        <h2 id="gateTitle">CrickEye Login</h2>
+        <p id="gateSubtitle">Login to continue your batting analytics.</p>
+      </div>
+      <div class="auth-gate-form">
+        <div id="signupFields" class="auth-signup-fields" hidden>
+          <input type="text" id="gateFullName" placeholder="Full name" autocomplete="name" />
+          <div class="auth-grid-2">
+            <input type="number" id="gateAge" placeholder="Age" min="8" max="100" />
+            <select id="gateGender">
+              <option value="">Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
+          </div>
+        </div>
+        <input type="email" id="gateEmail" placeholder="Email" autocomplete="email" />
+        <input type="password" id="gatePassword" placeholder="Password" autocomplete="current-password" />
+      </div>
       <div class="auth-gate-actions">
-        <button type="button" id="gateSignupBtn" class="auth-btn">Sign Up</button>
-        <button type="button" id="gateLoginBtn" class="auth-btn">Login</button>
+        <button type="button" id="gatePrimaryBtn" class="auth-btn auth-btn--primary">Login</button>
+        <button type="button" id="gateSwitchMode" class="auth-btn auth-btn--ghost">Need an account? Sign up</button>
       </div>
       <div id="gateMessage" class="auth-gate-msg"></div>
     </div>
@@ -145,6 +162,21 @@
     </div>
   </div>
 
+  <section id="coachDashboard" class="coach-dashboard" hidden>
+    <div class="coach-dashboard-head">
+      <div>
+        <h2>Coach Control Panel</h2>
+        <p>Track all registered players and their session performance.</p>
+      </div>
+      <button type="button" class="ce-btn ce-btn--danger" id="coachLogoutBtn">Log out</button>
+    </div>
+    <div id="coachStatsRow" class="coach-stats-row"></div>
+    <div id="coachPlayersList" class="coach-players-list">
+      <div class="session-item-empty">No player profiles found yet.</div>
+    </div>
+  </section>
+
+  <div id="playerAppShell">
   <!-- ───────────────── MAIN GRID ───────────────── -->
   <main class="main-grid">
 
@@ -356,6 +388,7 @@
     </footer>
 
   </section>
+  </div>
 
   <script src="components/wagonWheel.js"></script>
   <script src="components/ReportModal.js"></script>
