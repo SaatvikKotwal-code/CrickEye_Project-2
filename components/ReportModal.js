@@ -13,6 +13,15 @@
 
 const ReportModal = (() => {
 
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   const SHOT_LABELS = {
     cover:'Cover Drive', straight:'Straight Drive',
     pull:'Pull Shot', flick:'Flick', sweep:'Sweep',
@@ -22,15 +31,32 @@ const ReportModal = (() => {
     pull:'#F97316', flick:'#A855F7', sweep:'#EAB308',
   };
   const QUALITY_COLORS = {
-    Excellent:'#10B981', Good:'#06B6D4', Average:'#EAB308', Poor:'#EF4444',
-  };
-  const FOOTWORK_LABELS = {
-    front_foot:'Front Foot', back_foot:'Back Foot', neutral:'Neutral',
+    'Top class': '#10B981',
+    Good: '#06B6D4',
+    Average: '#EAB308',
+    Poor: '#EF4444',
+    OK: '#EAB308',
+    'Needs work': '#EF4444',
+    Excellent: '#10B981',
   };
   const FLAG_INFO = {
-    HEAD_MOVING:      { label:'Head Moving',     color:'#EF4444', desc:'Your head moved significantly during this shot, reducing timing accuracy and consistency.' },
-    UNSTABLE:         { label:'Unstable',         color:'#EF4444', desc:'High body sway was detected — balance was poor through the stroke execution.' },
-    FOOTWORK_UNCLEAR: { label:'Footwork Unclear', color:'#EAB308', desc:'Foot position was ambiguous — could not determine front/back foot clearly from pose data.' },
+    HEAD_LATERAL_DRIFT:   { label:'Head drifting sideways',     color:'#EF4444', desc:'Lateral head movement off the rotational axis during the swing.' },
+    HEAD_VERTICAL_DRIFT:  { label:'Head lifting/dropping',      color:'#F97316', desc:'Sharp vertical head movement at contact on a drive-type shot.' },
+    HEAD_DUCKING_PULL:    { label:'Ducking the pull',           color:'#EF4444', desc:'Head dropping through the pull instead of staying level to the ball.' },
+    STANCE_ASYMMETRIC:    { label:'Stance asymmetric',          color:'#EAB308', desc:'Shoulder or hip tilt at setup — directional bias before the ball arrives.' },
+    ELBOW_COLLAPSE:      { label:'Elbow collapse',             color:'#F97316', desc:'Arms cramped in before contact — reduced space and leverage.' },
+    ELBOW_COLLAPSE_PULL:  { label:'Elbow collapse (pull)',      color:'#EF4444', desc:'Cramped arms on the pull — top-edge risk, no extension through the ball.' },
+    ELBOW_REACHING:       { label:'Elbow reaching',             color:'#EAB308', desc:'Arms over-extended — chasing the ball instead of letting it come.' },
+    ELBOW_REACHING_FLICK: { label:'Elbow reaching (flick)',     color:'#F97316', desc:'Over-hitting the flick — timing shot needs soft hands, not locked arms.' },
+    ELBOW_BEHIND_PAD:     { label:'Elbow behind pad',           color:'#EF4444', desc:'Sweep: elbow dropped behind the pad — bat face closes early.' },
+    NARROW_BASE:          { label:'Narrow base',                color:'#EA580C', desc:'Feet too close at setup — limited platform for weight shift.' },
+    WIDE_BASE:            { label:'Wide base',                  color:'#EA580C', desc:'Stance wider than ~1.6× shoulder width — hips can lock.' },
+    LATE_PLANT:           { label:'Late front-foot plant',      color:'#64748B', desc:'Front foot lands noticeably after contact — harder to get weight through the ball.' },
+    FLAT_FOOTED:          { label:'Quiet feet',                 color:'#64748B', desc:'Very little pre-shot foot movement — check trigger and weight into the shot.' },
+    LOW_WEIGHT_TRANSFER:  { label:'Low weight transfer',        color:'#EF4444', desc:'Hips not driving toward the ball on front-foot drives.' },
+    OVER_COMMITTED:       { label:'Over-committed (lunge)',       color:'#CA8A04', desc:'Excessive hip shift — vulnerable to balls that hold up.' },
+    SPINE_COLLAPSE:       { label:'Spine collapse',             color:'#CA8A04', desc:'Upper body crouching into contact — shape and control suffer.' },
+    STIFF_LEGGED:         { label:'Stiff legs',                 color:'#64748B', desc:'Little knee flex at setup — reduced athletic readiness.' },
   };
 
   function getAnalysisSummary(analysis) {
@@ -42,22 +68,41 @@ const ReportModal = (() => {
       shotsConfirmed: ss.shots_confirmed ?? analysis?.shots_confirmed ?? 0,
       shotsTotalDetected: ss.shots_total_detected ?? analysis?.shots_total ?? 0,
       avgSpeed: ss.avg_bat_speed_kmh ?? av.peak_swing_speed ?? null,
-      avgHead: ss.avg_head_stability ?? av.head_stability ?? null,
-      avgStability: ss.avg_stability_score ?? av.stability_score ?? null,
+      avgHead: ss.avg_head_quality_score ?? av.head_quality_score ?? null,
+      avgStability: ss.avg_symmetry_score ?? av.symmetry_score ?? null,
+      avgFootwork: ss.avg_footwork_score ?? av.footwork_score ?? null,
+      avgSwingIntensity: ss.avg_swing_intensity ?? av.swing_intensity ?? null,
       avgShotScore: ss.avg_shot_score ?? null,
+      avgWeightTransfer: ss.avg_weight_transfer ?? null,
+      avgBaseWidth: ss.avg_base_width_ratio ?? null,
+      avgKneeFlex: ss.avg_knee_flex ?? null,
       fatigue: ss.fatigue_detected ?? analysis?.fatigue_detected ?? false,
       trend: {
         first_half_speed: tr.first_half_speed ?? tr.peak_swing_speed?.first_half ?? null,
         second_half_speed: tr.second_half_speed ?? tr.peak_swing_speed?.second_half ?? null,
-        first_half_head_stability: tr.first_half_head_stability ?? tr.head_stability?.first_half ?? null,
-        second_half_head_stability: tr.second_half_head_stability ?? tr.head_stability?.second_half ?? null,
-        first_half_stability_score: tr.first_half_stability_score ?? tr.stability_score?.first_half ?? null,
-        second_half_stability_score: tr.second_half_stability_score ?? tr.stability_score?.second_half ?? null,
+        first_half_head_quality_score: tr.first_half_head_quality_score ?? tr.head_quality_score?.first_half ?? null,
+        second_half_head_quality_score: tr.second_half_head_quality_score ?? tr.head_quality_score?.second_half ?? null,
+        first_half_symmetry_score: tr.first_half_symmetry_score ?? tr.symmetry_score?.first_half ?? null,
+        second_half_symmetry_score: tr.second_half_symmetry_score ?? tr.symmetry_score?.second_half ?? null,
+        first_half_footwork_score: tr.first_half_footwork_score ?? tr.footwork_score?.first_half ?? null,
+        second_half_footwork_score: tr.second_half_footwork_score ?? tr.footwork_score?.second_half ?? null,
+        first_half_swing_intensity: tr.first_half_swing_intensity ?? tr.swing_intensity?.first_half ?? null,
+        second_half_swing_intensity: tr.second_half_swing_intensity ?? tr.swing_intensity?.second_half ?? null,
       },
       flagsSummary: {
-        HEAD_MOVING_count: flags.HEAD_MOVING_count ?? 0,
-        UNSTABLE_count: flags.UNSTABLE_count ?? 0,
-        FOOTWORK_UNCLEAR_count: flags.FOOTWORK_UNCLEAR_count ?? 0,
+        HEAD_LATERAL_DRIFT_count: flags.HEAD_LATERAL_DRIFT_count ?? 0,
+        HEAD_VERTICAL_DRIFT_count: flags.HEAD_VERTICAL_DRIFT_count ?? 0,
+        HEAD_DUCKING_PULL_count: flags.HEAD_DUCKING_PULL_count ?? 0,
+        STANCE_ASYMMETRIC_count: flags.STANCE_ASYMMETRIC_count ?? 0,
+        ELBOW_COLLAPSE_count: flags.ELBOW_COLLAPSE_count ?? 0,
+        ELBOW_REACHING_count: flags.ELBOW_REACHING_count ?? 0,
+        ELBOW_BEHIND_PAD_count: flags.ELBOW_BEHIND_PAD_count ?? 0,
+        NARROW_BASE_count: flags.NARROW_BASE_count ?? 0,
+        WIDE_BASE_count: flags.WIDE_BASE_count ?? 0,
+        LOW_WEIGHT_TRANSFER_count: flags.LOW_WEIGHT_TRANSFER_count ?? 0,
+        OVER_COMMITTED_count: flags.OVER_COMMITTED_count ?? 0,
+        SPINE_COLLAPSE_count: flags.SPINE_COLLAPSE_count ?? 0,
+        STIFF_LEGGED_count: flags.STIFF_LEGGED_count ?? 0,
       },
       byShotType: ss.by_shot_type || analysis?.by_shot_type || {},
     };
@@ -155,14 +200,31 @@ const ReportModal = (() => {
     const score = shot.shot_score || 0;
     const sc = score >= 7 ? '#10B981' : score >= 5 ? '#06B6D4' : score >= 3 ? '#EAB308' : '#EF4444';
     const qc = QUALITY_COLORS[shot.shot_quality] || '#888';
-    const flags = shot.flags || [];
 
+    const latTh = shot.label === 'pull' || shot.label === 'sweep' ? 0.20 : 0.12;
+    const latR = shot.head_lateral_ratio != null ? Number(shot.head_lateral_ratio) : null;
+    const vertR = shot.head_vertical_ratio != null ? Number(shot.head_vertical_ratio) : null;
+    const latWarn = latR != null && latR > latTh;
+    const headQ = shot.head_quality_score != null ? Math.round(shot.head_quality_score) : null;
+    const symQ = shot.symmetry_score != null ? Math.round(shot.symmetry_score) : null;
+    const fwQ = shot.footwork_score != null ? Math.round(shot.footwork_score) : null;
+    const swQ = shot.swing_intensity != null ? Math.round(shot.swing_intensity) : null;
     const bars = [
-      // CHANGED: unit px/s → km/h, max 400 → 140, value uses toFixed(1), desc updated
+      { label: 'Head position', value: headQ, max: 100, color: '#6C63FF', unit: '/100', desc: 'Shot-type-conditioned head quality (lateral vs vertical axes).' },
+      { label: 'Foot movement', value: fwQ, max: 100, color: '#06B6D4', unit: '/100', desc: 'Pre-shot foot activity and front-foot plant timing vs contact.' },
+      { label: 'Batting stance', value: symQ, max: 100, color: '#10B981', unit: '/100', desc: 'Shoulder and hip tilt symmetry in the pre-shot window.' },
+      { label: 'Swing intensity', value: swQ, max: 100, color: '#EAB308', unit: '/100', desc: 'Session-normalized bat-path effort (rolling peak velocity).' },
       { label: 'Bat Speed', value: (shot.peak_swing_speed || 0).toFixed(1), max: 140, color: '#17B890', unit: 'km/h', desc: 'Bat tip speed in km/h — calibrated using shoulder-width pixel ruler at 30fps.' },
-      { label: 'Head Position', value: Math.round(shot.head_stability || 0), max: 100, color: '#6C63FF', unit: '/100', desc: 'How still your head stayed through impact — critical for timing and watching the ball.' },
-      { label: 'Base & Stability', value: Math.round(shot.stability_score || 0), max: 100, color: '#FF6B35', unit: '/100', desc: 'Lower-body base and balance through contact — reduces mistimed shots.' },
     ];
+    const wt = shot.weight_transfer != null ? Number(shot.weight_transfer) : null;
+    const bw = shot.base_width_ratio != null ? Number(shot.base_width_ratio) : null;
+    const kf = shot.knee_flex != null ? Number(shot.knee_flex) : null;
+    const sr = shot.spine_ratio != null ? Number(shot.spine_ratio) : null;
+    const wtStr = wt != null ? (wt >= 0 ? `+${wt.toFixed(3)}` : wt.toFixed(3)) : '—';
+    const subHead = `Lateral drift: ${latR != null ? latR.toFixed(2) : '—'}${latWarn ? ' (high)' : ''} · Vertical movement: ${vertR != null ? vertR.toFixed(2) : '—'} · head_frames_used: ${shot.head_frames_used != null ? shot.head_frames_used : '—'}`;
+    const subPosture = `Weight transfer: ${wtStr} · Base width: ${bw != null ? `${bw.toFixed(2)}×` : '—'} · Knee flex: ${kf != null ? kf.toFixed(2) : '—'} · Spine ratio: ${sr != null ? sr.toFixed(2) : '—'}`;
+    const padBadge = shot.elbow_behind_pad && shot.label === 'sweep'
+      ? `<div class="rp-shot-pad-badge">Elbow behind pad</div>` : '';
 
     return `
       <div class="rp-shot-card" style="--shot-col:${color}; border-left:4px solid ${color}">
@@ -173,43 +235,32 @@ const ReportModal = (() => {
           </div>
           <div class="rp-shot-right">
             <span class="rp-shot-time">${shot.timestamp || '—'}</span>
+            ${padBadge}
             <span class="rp-shot-quality" style="color:${qc};background:${qc}18">${shot.shot_quality || '—'}</span>
-            <span class="rp-shot-score" style="color:${sc}">${score}<span style="font-size:11px;opacity:0.6">/10</span></span>
+            <span class="rp-shot-score" style="color:${sc}">${score}<span class="rp-shot-denom">/10</span></span>
           </div>
         </div>
-        ${flags.length ? `
-          <div class="rp-shot-flags">
-            ${flags.map(f => {
-              const fi = FLAG_INFO[f] || { label: f, color: '#888', desc: '' };
-              return `<span class="rp-flag" style="color:${fi.color};background:${fi.color}18" title="${fi.desc}">${fi.label}</span>`;
-            }).join('')}
-          </div>` : ''}
         <div class="rp-shot-bars">
           ${bars.map(b => `
             <div class="rp-bar-row">
               <div class="rp-bar-meta">
                 <span class="rp-bar-label" title="${b.desc}">${b.label}</span>
-                <span class="rp-bar-val" style="color:${b.color}">${b.value}<span style="font-size:10px;opacity:0.7">${b.unit}</span></span>
+                <span class="rp-bar-val" style="color:${b.color}">${b.value != null ? b.value : '—'}<span class="rp-bar-unit">${b.unit}</span></span>
               </div>
               <div class="rp-bar-track">
-                <div class="rp-bar-fill" style="width:${Math.min(100,(b.value/b.max)*100).toFixed(1)}%;background:${b.color}"></div>
+                <div class="rp-bar-fill" style="width:${b.value == null ? 0 : Math.min(100,(Number(b.value)/b.max)*100).toFixed(1)}%;background:${b.color}"></div>
               </div>
             </div>`).join('')}
+          <div class="rp-shot-submetrics">${subHead}</div>
+          <div class="rp-shot-submetrics rp-shot-submetrics--posture">${subPosture}</div>
         </div>
         <div class="rp-shot-score-row">
           <span class="rp-bar-label">Shot Execution Rating</span>
           <div class="rp-bar-track" style="flex:1;margin:0 12px">
             <div class="rp-bar-fill" style="width:${score*10}%;background:${sc}"></div>
           </div>
-          <span style="font-family:Manrope,sans-serif;font-size:1rem;font-weight:800;color:${sc}">${score}<span style="font-size:11px;opacity:0.6">/10</span></span>
+          <span class="rp-shot-score-inline" style="color:${sc}">${score}<span class="rp-shot-denom">/10</span></span>
         </div>
-        ${flags.length ? `
-          <div class="rp-shot-flags-detail">
-            ${flags.map(f => {
-              const fi = FLAG_INFO[f] || { label: f, color: '#888', desc: 'No description available.' };
-              return `<div class="rp-flag-detail" style="border-left:3px solid ${fi.color}"><strong style="color:${fi.color}">${fi.label}:</strong> ${fi.desc}</div>`;
-            }).join('')}
-          </div>` : ''}
       </div>`;
   }
 
@@ -217,28 +268,40 @@ const ReportModal = (() => {
   function buildMetricCards() {
     const metrics = [
       {
-        icon: '🎯', color: '#06B6D4', title: 'Head Position',
-        what: 'Tracks how still your head stays through contact (0-100). This is the most reliable coaching metric in the model.',
-        how: 'Computed from pose keypoint variance around contact and normalized by shoulder width for scale stability.',
-        tip: 'Keep chin level and eyes through the ball after contact.',
+        icon: '🎯', color: '#06B6D4', title: 'Head position',
+        what: 'Axis-aware head quality (0–100): lateral drift is always penalised; vertical movement uses a shot-type free zone so pull/sweep tracking is not misread as a fault.',
+        how: 'Nose/ear-midpoint spread vs shoulder width, with HEAD_RULES weights per classifier label.',
+        tip: 'On drives, minimise lateral head movement; on pull/sweep, trust vertical tracking but keep the head on the rotational axis.',
       },
       {
-        icon: '⚖️', color: '#10B981', title: 'Base & Stability',
-        what: 'Measures lower-body stability and whole-body control through impact (0-100).',
-        how: 'Built from knee/ankle jitter around contact and blended with head control for robustness.',
-        tip: 'Use a wider base and hold finish position for 2 seconds after each rep.',
+        icon: '👟', color: '#0891B2', title: 'Foot movement',
+        what: 'Pre-shot foot activity and front-foot plant timing relative to contact (0–100).',
+        how: 'Ankle movement before the swing, normalized by shoulder width, plus plant frame vs contact.',
+        tip: 'Trigger a small press or lift early; get the front foot down on time on front-foot shots.',
       },
       {
-        icon: '💥', color: '#F97316', title: 'Bat Speed',
+        icon: '⚖️', color: '#10B981', title: 'Batting stance',
+        what: 'Pre-shot shoulder and hip line tilt vs horizontal (0–100).',
+        how: 'Mean tilt in the stationary window before onset; flags need enough clean frames.',
+        tip: 'Level shoulders before the bowler runs in — avoid showing a preset bias too early.',
+      },
+      {
+        icon: '💫', color: '#EAB308', title: 'Swing intensity',
+        what: 'How hard you swing through the ball (0–100), normalized within this session so effort is comparable shot to shot.',
+        how: 'P90 of a short rolling mean of bilateral wrist velocity in the swing window, scaled to the session max.',
+        tip: 'If intensity drops late in the net, check fatigue or rushing the trigger movement.',
+      },
+      {
+        icon: '💥', color: '#F97316', title: 'Bat speed (km/h)',
         what: 'Estimated bat-tip speed in km/h for session performance tracking.',
         how: 'Converted from pose-derived wrist motion using shoulder-width calibration and a bat-tip multiplier.',
-        tip: 'Track whether speed rises or drops through the session; combine with Head/Balance before coaching.',
+        tip: 'Use bat speed alongside swing intensity and timing — speed without head position rarely holds up in the middle.',
       },
       {
-        icon: '🏏', color: '#EF4444', title: 'Shot Execution Rating (/10)',
-        what: 'A composite rating combining all metrics into a single quality score per shot.',
-        how: 'Weighted: 55% speed and 45% balance. Head control influences balance internally. 8+ = Excellent, 6–7.9 = Good, 4–5.9 = Average, <4 = Poor.',
-        tip: 'Focus on the metric with the lowest contribution to your score first for maximum improvement.',
+        icon: '🏏', color: '#EF4444', title: 'Shot execution rating (/10)',
+        what: 'Composite from head (35%), footwork (25%), stance symmetry (15%), elbow shape (~25% band), swing intensity (10%).',
+        how: 'Elbow collapse/reaching and sweep elbow-behind-pad feed into the elbow band; scaled to /10.',
+        tip: 'Fix the lowest-contributing band first — often head axis, feet, or stance symmetry.',
       },
     ];
     return metrics.map(m => `
@@ -251,78 +314,45 @@ const ReportModal = (() => {
       </div>`).join('');
   }
 
-  function qualityBand(v) {
-    const n = Number(v || 0);
+  function qualityBand(v, emptyLabel = 'No data') {
+    if (v == null || !Number.isFinite(Number(v))) return { label: emptyLabel, color: '#94A3B8' };
+    const n = Number(v);
     if (n >= 80) return { label: 'Elite', color: '#10B981' };
     if (n >= 65) return { label: 'Good', color: '#10B981' };
     if (n >= 50) return { label: 'Workable', color: '#EAB308' };
     return { label: 'Needs Attention', color: '#EF4444' };
   }
 
-  function buildCoachingFocus(summary, confirmedShots) {
-    const shots = Array.isArray(confirmedShots) ? confirmedShots : [];
-    const byFlag = (flagKey) => shots.find((s) => (s.flags || []).some((f) => String(f).startsWith(flagKey)));
-    const deliveryRef = (shot) =>
-      shot ? `Delivery #${shot.shot_num} · ${(SHOT_LABELS[shot.label] || shot.label || '—').toUpperCase()} · ${shot.timestamp || '—'}` : 'Multiple deliveries across session';
-    const cues = [];
-    const fs = summary.flagsSummary || {};
-    if ((fs.HEAD_MOVING_count || 0) > 0) {
-      const sh = byFlag('HEAD_MOVING');
-      cues.push({
-        title: `HEAD MOVEMENT (${fs.HEAD_MOVING_count} shots flagged)`,
-        happened: 'Head position drifts at or through contact.',
-        delivery: deliveryRef(sh),
-        why: 'When head position is unstable, timing and scoring arc control drop.',
-        drill: 'Drill: chin level through contact, eyes track ball past hit.',
-      });
+  /** One table cell: /100 score + band + optional player-facing cue from the pipeline. */
+  function formatDeliveryMetric100(score, playerLabel) {
+    if (score == null || !Number.isFinite(Number(score))) {
+      return '<div class="rp-del-metric rp-del-metric--empty"><span class="rp-del-metric-dash">—</span></div>';
     }
-    if ((fs.UNSTABLE_count || 0) > 0) {
-      const sh = byFlag('UNSTABLE');
-      cues.push({
-        title: `BASE INSTABILITY (${fs.UNSTABLE_count} shots flagged)`,
-        happened: 'Base collapses or drifts through impact.',
-        delivery: deliveryRef(sh),
-        why: 'Weak base reduces bat path control, especially against hard length area.',
-        drill: 'Drill: wide base setup + hold finish for 2 seconds.',
-      });
-    }
-    if (summary.fatigue) {
-      cues.push({
-        title: 'SECOND-HALF DECLINE (fatigue signal)',
-        happened: 'Session momentum dipped in the second half.',
-        delivery: 'Comparison of 1st-half vs 2nd-half deliveries',
-        why: 'Late-session drop indicates trigger movement and intent are fading.',
-        drill: 'Next session: reduce volume by 20% or add a mid-session break.',
-      });
-    }
-    const used = Number(summary.shotsConfirmed || 0);
-    if ((fs.FOOTWORK_UNCLEAR_count || 0) > used * 0.4 && used > 0) {
-      const sh = byFlag('FOOTWORK_UNCLEAR');
-      cues.push({
-        title: 'FOOTWORK DATA UNCLEAR',
-        happened: 'Footwork read is uncertain on many deliveries.',
-        delivery: deliveryRef(sh),
-        why: 'Without clear crease position tracking, footwork coaching may be misleading.',
-        drill: 'Verify with video before making footwork-only coaching calls.',
-      });
-    }
-    const top = cues.slice(0, 3);
+    const n = Math.round(Number(score));
+    const band = qualityBand(n);
+    const sub = playerLabel
+      ? `<div class="rp-del-metric-cue">${escapeHtml(String(playerLabel))}</div>`
+      : '';
+    return `<div class="rp-del-metric"><span class="rp-del-metric-num" style="color:${band.color}">${n}</span><span class="rp-del-metric-band" style="color:${band.color}">${band.label}</span>${sub}</div>`;
+  }
+
+  function buildCoachingFocus(alertsList) {
+    const alerts = Array.isArray(alertsList) ? alertsList.filter(Boolean) : [];
+    const top = alerts.slice(0, 3);
     if (!top.length) {
       return `<div class="rp-coach-card rp-coach-card--clean">
         <div class="rp-coach-title">CLEAN SESSION</div>
-        <p class="rp-coach-text"><strong>What happened:</strong> No high-priority technical flags triggered.</p>
-        <p class="rp-coach-text"><strong>Which delivery:</strong> Across confirmed deliveries.</p>
-        <p class="rp-coach-text"><strong>Why it matters:</strong> Stable base and head position support repeatable scoring arcs.</p>
-        <div class="rp-coach-drill"><strong>Drill:</strong> Keep press-and-drive rhythm and maintain soft hands through contact.</div>
+        <p class="rp-coach-text"><strong>What happened:</strong> No coaching alerts were raised for this session.</p>
+        <p class="rp-coach-text"><strong>Why it matters:</strong> Head position, feet, stance, and swing intensity look consistent with your shot mix.</p>
+        <div class="rp-coach-drill"><strong>Next step:</strong> Keep logging sessions so trends stay sharp.</div>
       </div>`;
     }
-    return top.map((c, i) => `
+    return top.map((a, i) => `
       <div class="rp-coach-card ${i===0?'rp-coach-card--primary':'rp-coach-card--secondary'}">
-        <div class="rp-coach-title">${i+1}. ${c.title}</div>
-        <p class="rp-coach-text"><strong>What happened:</strong> ${c.happened}</p>
-        <p class="rp-coach-text"><strong>Which delivery:</strong> ${c.delivery}</p>
-        <p class="rp-coach-text"><strong>Why it matters:</strong> ${c.why}</p>
-        <div class="rp-coach-drill"><strong>Drill:</strong> ${c.drill}</div>
+        <div class="rp-coach-title">${i+1}. ${escapeHtml(a.severity || '')} · ${escapeHtml(a.metric || '')}</div>
+        <p class="rp-coach-text"><strong>Message:</strong> ${escapeHtml(a.message || '')}</p>
+        ${a.player_cue ? `<p class="rp-coach-text"><strong>Player cue:</strong> ${escapeHtml(a.player_cue)}</p>` : ''}
+        <div class="rp-coach-drill"><strong>Drill:</strong> ${escapeHtml(a.drill || a.action || '—')}</div>
       </div>`).join('');
   }
 
@@ -346,7 +376,7 @@ const ReportModal = (() => {
 .rp-modal {
   background: #F0F4F8;
   border-radius: 20px;
-  width: 100%; max-width: 960px;
+  width: 100%; max-width: 1080px;
   max-height: 92vh;
   display: flex; flex-direction: column;
   box-shadow: 0 32px 80px rgba(0,0,0,0.35);
@@ -409,8 +439,8 @@ const ReportModal = (() => {
 
 /* ── Section headings ── */
 .rp-section-title {
-  font-family: Manrope,sans-serif; font-size: 0.72rem; font-weight: 700;
-  color: #94A3B8; letter-spacing: 0.14em; text-transform: uppercase;
+  font-family: Manrope,sans-serif; font-size: 0.76rem; font-weight: 700;
+  color: #64748B; letter-spacing: 0.14em; text-transform: uppercase;
   padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.07);
   margin: 0 0 16px;
 }
@@ -428,12 +458,34 @@ const ReportModal = (() => {
 .rp-highlight-card.best  { border-top: 3px solid #10B981; }
 .rp-highlight-card.worst { border-top: 3px solid #EF4444; }
 .rp-hl-icon { font-size: 1.6rem; }
-.rp-hl-tag  { font-family: JetBrains Mono,monospace; font-size: 0.5rem; font-weight: 600; color: #94A3B8; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 3px; }
-.rp-hl-val  { font-family: Manrope,sans-serif; font-size: 1rem; font-weight: 800; letter-spacing: 0.02em; }
-.rp-hl-sub  { font-family: JetBrains Mono,monospace; font-size: 0.55rem; color: #94A3B8; margin-top: 3px; }
+.rp-hl-tag  { font-family: JetBrains Mono,monospace; font-size: 0.65rem; font-weight: 700; color: #475569; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+.rp-hl-val  { font-family: Manrope,sans-serif; font-size: 1.12rem; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
+.rp-hl-sub  { font-family: JetBrains Mono,monospace; font-size: 0.7rem; font-weight: 500; color: #64748B; margin-top: 4px; line-height: 1.35; }
+
+.rp-per-shot-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.rp-per-shot-row {
+  background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px;
+  padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.rp-per-shot-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 6px; font-family: Manrope,sans-serif; font-size: 0.78rem; font-weight: 700; color: #334155;
+}
+.rp-per-shot-num { font-family: JetBrains Mono,monospace; font-size: 0.68rem; color: #94A3B8; }
+.rp-per-shot-name { color: #0F172A; }
+.rp-per-shot-sc { margin-left: auto; font-family: JetBrains Mono,monospace; font-size: 0.65rem; color: #64748B; }
+.rp-per-shot-cues { display: flex; flex-wrap: wrap; gap: 6px; }
+.rp-per-shot-flag {
+  font-family: Inter,sans-serif; font-size: 0.68rem; font-weight: 600;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(148,163,184,0.16); color: #475569;
+  border: 1px solid rgba(100,116,139,0.22);
+}
+.rp-per-shot-none { font-size: 0.72rem; color: #94A3B8; }
 
 /* ── Pie charts grid ── */
-.rp-pies { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 8px; }
+.rp-pies { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 16px; margin-bottom: 8px; }
+.rp-subtitle-metrics { margin-top: 6px; font-size: 0.78rem; color: #64748B; line-height: 1.45; max-width: 52rem; }
 .rp-pie-card {
   background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
   padding: 20px 16px; display: flex; flex-direction: column; align-items: center;
@@ -451,7 +503,7 @@ const ReportModal = (() => {
   padding: 18px 12px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .rp-fw-num { font-family: Manrope,sans-serif; font-size: 2rem; font-weight: 800; line-height: 1; }
-.rp-fw-label { font-family: JetBrains Mono,monospace; font-size: 0.5rem; color: #94A3B8; letter-spacing: 0.12em; margin-top: 5px; text-transform: uppercase; }
+.rp-fw-label { font-family: JetBrains Mono,monospace; font-size: 0.62rem; font-weight: 600; color: #475569; letter-spacing: 0.1em; margin-top: 6px; text-transform: uppercase; line-height: 1.3; }
 
 /* ── Line graphs ── */
 .rp-graph-wrap { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 16px 18px 12px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
@@ -462,29 +514,43 @@ const ReportModal = (() => {
 .rp-shots-grid { display: flex; flex-direction: column; gap: 14px; }
 .rp-shot-card {
   background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
-  padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
-.rp-shot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.rp-shot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .rp-shot-left  { display: flex; align-items: center; gap: 8px; }
 .rp-shot-right { display: flex; align-items: center; gap: 10px; }
-.rp-shot-num   { font-family: JetBrains Mono,monospace; font-size: 0.7rem; color: #94A3B8; }
-.rp-shot-name  { font-family: Manrope,sans-serif; font-size: 1rem; font-weight: 800; letter-spacing: 0.02em; }
-.rp-shot-conf  { font-family: Manrope,sans-serif; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 100px; }
-.rp-shot-time  { font-family: JetBrains Mono,monospace; font-size: 0.7rem; color: #94A3B8; }
-.rp-shot-quality { font-family: Inter,sans-serif; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 8px; }
-.rp-shot-score { font-family: Manrope,sans-serif; font-size: 1.2rem; font-weight: 800; }
-.rp-shot-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.rp-flag { font-family: Inter,sans-serif; font-size: 0.7rem; font-weight: 600; padding: 3px 10px; border-radius: 6px; cursor: help; }
-.rp-shot-bars { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-.rp-bar-row { display: flex; flex-direction: column; gap: 5px; }
+.rp-shot-num   { font-family: JetBrains Mono,monospace; font-size: 0.76rem; color: #64748B; }
+.rp-shot-name  { font-family: Manrope,sans-serif; font-size: 1.02rem; font-weight: 800; letter-spacing: 0.02em; }
+.rp-shot-conf  { font-family: Manrope,sans-serif; font-size: 0.78rem; font-weight: 700; padding: 2px 10px; border-radius: 100px; }
+.rp-shot-time  { font-family: JetBrains Mono,monospace; font-size: 0.74rem; color: #64748B; }
+.rp-shot-quality { font-family: Inter,sans-serif; font-size: 0.82rem; font-weight: 700; padding: 4px 11px; border-radius: 8px; }
+.rp-shot-score { font-family: Manrope,sans-serif; font-size: 1.22rem; font-weight: 800; }
+.rp-shot-denom { font-size: 0.72em; font-weight: 700; color: #64748B; margin-left: 1px; }
+.rp-shot-score-inline { font-family: Manrope,sans-serif; font-size: 1.05rem; font-weight: 800; min-width: 2.5rem; text-align: right; }
+.rp-bar-unit { font-size: 0.72em; font-weight: 600; color: #64748B; margin-left: 2px; }
+.rp-shot-flags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.rp-flag { font-family: Inter,sans-serif; font-size: 0.76rem; font-weight: 600; padding: 5px 11px; border-radius: 8px; cursor: help; letter-spacing: 0.02em; }
+.rp-shot-bars { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.rp-bar-row { display: flex; flex-direction: column; gap: 6px; }
 .rp-bar-meta { display: flex; align-items: center; justify-content: space-between; }
-.rp-bar-label { font-family: Inter,sans-serif; font-size: 0.72rem; font-weight: 600; color: #475569; cursor: help; }
-.rp-bar-val   { font-family: Manrope,sans-serif; font-size: 0.88rem; font-weight: 800; }
-.rp-bar-track { width: 100%; height: 7px; background: rgba(0,0,0,0.07); border-radius: 4px; overflow: hidden; }
+.rp-bar-label { font-family: Inter,sans-serif; font-size: 0.8rem; font-weight: 600; color: #334155; cursor: help; }
+.rp-bar-val   { font-family: Manrope,sans-serif; font-size: 0.96rem; font-weight: 800; }
+.rp-bar-track { width: 100%; height: 8px; background: rgba(0,0,0,0.08); border-radius: 4px; overflow: hidden; }
 .rp-bar-fill  { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
-.rp-shot-score-row { display: flex; align-items: center; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 10px; }
-.rp-shot-flags-detail { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
-.rp-flag-detail { font-family: Inter,sans-serif; font-size: 0.78rem; color: #475569; padding: 7px 12px; background: rgba(0,0,0,0.025); border-radius: 6px; line-height: 1.5; }
+.rp-shot-submetrics { font-family: JetBrains Mono,monospace; font-size: 0.65rem; color: #64748B; line-height: 1.45; margin-top: 4px; }
+.rp-shot-submetrics--posture { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06); }
+.rp-posture-note {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: #F1F5F9;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.rp-shot-pad-badge { font-family: JetBrains Mono,monospace; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: rgba(239,68,68,0.12); color: #B91C1C; border: 1px solid rgba(239,68,68,0.28); }
+.rp-shot-score-row { display: flex; align-items: center; border-top: 1px solid rgba(0,0,0,0.07); padding-top: 12px; gap: 4px; }
+.rp-shot-score-row .rp-bar-label { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748B; }
+.rp-shot-flags-detail { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.rp-flag-detail { font-family: Inter,sans-serif; font-size: 0.84rem; color: #334155; padding: 9px 14px; background: rgba(0,0,0,0.03); border-radius: 8px; line-height: 1.5; }
 .rp-coach-card {
   border-left: 4px solid #06B6D4;
   background: #fff;
@@ -515,20 +581,46 @@ const ReportModal = (() => {
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .rp-speed-note-title { font-family: Manrope,sans-serif; font-weight: 700; color: #334155; margin-bottom: 6px; }
-.rp-speed-note-range { font-size: 0.82rem; color: #64748B; line-height: 1.5; }
-.rp-speed-note-sub { font-size: 0.78rem; color: #94A3B8; margin-top: 5px; }
+.rp-speed-note-range { font-size: 0.84rem; color: #475569; line-height: 1.55; }
+.rp-speed-note-sub { font-size: 0.8rem; color: #64748B; margin-top: 5px; line-height: 1.45; }
 
 .rp-shots-table-wrap {
   background: #fff;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: auto;
+  max-width: 100%;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  -webkit-overflow-scrolling: touch;
 }
-.rp-shots-table { width: 100%; border-collapse: collapse; font-family: Inter,sans-serif; }
-.rp-shots-table thead tr { background: #F8FAFC; text-align: left; }
-.rp-shots-table th { padding: 10px; font-size: 0.74rem; color: #64748B; font-weight: 700; letter-spacing: 0.04em; }
-.rp-shots-table td { padding: 10px; font-size: 0.82rem; color: #334155; border-top: 1px solid rgba(0,0,0,0.06); vertical-align: top; }
+.rp-shots-table { width: 100%; min-width: 920px; border-collapse: separate; border-spacing: 0; font-family: Inter,sans-serif; }
+.rp-shots-table thead tr { background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%); text-align: left; }
+.rp-shots-table thead th {
+  position: sticky; top: 0; z-index: 1;
+  padding: 12px 10px;
+  font-size: 0.68rem;
+  color: #64748B;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(15,23,42,0.08);
+  white-space: nowrap;
+}
+.rp-shots-table tbody tr:nth-child(even) { background: rgba(248,250,252,0.65); }
+.rp-shots-table tbody tr:hover { background: rgba(6,182,212,0.06); }
+.rp-shots-table td { padding: 12px 10px; font-size: 0.82rem; color: #334155; border-top: 1px solid rgba(0,0,0,0.05); vertical-align: top; }
+.rp-shots-table td.rp-col-num { font-family: JetBrains Mono,monospace; font-weight: 700; color: #0F172A; width: 2.5rem; }
+.rp-shots-table td.rp-col-shot { font-weight: 700; letter-spacing: 0.04em; color: #0F172A; min-width: 8.5rem; }
+.rp-shots-table td.rp-col-exec { font-weight: 800; font-family: Manrope,sans-serif; color: #06B6D4; white-space: nowrap; }
+.rp-del-metric { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-width: 5.5rem; max-width: 11rem; }
+.rp-del-metric--empty { color: #94A3B8; }
+.rp-del-metric-dash { font-family: JetBrains Mono,monospace; font-size: 0.9rem; }
+.rp-del-metric-num { font-family: Manrope,sans-serif; font-size: 1rem; font-weight: 800; line-height: 1.1; }
+.rp-del-metric-band { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.rp-del-metric-cue { font-size: 0.72rem; color: #64748B; line-height: 1.35; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rp-col-flags { min-width: 12rem; max-width: 20rem; }
+.rp-flag-stack { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.rp-shots-chip--soft { font-weight: 600; opacity: 0.95; }
 .rp-shots-chip {
   display: inline-block;
   margin-right: 6px;
@@ -598,43 +690,45 @@ const ReportModal = (() => {
     const summary = getAnalysisSummary(analysis);
     const best  = analysis.best_shot || {};
     const worst = analysis.worst_shot || {};
-    const fw    = analysis.footwork_summary || {};
     const alerts = analysis.coaching_alerts || [];
     const stance = data.stance || 'RHB';
 
-    const confirmedShots = shots.filter(s => s.conf > 0.5);
+    const confirmedShots = shots.filter(s => Number(s.conf ?? s.confidence) > 0.5);
     const totalShots = confirmedShots.length;
+    const confirmedCount = summary.shotsConfirmed || totalShots;
     const avgSpeed = summary.avgSpeed != null ? Number(summary.avgSpeed).toFixed(1) : '—';
     const avgScore = summary.avgShotScore != null
       ? Number(summary.avgShotScore).toFixed(1)
       : (totalShots ? (confirmedShots.reduce((a,s) => a + (s.shot_score||0), 0) / totalShots).toFixed(1) : '—');
-    const usage = summary.shotsTotalDetected > summary.shotsConfirmed
-      ? `${summary.shotsConfirmed} of ${summary.shotsTotalDetected} shots used`
-      : '';
-    const derivedFlags = {
-      HEAD_MOVING_count: confirmedShots.filter((s) => (s.flags || []).some((f) => String(f).startsWith('HEAD_MOVING'))).length,
-      UNSTABLE_count: confirmedShots.filter((s) => (s.flags || []).some((f) => String(f).startsWith('UNSTABLE'))).length,
-      FOOTWORK_UNCLEAR_count: confirmedShots.filter((s) => (s.flags || []).some((f) => String(f).startsWith('FOOTWORK_UNCLEAR'))).length,
-    };
-    const focusSummary = {
-      ...summary,
-      flagsSummary: {
-        HEAD_MOVING_count: summary.flagsSummary?.HEAD_MOVING_count || derivedFlags.HEAD_MOVING_count,
-        UNSTABLE_count: summary.flagsSummary?.UNSTABLE_count || derivedFlags.UNSTABLE_count,
-        FOOTWORK_UNCLEAR_count: summary.flagsSummary?.FOOTWORK_UNCLEAR_count || derivedFlags.FOOTWORK_UNCLEAR_count,
-      },
-      fatigue: Boolean(summary.fatigue || alerts.some((a) => /fatigue/i.test(String(a.metric || '')))),
-    };
-
+    // Usage compares confirmed-only pool (N of N), not raw detections vs confirmed.
+    const usage =
+      summary.shotsTotalDetected > summary.shotsConfirmed && confirmedCount > 0
+        ? `${confirmedCount} of ${confirmedCount} shots used`
+        : '';
     const bcol = SHOT_COLORS[best.label] || '#10B981';
     const wcol = SHOT_COLORS[worst.label] || '#EF4444';
 
-    // Trend data for graphs
+    const avHead = summary.avgHead != null ? Math.round(summary.avgHead) : null;
+    const avStab = summary.avgStability != null ? Math.round(summary.avgStability) : null;
+    const avFw = summary.avgFootwork != null ? Math.round(summary.avgFootwork) : null;
+    const avSi = summary.avgSwingIntensity != null ? Math.round(summary.avgSwingIntensity) : null;
+    const metricBits = [];
+    if (avHead != null) metricBits.push(`Head ${avHead}`);
+    if (avStab != null) metricBits.push(`Stance ${avStab}`);
+    if (avFw != null) metricBits.push(`Feet ${avFw}`);
+    if (avSi != null) metricBits.push(`Swing ${avSi}`);
+    const metricSubtitle = metricBits.length
+      ? `<div class="rp-subtitle rp-subtitle-metrics">Session averages (0–100): ${metricBits.join(' · ')}</div>`
+      : '';
+
+    // Trend data for graphs (same keys as analyse_session replay + bat speed)
     const trendShots = confirmedShots.map(s => ({
       shot_num: s.shot_num,
       speed:    parseFloat((s.peak_swing_speed || 0).toFixed(1)),
-      head:     Math.round(s.head_stability || 0),
-      stab:     Math.round(s.stability_score || 0),
+      head_quality_score: s.head_quality_score != null ? Math.round(s.head_quality_score) : 0,
+      symmetry_score: s.symmetry_score != null ? Math.round(s.symmetry_score) : 0,
+      footwork_score: s.footwork_score != null ? Math.round(s.footwork_score) : 0,
+      swing_intensity: s.swing_intensity != null ? Math.round(s.swing_intensity) : 0,
       score:    s.shot_score || 0,
     }));
 
@@ -649,6 +743,7 @@ const ReportModal = (() => {
             <div>
               <div class="rp-title">Net Session Report</div>
               <div class="rp-subtitle">${summary.shotsConfirmed || totalShots} confirmed shots &nbsp;·&nbsp; Avg Speed: ${avgSpeed} km/h &nbsp;·&nbsp; Avg Score: ${avgScore}/10 ${usage ? `&nbsp;·&nbsp; ${usage}` : ''}</div>
+              ${metricSubtitle}
             </div>
           </div>
           <button class="rp-close" id="rpCloseBtn" aria-label="Close">
@@ -695,82 +790,92 @@ const ReportModal = (() => {
             <div class="rp-section-title">Core Metrics</div>
             <div class="rp-pies">
               <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgHead || 0), '#06B6D4', 'Head Position', 'Most critical metric for timing, trigger movement, and ball tracking')}
+                ${buildPieChart(Math.round(summary.avgHead || 0), '#06B6D4', 'Head position', 'Axis-aware head quality for your shot mix')}
               </div>
               <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgStability || 0), '#10B981', 'Base & Stability', 'Crease position and base at contact — reduces mishits')}
+                ${buildPieChart(Math.round(summary.avgStability || 0), '#10B981', 'Batting stance', 'Pre-shot shoulder and hip symmetry')}
               </div>
               <div class="rp-pie-card">
-                ${buildPieChart(Math.round((Number(avgScore) || 0) * 10), '#FAAD14', 'Avg Shot Execution Rating', `${avgScore}/10 across confirmed deliveries`)}
+                ${buildPieChart(Math.round(summary.avgFootwork || 0), '#0891B2', 'Foot movement', 'Pre-shot feet and plant timing vs contact')}
+              </div>
+              <div class="rp-pie-card">
+                ${buildPieChart(Math.round(summary.avgSwingIntensity || 0), '#EAB308', 'Swing intensity', 'Session-normalized swing effort (0–100)')}
+              </div>
+              <div class="rp-pie-card">
+                ${buildPieChart(Math.round((Number(avgScore) || 0) * 10), '#FAAD14', 'Shot execution', `${avgScore}/10 across confirmed deliveries`)}
               </div>
             </div>
             <div class="rp-speed-note">
               <div class="rp-speed-note-title">Avg Bat Speed: ${avgSpeed} km/h</div>
-              <div class="rp-speed-note-range">Range this session: ${confirmedShots.length ? Math.min(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} - ${confirmedShots.length ? Math.max(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} km/h</div>
-              <div class="rp-speed-note-sub">Session bat-speed snapshot.</div>
-            </div>
-
-            <div class="rp-section-title">Footwork Summary</div>
-            <div class="rp-footwork">
-              <div class="rp-fw-card">
-                <div class="rp-fw-num" style="color:#10B981">${fw.front_foot_count||0}</div>
-                <div class="rp-fw-label">Front Foot</div>
-              </div>
-              <div class="rp-fw-card">
-                <div class="rp-fw-num" style="color:#F97316">${fw.back_foot_count||0}</div>
-                <div class="rp-fw-label">Back Foot</div>
-              </div>
-              <div class="rp-fw-card">
-                <div class="rp-fw-num" style="color:#EAB308">${fw.neutral_count||0}</div>
-                <div class="rp-fw-label">Neutral</div>
-              </div>
+              <div class="rp-speed-note-range">Range this session: ${confirmedShots.length ? Math.min(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} – ${confirmedShots.length ? Math.max(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} km/h</div>
+              <div class="rp-speed-note-sub">Bat speed is shown alongside the five core scores; coaching flags and plain-language cues sit in <strong>All Deliveries</strong>.</div>
             </div>
 
             <div class="rp-section-title">Today's Coaching Focus</div>
-            <div class="rp-shots-grid">${buildCoachingFocus(focusSummary, confirmedShots)}</div>
+            <div class="rp-shots-grid">${buildCoachingFocus(alerts)}</div>
           </div>
 
           <!-- ═══ SHOTS ═══ -->
           <div data-panel="shots" style="display:none">
             <div class="rp-section-title">All Deliveries</div>
             <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
-              Coaching-first table. Confidence/probability is intentionally hidden from player-facing review.
+              Coaching-first table. Per-delivery cues, work-on flags, and footwork tags are grouped here. Confidence/probability stays hidden from player-facing review.
             </p>
             <div class="rp-shots-table-wrap">
               <table class="rp-shots-table">
                 <thead>
                   <tr>
-                    <th>#</th><th>Delivery Outcome</th><th>Execution Rating</th><th>Head Position</th><th>Base & Stability</th><th>Bat Speed</th><th>Work-On Flags</th>
+                    <th>#</th>
+                    <th>Delivery</th>
+                    <th>Execution</th>
+                    <th>Head position</th>
+                    <th>Batting stance</th>
+                    <th>Foot movement</th>
+                    <th>Swing intensity</th>
+                    <th>Bat speed</th>
+                    <th>Coaching flags &amp; cues</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${confirmedShots.map((s) => {
-                    const head = Math.round(s.head_stability || 0);
-                    const stab = Math.round(s.stability_score || 0);
-                    const hb = qualityBand(head);
-                    const sb = qualityBand(stab);
-                    const fs = (s.flags || []).length ? (s.flags || []).map((f) => {
-                      const fi = FLAG_INFO[f] || { label: f, color: '#64748B' };
-                      return `<span style="display:inline-block;margin-right:6px;margin-top:4px;padding:2px 8px;border-radius:999px;background:${fi.color}18;color:${fi.color};font-size:11px">${fi.label}</span>`;
-                    }).join('') : '<span style="color:#10B981;font-size:12px">No flags</span>';
-                    const flagDetails = (s.flags || []).length
-                      ? (s.flags || []).map((f) => {
-                          const fi = FLAG_INFO[f] || { label: f, desc: 'No description available.' };
-                          return `<div class="rp-shots-detail-text"><strong>${fi.label}:</strong> ${fi.desc}</div>`;
-                        }).join('')
-                      : '<div class="rp-shots-detail-text">No technical warning flags on this shot.</div>';
+                    const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
+                    const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
+                    const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
+                    const sw = s.swing_intensity != null ? Math.round(s.swing_intensity) : null;
+                    const flagRows = [];
+                    for (const f of s.flags || []) {
+                      const base = String(f).split(':')[0];
+                      const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: '#64748B', desc: '' };
+                      flagRows.push({ label: fi.label, color: fi.color, desc: fi.desc || '' });
+                    }
+                    if (s.footwork_flag) {
+                      const ff = String(s.footwork_flag);
+                      const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: '#64748B', desc: '' };
+                      flagRows.push({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
+                    }
+                    const chips = flagRows.length
+                      ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:${r.color}18;color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
+                      : '<span class="rp-shots-chip" style="background:rgba(16,185,129,0.12);color:#059669;font-weight:700">Clean delivery</span>';
+                    const flagDetails = flagRows.length
+                      ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
+                      : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
                     const speed = Number(s.peak_swing_speed || 0);
                     const speedText = speed >= 140 ? '~140+' : speed.toFixed(1);
+                    const exec = s.shot_score != null ? Number(s.shot_score) : 0;
+                    const execCol = exec >= 7 ? '#10B981' : exec >= 5 ? '#06B6D4' : exec >= 3 ? '#EAB308' : '#EF4444';
                     return `
                     <tr>
-                      <td>${s.shot_num}</td>
-                      <td>${(SHOT_LABELS[s.label] || s.label || '—').toUpperCase()}</td>
-                      <td>${s.shot_score || 0}/10</td>
-                      <td style="color:${hb.color}">${head} (${hb.label})</td>
-                      <td style="color:${sb.color}">${stab} (${sb.label})</td>
-                      <td>${speedText} km/h</td>
-                      <td>${fs}
-                        <details class="rp-shots-detail"><summary>coaching detail</summary>
+                      <td class="rp-col-num">${s.shot_num}</td>
+                      <td class="rp-col-shot">${(SHOT_LABELS[s.label] || s.label || '—').toUpperCase()}</td>
+                      <td class="rp-col-exec" style="color:${execCol}">${exec.toFixed(1)}/10</td>
+                      <td>${formatDeliveryMetric100(head, s.head_quality_label)}</td>
+                      <td>${formatDeliveryMetric100(stab, s.symmetry_label)}</td>
+                      <td>${formatDeliveryMetric100(fw, s.footwork_label)}</td>
+                      <td>${formatDeliveryMetric100(sw, s.swing_intensity_label)}</td>
+                      <td style="font-family:JetBrains Mono,monospace;font-size:0.84rem;font-weight:600;white-space:nowrap">${speedText} km/h</td>
+                      <td class="rp-col-flags">
+                        <div class="rp-flag-stack">${chips}</div>
+                        <details class="rp-shots-detail"><summary>▶ Coaching detail</summary>
                           ${flagDetails}
                         </details>
                       </td>
@@ -787,19 +892,23 @@ const ReportModal = (() => {
             <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
               These graphs show how each metric changed shot-by-shot through your session. Look for patterns — are you getting tired later? Do scores drop after a certain shot?
             </p>
-            ${buildLineGraph(trendShots, 'head',  '#6C63FF', 'Head Position (0–100) — stillness through contact', 100)}
-            ${buildLineGraph(trendShots, 'stab',  '#F97316', 'Base & Stability (0–100) — balance and base through contact', 100)}
-            ${buildLineGraph(trendShots, 'speed', '#17B890', 'Bat Speed (km/h) — calibrated bat-tip speed', 140)}
-            ${buildLineGraph(trendShots, 'score', '#FAAD14', 'Shot Execution Rating (/10) — composite quality by delivery', 10)}
+            ${buildLineGraph(trendShots, 'head_quality_score',  '#6C63FF', 'Head position (0–100)', 100)}
+            ${buildLineGraph(trendShots, 'symmetry_score',  '#10B981', 'Batting stance (0–100)', 100)}
+            ${buildLineGraph(trendShots, 'footwork_score', '#0891B2', 'Foot movement (0–100)', 100)}
+            ${buildLineGraph(trendShots, 'swing_intensity', '#EAB308', 'Swing intensity (0–100)', 100)}
+            ${buildLineGraph(trendShots, 'speed', '#17B890', 'Bat speed (km/h)', 140)}
+            ${buildLineGraph(trendShots, 'score', '#FAAD14', 'Shot execution rating (/10)', 10)}
             ${summary.shotsConfirmed >= 6 ? `
               <div class="rp-trend-summary">
                 <div class="rp-trend-summary-title">Session Momentum (1st vs 2nd Half)</div>
                 <div class="rp-trend-summary-body">
-                  Head Position: ${Math.round(summary.trend.first_half_head_stability || 0)} → ${Math.round(summary.trend.second_half_head_stability || 0)}<br/>
-                  Base & Stability: ${Math.round(summary.trend.first_half_stability_score || 0)} → ${Math.round(summary.trend.second_half_stability_score || 0)}<br/>
-                  Bat Speed: ${Math.round(summary.trend.first_half_speed || 0)} → ${Math.round(summary.trend.second_half_speed || 0)} km/h
+                  Head position: ${Math.round(summary.trend.first_half_head_quality_score || 0)} → ${Math.round(summary.trend.second_half_head_quality_score || 0)}<br/>
+                  Batting stance: ${Math.round(summary.trend.first_half_symmetry_score || 0)} → ${Math.round(summary.trend.second_half_symmetry_score || 0)}<br/>
+                  Foot movement: ${Math.round(summary.trend.first_half_footwork_score || 0)} → ${Math.round(summary.trend.second_half_footwork_score || 0)}<br/>
+                  Swing intensity: ${Math.round(summary.trend.first_half_swing_intensity || 0)} → ${Math.round(summary.trend.second_half_swing_intensity || 0)}<br/>
+                  Bat speed: ${Math.round(summary.trend.first_half_speed || 0)} → ${Math.round(summary.trend.second_half_speed || 0)} km/h
                 </div>
-                ${summary.fatigue ? '<div class="rp-trend-summary-note">Performance declined in second half — likely fatigue or focus drop.</div>' : ''}
+                ${summary.fatigue ? '<div class="rp-trend-summary-note">Swing intensity or bat speed dipped in the second half — check fatigue or rushing the trigger.</div>' : ''}
               </div>` : ''}
           </div>
 
@@ -810,7 +919,9 @@ const ReportModal = (() => {
               Cricket-first interpretation: read dominant hand, head position, base stability, and scoring arc together before setting work-on drills.
             </p>
             <p style="font-family:Inter,sans-serif;font-size:0.78rem;color:#94A3B8;margin:-8px 0 16px;line-height:1.5">
-              ${summary.shotsConfirmed} of ${summary.shotsTotalDetected} shots confirmed (confidence filter at 60%).
+              ${confirmedCount > 0
+                ? `${confirmedCount} of ${confirmedCount} shots confirmed (confidence filter at 60%).`
+                : 'No shots met the confirmation threshold (60%).'}
             </p>
             <div class="rp-metrics-grid">
               ${buildMetricCards()}

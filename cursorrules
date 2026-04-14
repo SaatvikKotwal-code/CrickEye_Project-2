@@ -1,5 +1,5 @@
 # ╔══════════════════════════════════════════════════════════════╗
-# ║              CrickEyePro — .cursorrules v1.2                 ║
+# ║              CrickEyePro — .cursorrules v1.3 (v6.5 metrics)    ║
 # ║   AI Cricket Batting Analytics · Full-Stack + ML Rules       ║
 # ╚══════════════════════════════════════════════════════════════╝
 
@@ -50,7 +50,7 @@
 # /data/                      ← session_log.csv, session_report.json (output)
 # /uploads/                   ← temp video upload landing dir
 # analyse_session.py          ← ML pipeline entry point (root level)
-# App.js                      ← main frontend JS (v6.4)
+# App.js                      ← main frontend JS (v6.5)
 # index.html
 # style.css
 # requirements.txt
@@ -81,7 +81,7 @@
 #   - refreshCompareSessionOptions() — if 0 completed: empty message; if 1: both dropdowns same +
 #     "need at least two…"; if ≥2: options for both, default A = second-newest, B = newest (different IDs)
 #   - renderSessionComparison(a,b) — blocks same id; four dual charts via buildDualLineCompareGraph:
-#     speed (km/h), head, stab, score — colors #06B6D4 vs #10B981; legends use sessionCompareDisplayLabel()
+#     speed (km/h), head_quality_score, symmetry_score, score — colors #06B6D4 vs #10B981
 #   - sessionCompareDisplayLabel(session, peerSessions) — date string; if multiple sessions share a
 #     calendar day, appends short time to disambiguate
 #
@@ -91,37 +91,44 @@
 #   - renderMonthSessionsComparison() — banner + buildMonthPlayerInsightHtml() + buildMultiLineCompareGraph
 #     for each metric (palette COMPARE_MULTI_COLORS, up to N distinct session lines)
 #   - buildMonthPlayerInsightHtml — narrative "Your month at a glance" (momentum, bat speed, coaching
-#     alerts, fatigue_detected, HEAD_MOVING/UNSTABLE shot flags across the month)
+#     alerts, fatigue_detected, HEAD_LATERAL_DRIFT / STANCE_ASYMMETRIC-style flags across the month)
 #   - "← Two-session compare" (data-compare-back) restores renderSessionComparison for current A/B picks
 #
 # When extending: keep SVG geometry aligned with ReportModal line-graph conventions; escapeHtml() on all
 # dynamic labels and insight bullets.
 
-## ── COACHING-FIRST METRIC PRIORITY (player-facing UI) ────────────────────
+## ── COACHING-FIRST METRIC PRIORITY (player-facing UI, v6.5) ─────────────
 # Display/review priority (do not reorder without explicit approval):
-# 1) head_stability      — primary coaching metric
-# 2) stability_score     — secondary core metric
-# 3) shot_score          — composite quality
-# 4) flags               — binary coaching cues
+# 1) head_quality_score  — axis-aware head quality (shot-type conditioned)
+# 2) symmetry_score      — pre-shot shoulder/hip stance symmetry
+# 3) shot_score          — composite quality (head/symmetry/elbow/speed blend)
+# 4) flags               — binary coaching cues (see ML PIPELINE for codes)
 # 5) trend/fatigue       — within-session consistency
 # 6) bat_speed trend     — secondary, camera-calibration dependent
 # 7) bat_speed absolute  — secondary with caveat
-# 8) footwork            — lower reliability (ankle keypoints often weak)
-# 9) classifier conf %   — NOT player-facing coaching metric
+# 8) classifier conf %   — NOT player-facing coaching metric
+#
+# Supplementary per-shot diagnostics (same naming everywhere in dashboard):
+# head_lateral_ratio, head_vertical_ratio, head_frames_used, head_flag,
+# elbow_collapse, elbow_delta, elbow_behind_pad (sweep), stance_flag, elbow_flag
 
 ## ── CRICKET TERMINOLOGY MAP (UI copy standard) ───────────────────────────
-# Use these labels consistently in player/coach-facing UI:
+# v6.5: Core metric *identifiers* in the dashboard match the API/schema literally:
+#   head_quality_score, symmetry_score (not marketing aliases).
+# Use these narrative labels where they fit (headers, coaching copy):
 # - "Session Summary" (practice)  → "Net Session Report"
 # - "Session Summary" (match play) → "Innings Summary"
 # - "Best Shot"   → "Signature Shot"
 # - "Worst Shot"  → "Work-On Shot"
 # - "Shot Distribution" → "Wagon Wheel Coverage"
-# - "Head Control" → "Head Position"
-# - "Body Balance" → "Base & Stability"
-# - "Shot Score"   → "Shot Execution Rating"
+# - "Shot Score"   → "Shot Execution Rating" (field name remains shot_score)
 # - "Needs Work"   → "Needs Attention"
 
 ## ── COACHING NOTE FORMAT (mandatory tone) ────────────────────────────────
+# Session coaching_alerts from run_session_analysis() include:
+#   severity, metric, flag, shot_type, message, player_cue, drill
+# (Legacy alerts may still have "action" instead of player_cue/drill.)
+#
 # Every player-facing coaching cue should follow:
 # 1) What happened
 # 2) Which delivery (or session segment)
@@ -132,30 +139,31 @@
 # dominant hand, trigger movement, crease position, hard hands / soft hands,
 # wagon wheel, scoring arc, press and drive, hard length area.
 
-## ── METRIC SCHEMA (v6.5+) ────────────────────────────────────────────────
-# run_session_analysis() returns:
-# - best_shot / worst_shot / footwork_summary / coaching_alerts (kept)
+## ── METRIC SCHEMA (v6.5) ───────────────────────────────────────────────────
+# run_session_analysis() returns (footwork_summary removed in v6.5):
+# - best_shot, worst_shot, coaching_alerts
 # - session_summary (authoritative block):
 #   {
-#     shots_confirmed: int,
-#     shots_total_detected: int,
-#     avg_bat_speed_kmh: float,
-#     avg_head_stability: float,
-#     avg_stability_score: float,
-#     avg_shot_score: float,
-#     fatigue_detected: bool,
+#     shots_confirmed, shots_total_detected,
+#     avg_bat_speed_kmh, avg_head_quality_score, avg_symmetry_score, avg_shot_score,
+#     fatigue_detected,
 #     trend: {
 #       first_half_speed, second_half_speed,
-#       first_half_head_stability, second_half_head_stability,
-#       first_half_stability_score, second_half_stability_score
+#       first_half_head_quality_score, second_half_head_quality_score,
+#       first_half_symmetry_score, second_half_symmetry_score
 #     },
 #     flags_summary: {
-#       HEAD_MOVING_count, UNSTABLE_count, FOOTWORK_UNCLEAR_count
+#       HEAD_LATERAL_DRIFT_count, HEAD_VERTICAL_DRIFT_count, HEAD_DUCKING_PULL_count,
+#       STANCE_ASYMMETRIC_count,
+#       ELBOW_COLLAPSE_count (includes ELBOW_COLLAPSE_PULL),
+#       ELBOW_REACHING_count (includes ELBOW_REACHING_FLICK),
+#       ELBOW_BEHIND_PAD_count
 #     },
-#     by_shot_type: { ...existing per-shot-type stats... }
+#     by_shot_type: { per label: count, avg_conf, peak_swing_speed, head_quality_score,
+#                     symmetry_score, shot_score aggregates, elbow_breakdown, head_flag_breakdown }
 #   }
-# - Legacy session_scores/session_averages are deprecated; frontend should read
-#   session_summary first and only fallback for legacy saved sessions.
+# - Legacy sessions may still have avg_head_stability / head_stability in DB; v6.5 UI reads
+#   v6.5 keys only — re-run pipeline to refresh stored analysis.
 
 ## ── ARCHITECTURE RULES ──────────────────────────────────────────
 
@@ -199,19 +207,23 @@
 - Python subprocess calls from Node use services/yoloRunner.js
 
 ## ── ML PIPELINE RULES ───────────────────────────────────────────
-### Shot classification output shape (DO NOT CHANGE FIELD NAMES):
+### Shot classification + biomech output shape (DO NOT CHANGE FIELD NAMES):
+# WebSocket type "shot" and replay.shots[] use the same core fields:
 # {
-#   shot_num, label, conf, confirmed, timestamp, peak_frame,
-#   peak_swing_speed,   ← ALWAYS km/h (calibrated)
-#   footwork,           ← 'front_foot' | 'back_foot' | 'neutral'
-#   footwork_conf,      ← 'high' | 'low'
-#   head_stability,     ← 0–100
-#   stability_score,    ← 0–100
-#   shot_score,         ← 0–10
-#   shot_quality,       ← 'Excellent' | 'Good' | 'Average' | 'Poor'
-#   flags,              ← ['HEAD_MOVING', 'UNSTABLE', 'FOOTWORK_UNCLEAR']
+#   shot_num, label, conf, confirmed, timestamp, peak_frame, onset_score,
+#   peak_swing_speed,   ← km/h (calibrated)
+#   head_quality_score, head_lateral_ratio, head_vertical_ratio, head_frames_used, head_flag,
+#   symmetry_score, avg_shoulder_tilt, avg_hip_tilt, stance_flag,
+#   elbow_collapse, elbow_delta, setup_elbow_ratio, contact_elbow_ratio,
+#   elbow_behind_pad, elbow_flag,
+#   shot_score, shot_quality,
+#   flags,              ← subset of: HEAD_LATERAL_DRIFT, HEAD_VERTICAL_DRIFT, HEAD_DUCKING_PULL,
+#                         STANCE_ASYMMETRIC, ELBOW_COLLAPSE, ELBOW_COLLAPSE_PULL,
+#                         ELBOW_REACHING, ELBOW_REACHING_FLICK, ELBOW_BEHIND_PAD
 #   probs               ← { cover, flick, pull, straight, sweep }
 # }
+# Removed in v6.5: footwork, footwork_conf, head_stability, stability_score,
+#   legacy flags HEAD_MOVING, UNSTABLE, FOOTWORK_UNCLEAR
 
 ### Speed calibration constants (tune, never delete):
 # SHOULDER_WIDTH_M    = 0.45   (pixel ruler baseline)
@@ -219,6 +231,11 @@
 # SPEED_SANITY_CAP_KMH = 140.0
 # POWER_SCORE_CEILING_KMH = 140.0
 # SHOULDER_FALLBACK_PX = 60.0
+# MIN_SHOULDER_PX, MIN_HEAD_FRAMES — see analyse_session.py CONFIG
+
+### Head rules (v6.5 — shot-type-conditioned head quality):
+# HEAD_RULES: per-label (lateral_weight, vertical_weight, vertical_free_ratio)
+# HEAD_RULES_DEFAULT — fallback for labels not in HEAD_RULES (e.g. unclear)
 
 ### Shot classes (fixed, model was trained on these):
 # SHOT_CLASSES = ['cover', 'flick', 'pull', 'straight', 'sweep']
@@ -259,10 +276,9 @@
 
 ### Wagon Wheel API (wagonWheel.js public methods):
 # WagonWheel.init(canvasEl)        ← call once on init
-# WagonWheel.drawSpoke(shotType, shotScore, headStability, batSpeed, onDone)
-#   - line width encodes shotScore (1.5px → 5px)
-#   - alpha encodes headStability (min 0.25)
-#   - tooltip uses shotType + shotScore + headStability + batSpeed
+# WagonWheel.drawSpoke(shotType, shotScore, headQualityScore, batSpeed, onDone)
+#   - 3rd arg is head_quality_score (0–100) for opacity (min 0.25)
+#   - tooltip labels it head_quality_score
 # WagonWheel.clearAll()            ← resets canvas + state
 # WagonWheel.setHand('left'|'right')       ← flips angle configs
 # WagonWheel.getSpokeCount()       ← returns number of drawn spokes
@@ -292,7 +308,7 @@
 #     complete: { type, total_shots, confirmed, unclear, output_video,
 #                 handedness, stance_conf, shot_counts, avg_conf,
 #                 total_frames, fps, speed_unit },
-#     shots: [ ...confirmed shot log array ]
+#     shots: [ ...confirmed shot log — v6.5 fields (head_quality_score, symmetry_score, …) ]
 #   },
 #   file_fingerprint: string (SHA-256 hex)
 # }

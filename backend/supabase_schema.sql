@@ -10,6 +10,9 @@ create table if not exists public.profiles (
   created_at timestamp with time zone default now()
 );
 
+-- Coach dashboard: hide demo/legacy players without deleting accounts or data.
+alter table public.profiles add column if not exists hidden_from_coach_dashboard boolean not null default false;
+
 alter table public.profiles add column if not exists email text;
 create unique index if not exists profiles_email_key on public.profiles (email);
 
@@ -63,9 +66,11 @@ grant execute on function public.is_coach(uuid) to authenticated;
 drop policy if exists "sessions_select_own" on public.sessions;
 drop policy if exists "sessions_insert_own" on public.sessions;
 drop policy if exists "sessions_update_own" on public.sessions;
+drop policy if exists "sessions_delete_own" on public.sessions;
 drop policy if exists "profiles_select_self_or_coach" on public.profiles;
 drop policy if exists "profiles_insert_self" on public.profiles;
 drop policy if exists "profiles_update_self" on public.profiles;
+drop policy if exists "profiles_update_coach" on public.profiles;
 
 create policy "sessions_select_own"
   on public.sessions for select
@@ -85,6 +90,12 @@ create policy "sessions_update_own"
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Lets players remove saved session rows (e.g. re-test same video with a new pipeline).
+create policy "sessions_delete_own"
+  on public.sessions for delete
+  to authenticated
+  using (auth.uid() = user_id);
 
 create policy "profiles_select_self_or_coach"
   on public.profiles for select
@@ -111,6 +122,21 @@ create policy "profiles_update_self"
       where p.id = auth.uid()
       limit 1
     )
+  );
+
+-- Coaches may update player rows (e.g. hide demo accounts from the dashboard).
+create policy "profiles_update_coach"
+  on public.profiles for update
+  to authenticated
+  using (
+    public.is_coach(auth.uid())
+    and id <> auth.uid()
+    and role = 'player'
+  )
+  with check (
+    public.is_coach(auth.uid())
+    and id <> auth.uid()
+    and role = 'player'
   );
 
 -- ── Storage: bucket "videos" (run after creating the bucket in the UI) ─────

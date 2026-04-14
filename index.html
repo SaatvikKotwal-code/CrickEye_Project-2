@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div id="authGate" class="auth-gate">
@@ -137,7 +137,7 @@
     <div class="ce-modal-dialog ce-modal-dialog--compare">
       <button type="button" class="ce-modal-close" data-close-modal="sessionCompareModal" aria-label="Close">&times;</button>
       <h2 id="sessionCompareTitle" class="ce-modal-title">Session Comparison</h2>
-      <p class="ce-modal-lead">Pick two completed sessions to compare, or overlay every completed session from this calendar month on the same charts.</p>
+      <p id="sessionCompareLead" class="ce-modal-lead">Pick two completed sessions to compare, or overlay every completed session from this calendar month on the same charts.</p>
       <div class="compare-picker-grid">
         <label class="compare-picker-field">
           <span>Session 1 (baseline)</span>
@@ -171,7 +171,8 @@
       <button type="button" class="ce-btn ce-btn--danger" id="coachLogoutBtn">Log out</button>
     </div>
     <div id="coachStatsRow" class="coach-stats-row"></div>
-    <div id="coachPlayersList" class="coach-players-list">
+    <div id="coachDashboardToolbar" class="coach-dashboard-toolbar" hidden></div>
+    <div id="coachPlayersList" class="coach-players-container">
       <div class="session-item-empty">No player profiles found yet.</div>
     </div>
   </section>
@@ -353,9 +354,14 @@
     <section class="user-sessions-panel">
       <div class="panel-header">
         <span class="panel-label">My Sessions</span>
-        <button type="button" class="compare-sessions-btn" id="openSessionCompareBtn" aria-haspopup="dialog" aria-controls="sessionCompareModal">
-          Compare Sessions
-        </button>
+        <div class="sessions-panel-actions">
+          <button type="button" class="clear-sessions-btn" id="clearAllSessionsBtn" hidden title="Remove every saved session for your account">
+            Clear all
+          </button>
+          <button type="button" class="compare-sessions-btn" id="openSessionCompareBtn" aria-haspopup="dialog" aria-controls="sessionCompareModal">
+            Compare Sessions
+          </button>
+        </div>
       </div>
       <div id="sessionsList" class="sessions-list">
         <div class="session-item-empty">Login to view your sessions.</div>

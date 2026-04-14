@@ -434,10 +434,9 @@ const WagonWheel = (() => {
     const type = String(sp.shotType || '').toUpperCase() || 'SHOT';
     const score = Number(sp.shotScore || 0).toFixed(1);
     const head = Math.round(Number(sp.headStability || 0));
-    const speed = Number(sp.batSpeed || 0);
-    const speedTxt = speed >= 140 ? '~140+ km/h' : `${speed.toFixed(1)} km/h`;
-    const line1 = `${type}  Score: ${score}/10`;
-    const line2 = `Head Position: ${head}/100  ·  Speed: ${speedTxt}`;
+    const swing = Math.round(Number(sp.batSpeed || 0));
+    const line1 = `${type}  ·  ${score}/10`;
+    const line2 = `Head ${head}  ·  Swing ${swing}`;
 
     ctx.save();
     ctx.font = "600 11px 'Manrope', Arial, sans-serif";
