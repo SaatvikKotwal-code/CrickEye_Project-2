@@ -2,5 +2,6 @@ Place these files in this folder (see readme.md → Model & Dataset Setup for th
 
   crickeye_best.pth   — shot classifier (required)
   yolov8n-pose.pt     — YOLOv8n-pose weights (required; loaded only from this folder, no auto-download)
+  best_ball.pt        — ball detector for Ball Analytics (required unless BALL_ANALYTICS_ENABLED=0)
 
-The pipeline loads both paths from assets/ explicitly. Missing either file raises FileNotFoundError with the full path.
+The pipeline loads paths from assets/ explicitly (absolute path resolved at runtime). Missing required files raise FileNotFoundError with the full path.

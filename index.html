@@ -162,6 +162,32 @@
     </div>
   </div>
 
+  <!-- After cloud reset: browser + local dev cleanup tips -->
+  <div id="resetEverythingModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="resetEverythingTitle" hidden>
+    <div class="ce-modal-backdrop" data-close-modal="resetEverythingModal"></div>
+    <div class="ce-modal-dialog ce-modal-dialog--session">
+      <button type="button" class="ce-modal-close" data-close-modal="resetEverythingModal" aria-label="Close">&times;</button>
+      <h2 id="resetEverythingTitle" class="ce-modal-title">Reset complete</h2>
+      <div id="resetEverythingBody" class="session-detail-body reset-everything-body">
+        <p id="resetEverythingLead" class="ce-modal-lead"></p>
+        <p class="reset-everything-subtitle"><strong>Optional — clear this site in your browser</strong> (logs you out; does not delete cloud data by itself):</p>
+        <ul class="reset-everything-steps">
+          <li>Chrome / Edge: <kbd>F12</kbd> → <strong>Application</strong> → <strong>Storage</strong> → <strong>Clear site data</strong> for <span id="resetEverythingOrigin" class="reset-everything-mono"></span></li>
+          <li>Or: browser Settings → Privacy → clear <strong>cookies / site data</strong> for this origin.</li>
+        </ul>
+        <p class="reset-everything-subtitle"><strong>On this PC (optional)</strong> — last-run artifacts only; next full analysis overwrites them:</p>
+        <ul class="reset-everything-steps">
+          <li>Project folder: <code class="reset-everything-mono">uploads/</code>, <code class="reset-everything-mono">data/session_report.json</code>, <code class="reset-everything-mono">assets/analysed_out.mp4</code></li>
+        </ul>
+        <p class="reset-everything-footnote">Uploaded videos in Supabase Storage are not removed by this button — delete those from the Supabase dashboard if you need to free space.</p>
+      </div>
+      <div class="ce-modal-actions">
+        <button type="button" class="ce-btn ce-btn--ghost" id="resetEverythingLogoutBtn" title="Sign out of CrickEye on this browser">Log out now</button>
+        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="resetEverythingModal">Close</button>
+      </div>
+    </div>
+  </div>
+
   <section id="coachDashboard" class="coach-dashboard" hidden>
     <div class="coach-dashboard-head">
       <div>
@@ -207,6 +233,7 @@
 
       <div class="video-wrapper">
         <video id="mainVideo" class="main-video" playsinline></video>
+        <canvas id="ballOverlayCanvas" class="ball-overlay-canvas" aria-hidden="true"></canvas>
         <div class="video-hud">
           <div class="hud-corner hud-tl">
             <span class="rec-dot"></span> LIVE
@@ -349,6 +376,36 @@
     </div>
   </section>
 
+  <!-- ───────────────── BALL ANALYTICS (YOLO track) ───────────────── -->
+  <section class="ball-analytics-section" id="ballAnalyticsSection" hidden>
+    <div class="ball-analytics-head">
+      <div class="panel-label-group">
+        <span class="panel-label">Ball Analytics</span>
+      </div>
+      <div class="ball-analytics-toggles">
+        <label class="ball-toggle"><input type="checkbox" id="ballToggleCalib" checked /> Calib. axis</label>
+        <label class="ball-toggle"><input type="checkbox" id="ballToggleTrail" checked /> Trajectory</label>
+      </div>
+    </div>
+    <div id="ballAvgSpeedStrip" class="ball-speed-session-strip" hidden></div>
+    <div class="ball-analytics-grid">
+      <div class="ball-pitch-card">
+        <div class="ball-pitch-title">Pitch map · length zones from striker</div>
+        <div class="ball-pitch-canvas-wrap">
+          <div id="pitchMapReactRoot" hidden></div>
+          <canvas id="pitchMapCanvas" width="280" height="360"></canvas>
+        </div>
+        <p class="ball-muted ball-pitch-note">Leg side / off side are schematic (RHB). Single-camera — lateral spread is approximate.</p>
+      </div>
+      <div class="ball-stats-stack">
+        <div id="ballPaceSplit" class="ball-split-card"></div>
+        <div id="ballLengthSplit" class="ball-split-card"></div>
+        <div id="ballDeliveryTable" class="ball-split-card ball-table-card"></div>
+        <div id="ballInsights" class="ball-split-card ball-insights-card"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ───────────────── BOTTOM SECTION ───────────────── -->
   <section class="bottom-section">
     <section class="user-sessions-panel">
@@ -357,6 +414,9 @@
         <div class="sessions-panel-actions">
           <button type="button" class="clear-sessions-btn" id="clearAllSessionsBtn" hidden title="Remove every saved session for your account">
             Clear all
+          </button>
+          <button type="button" class="clear-sessions-btn reset-everything-btn" id="resetEverythingBtn" hidden title="Delete all cloud sessions and show browser cleanup steps">
+            Reset everything
           </button>
           <button type="button" class="compare-sessions-btn" id="openSessionCompareBtn" aria-haspopup="dialog" aria-controls="sessionCompareModal">
             Compare Sessions
@@ -396,7 +456,12 @@
   </section>
   </div>
 
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="components/PitchMap.js"></script>
   <script src="components/wagonWheel.js"></script>
+  <script src="components/ballAnalytics.js"></script>
+  <script src="components/lengthInsights.js"></script>
   <script src="components/ReportModal.js"></script>
   <!-- UMD build required for classic <script>; bare @2 points at CJS and breaks in the browser -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>

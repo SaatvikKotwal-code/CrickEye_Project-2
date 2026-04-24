@@ -15,7 +15,7 @@ For project setup and repo overview, see `readme.md` at the repository root.
 - **Shot:** `label`, `conf`, `probs`, `timestamp`, `peak_frame`, `start_frame`, `end_frame`, `onset_score`
 - **Head:** `head_quality_score`, `head_lateral_ratio`, `head_vertical_ratio`, `head_frames_used`, `head_flag`, `head_confidence`, `head_quality_label`
 - **Stance:** `symmetry_score`, `avg_shoulder_tilt`, `avg_hip_tilt`, `stance_flag`, `symmetry_label`
-- **Swing / speed:** `swing_raw_p90`, `swing_intensity`, `swing_intensity_label`, `peak_swing_speed`, `speed_is_capped`
+- **Swing / speed:** `swing_raw_p90`, `swing_intensity`, `swing_intensity_label`, `peak_swing_speed`, `speed_is_capped` (optional **`BAT_SPEED_SESSION_LOCK`** on `flags` if peak was capped to match the session)
 - **Elbows:** `elbow_collapse`, `elbow_delta`, `setup_elbow_ratio`, `contact_elbow_ratio`, `elbow_behind_pad`, `elbow_flag`
 - **Footwork:** `feet_active`, `pre_shot_movement`, `plant_timing`, `footwork_score`, `footwork_flag`, `footwork_label`
 - **Overall:** `shot_score`, `shot_quality`, `shot_quality_label`, `flags`, `flags_plain`, `data_quality`, `data_quality_note`
@@ -44,8 +44,8 @@ For project setup and repo overview, see `readme.md` at the repository root.
 5. **Split into shots** — Each swing becomes its own short **clip** of frames around the moment the hands really go.
 6. **Shot type** — A separate **video classifier** looks at those frames and guesses the stroke (cover, pull, flick, etc.) and how sure it is (**confidence**).
 7. **Biomechanics per shot** — For each shot it measures head, stance, elbows, feet, swing effort, and builds a **0–10 shot score** plus **flags** (things to fix).
-8. **Session pass** — After all shots, it **rescales swing effort** so “how hard you swung” is compared **within that session only**, then **recalculates** the final 0–10 using that rescaling.
-9. **Session summary** — Averages, trends (first half vs second half), best/worst shot, **coaching alerts**, and counts of each flag type.
+8. **Session pass** — After all shots, it **rescales swing effort** so “how hard you swung” is compared **within that session only**, then (unless disabled via env) **optionally aligns** any lone **peak bat speed** outlier to that session + swing intensity, then **recalculates** the final 0–10 using the final swing intensity.
+9. **Session summary** — Averages, trends (first half vs second half), best/worst shot, **coaching alerts**, and counts of each flag type (including **BAT_SPEED_SESSION_LOCK** when that step adjusted a delivery).
 10. **Outputs** — JSON report, optional annotated video, CSV, and (in the app) WebSocket updates.
 
 ---
@@ -278,7 +278,7 @@ An **estimated bat-speed-style number** from the **same wrist motion** used for 
 **Coaching importance:** **Supporting / motivational** if explained honestly: good for **trends** in the same camera setup; **not** a radar gun. Use for **“more intent”** or **“session drift”**, not absolute pro benchmarks.
 
 **How it’s calculated (layman):**  
-“How fast did the wrists move in the picture?” → turn pixels-per-frame into **metres per second** using “shoulders ≈ 45 cm wide in real life” as a ruler → convert to **km/h** → multiply by a fudge factor for **bat tip** → if above max, **cap** and set **speed_is_capped**.
+“How fast did the wrists move in the picture?” → turn pixels-per-frame into **metres per second** using “shoulders ≈ 45 cm wide in real life” as a ruler → convert to **km/h** → multiply by a fudge factor for **bat tip** → if above max, **cap** and set **speed_is_capped**. After the whole session’s **swing intensity** is known, an optional pass (**`SESSION_BAT_SPEED_LOCK`**, default on) can **lower** a lone peak that is wildly higher than the session median and than swing intensity suggests; that delivery gets **`BAT_SPEED_SESSION_LOCK`** on **`flags`** / **`flags_plain`** (and **`BAT_SPEED_SESSION_LOCK_count`** in **`session_summary.flags_summary`**).
 
 **No separate flag** on the shot for “slow speed”; **low swing** is surfaced via **session alerts** (swing intensity), not a `HEAD_*`-style code on each ball.
 
@@ -311,7 +311,7 @@ These strings exist so **old data or future code** can still show friendly text:
 | **SPINE_COLLAPSE** | Too low in the body | Same. |
 | **STIFF_LEGGED** | Legs very straight | Same. |
 
-For **live CrickEye v7-style** output, treat the **active** per-shot flags as: **three head**, **one stance**, **five elbow variants** (two collapse, two reach, one sweep pad), **two footwork**.
+For **live CrickEye v7-style** output, treat the **active** per-shot flags as: **three head**, **one stance**, **five elbow variants** (two collapse, two reach, one sweep pad), **two footwork**, plus **BAT_SPEED_SESSION_LOCK** when the session bat-speed alignment step ran on that row.
 
 ---
 
@@ -321,4 +321,4 @@ For **live CrickEye v7-style** output, treat the **active** per-shot flags as: *
 - **Stance / symmetry** → `STANCE_ASYMMETRIC`  
 - **Footwork** → `FLAT_FOOTED`, `LATE_PLANT`  
 - **Elbows / bat control** → `ELBOW_COLLAPSE`, `ELBOW_COLLAPSE_PULL`, `ELBOW_REACHING`, `ELBOW_REACHING_FLICK`, `ELBOW_BEHIND_PAD`  
-- **Swing / session** → **alerts**: `LOW_BAT_SPEED`, `FATIGUE` (session-level coaching, not the same as the per-shot `flags` array)
+- **Swing / session** → **alerts**: `LOW_BAT_SPEED`, `FATIGUE` (session-level coaching, not the same as the per-shot `flags` array); **post-pass** on a delivery → **`BAT_SPEED_SESSION_LOCK`** (bat peak aligned to session + swing intensity — informational, not a coaching drill flag)

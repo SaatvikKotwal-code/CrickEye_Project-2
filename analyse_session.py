@@ -6,8 +6,9 @@ KEY CHANGES vs v6.6 — Reliable Metrics Overhaul:
   - Only front-on-reliable metrics kept in shot score and player display.
   - Symmetry angle bug FIXED: was measuring line direction (~180 deg),
     now measures tilt-from-horizontal (0-15 deg). Score is real now.
-  - Bat speed replaced with Swing Intensity: P90 of 5-frame rolling-mean
-    bilateral velocity, session-relative 0-100 scale. Raw km/h kept in JSON.
+  - Swing Intensity: P90 of 5-frame rolling-mean bilateral velocity,
+    session-relative 0-100 scale. peak_swing_speed (km/h) is separate, smoothed,
+    then optional SESSION_BAT_SPEED_LOCK caps session outliers after scaling.
   - FOOTWORK added: trigger movement detection (pre-delivery ankle Y dip-rise)
     + front foot plant timing (ankle Y-velocity zero-crossing vs contact).
   - Removed from score/display: weight_transfer, base_width, spine_ratio,
@@ -16,6 +17,9 @@ KEY CHANGES vs v6.6 — Reliable Metrics Overhaul:
   - New shot score: Head 35 + Footwork 25 + Symmetry 15 + Elbow 15
     + Swing Intensity 10 = 100 pts (/10 display).
   - New alerts: NO_TRIGGER, LATE_PLANT.
+  - Zoomed-out front-on: median shoulder width estimates subject scale; px-based
+    thresholds (swing detection, plant, population swing baseline) scale so
+    metrics match long-lens / full-body footage, not only close-net cameras.
 
 Entry points:
   run_pipeline()          -- CLI mode
@@ -25,6 +29,8 @@ Entry points:
 import cv2
 import csv
 import json
+import logging
+import os
 import time
 import asyncio
 import numpy as np
@@ -33,19 +39,55 @@ import torch.nn as nn
 import torchvision
 from collections import deque, defaultdict
 from pathlib import Path
+
+# Before first ultralytics import: keep INFO/WARNING off the console (stride/imgsz noise).
+os.environ.setdefault("YOLO_VERBOSE", "false")
 from ultralytics import YOLO
+
+logging.getLogger("ultralytics").setLevel(logging.ERROR)
 
 # -----------------------------------------------------------------
 # CONFIG
 # -----------------------------------------------------------------
 
 BASE_DIR    = Path(__file__).parent
+
+
+def _quiet_console() -> bool:
+    """When true, skip periodic progress prints (WebSocket still gets progress events)."""
+    return os.environ.get("CRICKEYE_QUIET", "").strip().lower() in ("1", "true", "yes")
+
+
 VIDEO_PATH  = str(BASE_DIR / "assets" / "net_session_video.mp4")
 MODEL_PATH  = str(BASE_DIR / "assets" / "crickeye_best.pth")
 POSE_MODEL_PATH = str(BASE_DIR / "assets" / "yolov8n-pose.pt")
 OUTPUT_PATH = str(BASE_DIR / "assets" / "analysed_out.mp4")
 CSV_PATH    = str(BASE_DIR / "data"   / "session_log.csv")
 JSON_PATH   = str(BASE_DIR / "data"   / "session_report.json")
+
+
+def output_video_paths(video_path: str):
+    """
+    One annotated MP4 per upload session so replays match saved metrics.
+
+    uploads/<session_id>/video.* -> disk: assets/analysed_<session_id>.mp4
+    Browser URL: /assets/analysed_<session_id>.mp4
+
+    Legacy/CLI (no uploads/ prefix) keeps a single analysed_out.mp4 — that file is
+    overwritten each run, so do not pair it with Supabase replay of another session.
+    """
+    try:
+        p = Path(video_path).resolve()
+        rel = p.relative_to(BASE_DIR.resolve())
+        if len(rel.parts) >= 3 and rel.parts[0] == "uploads":
+            sid = rel.parts[1]
+            name = f"analysed_{sid}.mp4"
+            return str(BASE_DIR / "assets" / name), f"/assets/{name}"
+    except (ValueError, IndexError, OSError):
+        pass
+    return OUTPUT_PATH, "/assets/analysed_out.mp4"
+
+# Replay cache version for the browser lives in pipeline_cache_version.py (imported by backend/main.py).
 
 # -- Shot detection
 BILATERAL_VEL_THRESHOLD  = 12.0
@@ -54,12 +96,21 @@ BILATERAL_FRAME_FRAC     = 0.6
 MIN_TRAVEL_PX            = 40
 MIN_SHOT_GAP_FRAMES      = 45
 
+# Population baseline for swing intensity normalisation.
+# P90 of wrist rolling-mean at which a batter is considered "making good contact effort".
+# 45.0 px/frame = typical committed net-session swing at
+# standard net camera distance (~2-3m). Shot #7's strong
+# pull was calibrating the ceiling too high and compressing
+# all other shots to near-zero.
+# If scores still cluster low after this, raise to 55.0.
+# If scores feel too high (most shots showing 70+), lower to 38.0.
+POPULATION_SWING_BASELINE_PX = 45.0
+
 # -- Stance detection
 W_SHOULDER               = 3.0
 W_BACK_FOOT              = 2.0
 W_FRONT_FOOT             = 2.0
 W_WRIST_DROP             = 1.0
-STANCE_THRESHOLD         = 0.65
 MIN_KEYPOINT_CONF        = 0.30
 MIN_POSE_CONF            = 0.40
 PRESHOT_START            = 10
@@ -67,7 +118,7 @@ PRESHOT_END              = 3
 
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
-CONF_THRESHOLD           = 0.60
+CONF_THRESHOLD           = 0.30
 NUM_FRAMES               = 16
 IMG_SIZE                 = 224
 CLIP_PRE_FRAMES          = 10
@@ -88,10 +139,17 @@ HEAD_STABLE_WARN         = 35      # was 40
 STABILITY_GOOD           = 60      # was 70
 STABILITY_WARN           = 35      # was 45
 
-# Head-score penalty multiplier (front-on camera; was 12 → 7 → now 5.5)
-# Lower = more lenient. Front-on camera sees Z-axis lunge as vertical
-# movement, so we must be more forgiving than a side-on camera would be.
-HEAD_SCORE_MULTIPLIER    = 5.5
+# Head-score penalty multiplier (front-on camera; lower = more lenient).
+HEAD_SCORE_MULTIPLIER    = 3.6
+
+# Shot-type-specific head score multiplier (lower = more lenient)
+HEAD_SCORE_MULTIPLIER_BY_SHOT = {
+    'pull'    : 2.5,
+    'sweep'   : 2.5,
+    'cover'   : 3.3,
+    'flick'   : 3.3,
+    'straight': 3.6,
+}
 
 # Minimum keypoint frames required before we trust a biomech metric
 MIN_SYMMETRY_FRAMES      = 4       # symmetry needs at least this many readings
@@ -129,13 +187,15 @@ BAT_TIP_MULTIPLIER       = 1.35
 # Straight: head should be very still — ball is coming straight at you.
 # Pull/sweep: cross-bat, body rotates — vertical movement is free.
 HEAD_RULES = {
-    'cover'    : (0.65, 0.35, 0.25, 0.22, 0.28, 0.10),
-    'straight' : (0.80, 0.20, 0.10, 0.14, 0.15, 0.04),
-    'flick'    : (0.70, 0.30, 0.18, 0.18, 0.20, 0.06),
-    'pull'     : (0.15, 0.85, 0.35, 0.22, 0.30, 0.08),
-    'sweep'    : (0.20, 0.80, 0.40, 0.22, 0.32, 0.08),
+    # Extra lat/vert “free” slack vs older tuples — nose std from pose jitter + rotation
+    # was producing depressingly low scores on otherwise fine net swings.
+    'cover'    : (0.63, 0.37, 0.32, 0.27, 0.34, 0.16),
+    'straight' : (0.70, 0.30, 0.22, 0.24, 0.28, 0.14),
+    'flick'    : (0.70, 0.30, 0.24, 0.23, 0.28, 0.12),
+    'pull'     : (0.15, 0.85, 0.55, 0.32, 0.34, 0.30),
+    'sweep'    : (0.20, 0.80, 0.55, 0.32, 0.36, 0.28),
 }
-HEAD_RULES_DEFAULT = (0.80, 0.20, 0.10, 0.14, 0.15, 0.04)
+HEAD_RULES_DEFAULT = (0.80, 0.20, 0.16, 0.18, 0.20, 0.10)
 
 # ── Balance / Posture constants (new metrics) ──────────────────────────
 # Base width: ankle separation as multiple of shoulder width.
@@ -160,6 +220,51 @@ KNEE_BEND_GOOD           = 0.30    # knee drop ≥ 30% of femur = good flex
 KNEE_BEND_STIFF          = 0.15    # below 15% = stiff-legged
 
 MIN_HEAD_FRAMES = 2   # short clips: 2 frames minimum for basic std
+
+# -- Camera scale (zoomed-out vs close net) --------------------------------
+# Reference shoulder width (px) at a typical close phone/net distance (~2–3 m).
+# Session median shoulder width / REF_SHOULDER_PX scales px thresholds for
+# zoomed-out front-on videos where the same real motion spans fewer pixels.
+REF_SHOULDER_PX = 85.0
+
+
+def camera_pixel_scale_from_session_shoulder(session_shoulder_px):
+    """~1.0 at close net; <1 when the batter is small in frame (zoomed / long lens)."""
+    if session_shoulder_px is None or session_shoulder_px <= 0:
+        return 1.0
+    s = float(session_shoulder_px) / REF_SHOULDER_PX
+    return float(np.clip(s, 0.22, 1.55))
+
+
+def _session_shoulder_median_robust(all_keypoints, min_shoulder_px: float):
+    """Median shoulder width with an explicit floor (px)."""
+    widths = []
+    for kp in all_keypoints:
+        if kp.get('pose_conf', 0) < SHOULDER_POSE_CONF_MIN:
+            continue
+        ls, rs = kp.get('ls'), kp.get('rs')
+        if ls and rs:
+            w = float(np.hypot(rs[0] - ls[0], rs[1] - ls[1]))
+            if w > min_shoulder_px:
+                widths.append(w)
+    if not widths:
+        return None
+    med = float(np.median(widths))
+    return med if med > min_shoulder_px else None
+
+
+def resolve_session_shoulder_and_scale(all_keypoints):
+    """Session median shoulder (px) + pixel scale for threshold calibration."""
+    med = _session_shoulder_median_robust(all_keypoints, MIN_SHOULDER_PX)
+    if med is None:
+        med = _session_shoulder_median_robust(all_keypoints, 18.0)
+    scale = camera_pixel_scale_from_session_shoulder(med)
+    return med, scale
+
+
+# Swing windows drive which frames go to the shot classifier — must stay aligned
+# with the original fixed-px detector. Biomechanics (below) still use pixel_scale.
+SWING_DETECTION_PIXEL_SCALE = 1.0
 
 # -- COCO keypoint indices
 KP_NOSE                  = 0
@@ -201,6 +306,22 @@ def ws_emit(ws, loop, payload: dict):
         future.result(timeout=5)
     except Exception as e:
         print(f"[WS emit error] {e}")
+
+
+def _to_jsonable(obj):
+    """
+    Recursively convert numpy objects to standard Python JSON-safe types.
+    Prevents crashes like: TypeError: Object of type float32 is not JSON serializable
+    """
+    if isinstance(obj, dict):
+        return {k: _to_jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_jsonable(v) for v in obj]
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
 
 # -----------------------------------------------------------------
 # GEOMETRY HELPERS
@@ -262,11 +383,35 @@ def extract_all_keypoints(video_path, ws=None, loop=None):
     orig_h       = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     print(f"[CrickEye] Video: {orig_w}x{orig_h} @ {fps:.1f}fps | {total_frames} frames")
+    _long = max(orig_w, orig_h)
+    def _imgsz_stride32(x: int, stride: int = 32) -> int:
+        """YOLOv8 stride; avoids Ultralytics warning + per-frame resize spam."""
+        return max(stride, int(round(x / stride)) * stride)
+
+    _pose_imgsz_env = os.environ.get("POSE_IMGSZ", "").strip()
+    _zoomed_pose = os.environ.get("CRICKEYE_ZOOMED_POSE", "").strip().lower() in (
+        "1", "true", "yes",
+    )
+    if _pose_imgsz_env:
+        pose_imgsz = _imgsz_stride32(max(320, min(1536, int(_pose_imgsz_env))))
+    elif _zoomed_pose:
+        # Optional: larger imgsz for tiny batters in frame (changes wrist tracks vs default).
+        pose_imgsz = _imgsz_stride32(int(max(640, min(1280, round(_long * 0.72)))))
+    else:
+        # Default: match original pipeline (Ultralytics default 640) so swing detection
+        # / classifier clip alignment stays stable.
+        pose_imgsz = 640
+    print(
+        f"[CrickEye] Pose inference imgsz={pose_imgsz}"
+        + (" (CRICKEYE_ZOOMED_POSE=1 or POSE_IMGSZ)" if pose_imgsz != 640 else "")
+        + " — set POSE_IMGSZ or CRICKEYE_ZOOMED_POSE=1 for zoomed subjects",
+    )
     ws_emit(ws, loop, {
         "type": "stage", "stage": "keypoints",
         "message": "Pass 1 - Extracting pose keypoints...",
         "total_frames": total_frames, "fps": fps,
         "width": orig_w, "height": orig_h,
+        "pose_imgsz": pose_imgsz,
     })
 
     all_frames_rgb = []
@@ -281,7 +426,7 @@ def extract_all_keypoints(video_path, ws=None, loop=None):
 
         all_frames_rgb.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
 
-        results  = pose_model(frame_bgr, verbose=False)
+        results  = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz)
         kp_entry = {k: None for k in KP_KEYS}
         kp_entry['pose_conf'] = 0.0
 
@@ -311,7 +456,8 @@ def extract_all_keypoints(video_path, ws=None, loop=None):
             pct     = frame_idx / total_frames * 100
             elapsed = time.time() - t0
             eta     = (elapsed / frame_idx) * (total_frames - frame_idx)
-            print(f"  [{pct:5.1f}%] frame {frame_idx}/{total_frames}  ETA {eta:.0f}s")
+            if not _quiet_console():
+                print(f"  [{pct:5.1f}%] frame {frame_idx}/{total_frames}  ETA {eta:.0f}s")
             ws_emit(ws, loop, {
                 "type": "progress", "stage": "keypoints",
                 "frame": frame_idx, "total": total_frames,
@@ -364,17 +510,19 @@ def compute_wrist_signals(all_keypoints):
 # SWING WINDOW DETECTION
 # -----------------------------------------------------------------
 
-def find_swing_windows(bilateral):
+def find_swing_windows(bilateral, pixel_scale=1.0):
     N           = len(bilateral)
     bil_arr     = np.array(bilateral, dtype=np.float32)
     W           = MIN_SWING_FRAMES
     swing_valid = np.zeros(N, dtype=bool)
     swing_score = np.zeros(N, dtype=np.float32)
-    soft_thr    = BILATERAL_VEL_THRESHOLD * 0.7
+    thr         = BILATERAL_VEL_THRESHOLD * pixel_scale
+    soft_thr    = thr * 0.7
+    min_travel  = MIN_TRAVEL_PX * pixel_scale
 
     for i in range(N - W):
         window = bil_arr[i : i + W]
-        if float(window.mean()) < BILATERAL_VEL_THRESHOLD:
+        if float(window.mean()) < thr:
             continue
         if int(np.sum(window >= soft_thr)) < int(np.ceil(W * BILATERAL_FRAME_FRAC)):
             continue
@@ -382,7 +530,7 @@ def find_swing_windows(bilateral):
         if not (int(W * 0.20) <= peak_idx <= int(W * 0.80)):
             continue
         total_travel = float(window.sum())
-        if total_travel < MIN_TRAVEL_PX:
+        if total_travel < min_travel:
             continue
         swing_valid[i] = True
         swing_score[i] = total_travel
@@ -390,11 +538,12 @@ def find_swing_windows(bilateral):
     return swing_valid, swing_score
 
 
-def find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws=None, loop=None):
+def find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws=None, loop=None,
+                     pixel_scale=1.0):
     ws_emit(ws, loop, {"type": "stage", "stage": "detection",
                        "message": "Detecting swing windows..."})
 
-    swing_valid, swing_score = find_swing_windows(bilateral)
+    swing_valid, swing_score = find_swing_windows(bilateral, pixel_scale=pixel_scale)
     candidates = [(i, float(swing_score[i]))
                   for i in range(len(swing_valid)) if swing_valid[i]]
 
@@ -570,10 +719,11 @@ def px_per_frame_to_kmh(peak_px_per_frame, shoulder_px, fps):
 # -----------------------------------------------------------------
 
 PLAIN_ENGLISH = {
-    # Head position — short chips for the card
-    "HEAD_LATERAL_DRIFT"      : "Eyes off the ball",
-    "HEAD_VERTICAL_DRIFT"     : "Head moving too early",
-    "HEAD_DUCKING_PULL"       : "Head too low on the pull",
+    "BAT_SPEED_SESSION_LOCK"   : "Bat speed matched to swing + session",
+    # Head position — short chips for the card (plain English)
+    "HEAD_LATERAL_DRIFT"      : "Head shifting sideways",
+    "HEAD_VERTICAL_DRIFT"     : "Head dipping or lifting early",
+    "HEAD_DUCKING_PULL"       : "Head dropping on the pull",
     # Stance
     "STANCE_ASYMMETRIC"       : "Stance uneven",
     # Bat control
@@ -597,26 +747,51 @@ PLAIN_ENGLISH = {
     "FATIGUE"                 : "Swing dropping off late",
 }
 
+# Player-facing tiers — forgiving mid band; bottom tier = pose/camera uncertain, not moral failure.
 HEAD_QUALITY_LABEL = [
-    (85, "Ball watched well"),
-    (70, "Head fairly still"),
-    (50, "Small head movement"),
-    (35, "Eyes leaving the ball"),
-    (0,  "Lost sight of the ball"),
+    (90, "Very still — eyes on the ball"),
+    (78, "Stable — watching the ball"),
+    (66, "Head mostly quiet"),
+    (54, "Small head movement"),
+    (44, "Some head movement"),
+    (34, "Noticeable head movement"),
+    (26, "Busy head through the shot"),
+    (18, "A lot of head movement"),
+    (10, "Head hard to track — check lighting / zoom"),
+    (0,  "Not enough data — head score uncertain"),
 ]
+
+
+def _soft_head_score_display(raw):
+    """
+    Raw head score uses 100/(1+k*combined) and is harsh on front-on nets (low 20s–50s common).
+    Map to a gentler 22–97 band so tiers match coaching intuition without fake 90s for bad swings.
+    """
+    x = float(np.clip(float(raw), 0.0, 100.0))
+    return float(round(np.clip(20.0 + 0.78 * x, 22.0, 97.0), 1))
+
 
 SYMMETRY_LABEL = [
-    (80, "Balanced stance"),
-    (60, "Slight open shape"),
-    (40, "Leaning a bit"),
-    (20, "Off balance"),
+    (86, "Level stance"),
+    (73, "Near level"),
+    (61, "Slight open shape"),
+    (46, "Moderately open"),
+    (26, "Off balance"),
+    (0,  "Strongly off balance"),
 ]
 
+# Dense 25–55 band so net sessions get distinct wording shot-to-shot.
 SWING_INTENSITY_LABEL = [
-    (80, "Strong, committed swing"),
-    (60, "Good tempo"),
-    (40, "Gentle swing"),
-    (20, "Mostly arms"),
+    (84, "Strong, committed swing"),
+    (72, "Solid swing"),
+    (62, "Good tempo"),
+    (52, "Rhythm swing"),
+    (45, "Flowing swing"),
+    (38, "Gentle swing"),
+    (31, "Measured swing"),
+    (24, "Hands-led swing"),
+    (16, "Compact swing"),
+    (8,  "Mostly arms"),
     (0,  "Very little swing"),
 ]
 
@@ -691,11 +866,97 @@ def finalize_shot_player_copy(e):
     _recompute_shot_score_from_final_swing(e)
 
 
+def _bat_speed_session_lock_enabled() -> bool:
+    v = os.getenv("SESSION_BAT_SPEED_LOCK", "1").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def _apply_session_bat_speed_lock(shot_log):
+    """Cap lone bat-speed spikes that swing intensity + session median cannot support."""
+    if not _bat_speed_session_lock_enabled():
+        return
+    vals = []
+    for e in shot_log:
+        p = e.get("peak_swing_speed")
+        if p is None:
+            continue
+        try:
+            vals.append(float(p))
+        except (TypeError, ValueError):
+            continue
+    if len(vals) < 3:
+        return
+    med = float(np.median(vals))
+
+    def _note_lock(e):
+        fl = e.get("flags")
+        if not isinstance(fl, list):
+            e["flags"] = []
+            fl = e["flags"]
+        if "BAT_SPEED_SESSION_LOCK" not in fl:
+            fl.append("BAT_SPEED_SESSION_LOCK")
+        fp = e.get("flags_plain")
+        if not isinstance(fp, list):
+            e["flags_plain"] = []
+            fp = e["flags_plain"]
+        txt = plain_flag("BAT_SPEED_SESSION_LOCK")
+        if txt not in fp:
+            fp.append(txt)
+
+    for e in shot_log:
+        pk = e.get("peak_swing_speed")
+        if pk is None:
+            continue
+        try:
+            pk = float(pk)
+        except (TypeError, ValueError):
+            continue
+        si = float(e.get("swing_intensity") or 0)
+        exp = 28.0 + 1.12 * si
+        allowed = max(med * 1.55, exp + 22.0)
+        if pk <= allowed + 2.5:
+            continue
+        e["peak_swing_speed"] = round(float(allowed), 1)
+        _note_lock(e)
+
+
 # -----------------------------------------------------------------
 # SWING INTENSITY — P90 of rolling-mean bilateral velocity
 # -----------------------------------------------------------------
 
 SWING_INTENSITY_ROLLING_W = 5   # rolling mean window (frames)
+
+# Bat-tip km/h: longer smooth window + blended high percentiles (less spike jitter than swing P90 alone).
+BAT_SPEED_ROLLING_W = 7
+BAT_SPEED_MIN_SWING_FRAMES = 8
+
+
+def _compute_bat_speed_raw_px(clip_bilateral):
+    """
+    Bilateral speed sample for bat-tip calibration: rolling-mean smoothing then
+    blend of high percentiles. Short clips are damped (noisy peaks).
+    """
+    if not clip_bilateral:
+        return 0.0
+    arr = np.array(clip_bilateral, dtype=np.float32)
+    n = int(arr.size)
+    if n < 3:
+        return float(np.max(arr)) if n else 0.0
+    w = int(BAT_SPEED_ROLLING_W)
+    if n < w:
+        return float(np.percentile(arr, 85))
+    kernel = np.ones(w, dtype=np.float32) / float(w)
+    smoothed = np.convolve(arr, kernel, mode='valid')
+    if smoothed.size < 2:
+        return float(np.max(smoothed))
+    p88 = float(np.percentile(smoothed, 88))
+    p95 = float(np.percentile(smoothed, 95))
+    peak = 0.52 * p88 + 0.48 * p95
+    min_sf = int(BAT_SPEED_MIN_SWING_FRAMES)
+    if n < min_sf:
+        peak *= float(0.76 + 0.24 * (n / max(min_sf, 1)))
+    return float(peak)
+
 
 def _compute_swing_intensity_raw(clip_bilateral):
     """
@@ -712,14 +973,17 @@ def _compute_swing_intensity_raw(clip_bilateral):
     smoothed = np.convolve(arr, kernel, mode='valid')
     return float(np.percentile(smoothed, 90))
 
-def _compute_bat_speed_kmh(raw_p90_px, shoulder_px, session_shoulder_px, fps):
-    """Convert raw P90 px/frame to km/h estimate (kept in JSON for dev use)."""
+def _compute_bat_speed_kmh(raw_p90_px, shoulder_px, session_shoulder_px, fps,
+                             fallback_shoulder_px=None, pixel_scale=1.0):
+    """Convert smoothed bilateral peak (px/frame) to bat-tip km/h."""
+    min_w = max(22.0, 40.0 * min(1.0, pixel_scale))
     candidates = []
-    if shoulder_px and shoulder_px >= 40.0:
+    if shoulder_px and shoulder_px >= min_w:
         candidates.append(shoulder_px)
-    if session_shoulder_px and session_shoulder_px >= 40.0:
+    if session_shoulder_px and session_shoulder_px >= min_w:
         candidates.append(session_shoulder_px)
-    candidates.append(SHOULDER_FALLBACK_PX)
+    fb = fallback_shoulder_px if fallback_shoulder_px is not None else SHOULDER_FALLBACK_PX
+    candidates.append(fb)
     best_shoulder = max(candidates)
     metres_per_pixel = SHOULDER_WIDTH_M / best_shoulder
     speed_ms  = raw_p90_px * fps * metres_per_pixel
@@ -782,13 +1046,15 @@ def _measure_pre_shot_movement(all_keypoints, pre_start, pre_end):
 
 
 def _detect_foot_plant(all_keypoints, onset_frame, contact_frame, end_frame,
-                       handedness, shot_label):
+                       handedness, shot_label, pixel_scale=1.0):
     """
     Detect when the front foot plants relative to contact.
     Front foot = left ankle for RHB on front-foot shots.
     Returns (plant_frame: int or None, timing: int or None).
     timing = plant_frame - contact_frame (negative = planted before contact = good).
     """
+    plant_vel_thr = PLANT_VEL_THRESHOLD * pixel_scale
+    plant_min_descent = PLANT_MIN_DESCENT_PX * pixel_scale
     N = len(all_keypoints)
 
     is_front_foot = shot_label in FRONT_FOOT_SHOTS
@@ -829,7 +1095,7 @@ def _detect_foot_plant(all_keypoints, onset_frame, contact_frame, end_frame,
         return None, None
 
     total_descent = max(ys) - min(ys[:max(1, len(ys)//2)])
-    if total_descent < PLANT_MIN_DESCENT_PX:
+    if total_descent < plant_min_descent:
         return None, None
 
     was_moving = False
@@ -837,9 +1103,9 @@ def _detect_foot_plant(all_keypoints, onset_frame, contact_frame, end_frame,
     for vf, vel in velocities:
         if vf < onset_frame:
             continue
-        if abs(vel) > PLANT_VEL_THRESHOLD:
+        if abs(vel) > plant_vel_thr:
             was_moving = True
-        elif was_moving and abs(vel) <= PLANT_VEL_THRESHOLD:
+        elif was_moving and abs(vel) <= plant_vel_thr:
             plant_frame = vf
             break
 
@@ -851,12 +1117,58 @@ def _detect_foot_plant(all_keypoints, onset_frame, contact_frame, end_frame,
 
 
 FOOTWORK_LABEL = [
-    (80, "Good foot timing"),
-    (60, "Front foot used well"),
-    (40, "Late or stretching"),
-    (20, "Feet very quiet"),
+    (85, "Good foot timing"),
+    (70, "Front foot used well"),
+    (55, "Slightly late or early"),
+    (35, "Late movement"),
+    (15, "Feet very quiet"),
     (0,  "Almost no step"),
 ]
+
+
+def _compute_feet_timing_score(plant_timing, shot_label):
+    """
+    Shot-type-aware timing score (0-100) for front-foot plant relative to contact.
+    plant_timing = plant_frame - contact_frame (negative = planted before contact).
+    Returns (score, timing_band) where timing_band is 'early'|'on_time'|'late'|'unknown'.
+    """
+    if plant_timing is None:
+        return 50.0, 'unknown'   # no data: neutral
+
+    BACK_FOOT_SHOTS_LOCAL = {'pull', 'sweep'}
+    FRONT_FOOT_SHOTS_LOCAL = {'cover', 'straight', 'flick'}
+
+    if shot_label in BACK_FOOT_SHOTS_LOCAL:
+        # Pull/sweep: "on time" = small window around contact; early is acceptable
+        if plant_timing < -6:
+            return 65.0, 'early'    # committed early — acceptable on back-foot
+        elif -6 <= plant_timing <= 4:
+            return 90.0, 'on_time'  # ideal
+        else:
+            late_penalty = min(50.0, (plant_timing - 4) * 8.0)
+            return max(10.0, 90.0 - late_penalty), 'late'
+
+    elif shot_label in FRONT_FOOT_SHOTS_LOCAL:
+        # Drives: front foot should land BEFORE contact (negative timing = good)
+        if plant_timing < -8:
+            return 80.0, 'early'    # very early — slight over-commitment
+        elif -8 <= plant_timing <= -1:
+            return 95.0, 'early'    # ideal: foot down just before contact
+        elif 0 <= plant_timing <= 4:
+            return 75.0, 'on_time'  # landing at same time — marginal but ok
+        else:
+            late_penalty = min(65.0, (plant_timing - 4) * 10.0)
+            return max(10.0, 75.0 - late_penalty), 'late'
+
+    else:
+        # Unknown shot type: use symmetric window
+        if abs(plant_timing) <= 4:
+            return 80.0, 'on_time'
+        elif plant_timing < -4:
+            return 70.0, 'early'
+        else:
+            return max(20.0, 80.0 - (plant_timing - 4) * 7.0), 'late'
+
 
 def _compute_footwork_score(pre_shot_movement, plant_timing, shot_label,
                             shoulder_px):
@@ -878,20 +1190,9 @@ def _compute_footwork_score(pre_shot_movement, plant_timing, shot_label,
     else:
         activity_pts = 5.0
 
-    # Plant timing: 0-50 points
-    plant_pts = 0.0
-    if plant_timing is not None:
-        if abs(plant_timing) <= PLANT_GOOD_TIMING_FRAMES:
-            plant_pts = 50.0
-        elif plant_timing > PLANT_GOOD_TIMING_FRAMES:
-            late_by = plant_timing - PLANT_GOOD_TIMING_FRAMES
-            plant_pts = max(0.0, 50.0 - late_by * 8.0)
-        else:
-            plant_pts = 40.0   # early plant is still good
-    elif shot_label in FRONT_FOOT_SHOTS:
-        plant_pts = 5.0    # no plant on front-foot shot = limited
-    else:
-        plant_pts = 25.0   # back-foot: plant less critical
+    # Plant timing: 0-50 points — use shot-type-aware timing score for the plant component
+    timing_s, _ = _compute_feet_timing_score(plant_timing, shot_label)
+    plant_pts = (timing_s / 100.0) * 50.0
 
     return round(min(100.0, activity_pts + plant_pts), 1)
 
@@ -902,29 +1203,20 @@ def _compute_footwork_score(pre_shot_movement, plant_timing, shot_label,
 
 def _session_shoulder_median_all_frames(all_keypoints):
     """Robust session-wide shoulder width (px) for cross-clip calibration."""
-    widths = []
-    for kp in all_keypoints:
-        if kp.get('pose_conf', 0) < SHOULDER_POSE_CONF_MIN:
-            continue
-        ls, rs = kp.get('ls'), kp.get('rs')
-        if ls and rs:
-            w = float(np.hypot(rs[0] - ls[0], rs[1] - ls[1]))
-            if w > MIN_SHOULDER_PX:
-                widths.append(w)
-    if not widths:
-        return None
-    med = float(np.median(widths))
-    return med if med > MIN_SHOULDER_PX else None
+    return _session_shoulder_median_robust(all_keypoints, MIN_SHOULDER_PX)
 
 
 def _shoulder_px_from_window(all_keypoints, start_f, end_f,
-                             session_shoulder_px=None):
+                             session_shoulder_px=None, pixel_scale=1.0):
     """
     Median shoulder width across the clip window, gated by pose confidence.
     If session_shoulder_px is set, keep widths within SHOULDER_SESSION_BAND
     of that median to drop per-clip outliers. Falls back to session median,
-    then SHOULDER_FALLBACK_PX.
+    then a scale-aware shoulder fallback (zoomed-out = smaller px).
     """
+    min_w = max(18.0, MIN_SHOULDER_PX * min(1.0, pixel_scale))
+    fb = max(22.0, SHOULDER_FALLBACK_PX * pixel_scale)
+
     widths = []
     for f in range(max(0, start_f), min(end_f, len(all_keypoints))):
         kp = all_keypoints[f]
@@ -934,22 +1226,22 @@ def _shoulder_px_from_window(all_keypoints, start_f, end_f,
         rs = kp.get('rs')
         if ls and rs:
             w = float(np.hypot(rs[0] - ls[0], rs[1] - ls[1]))
-            if w > MIN_SHOULDER_PX:
+            if w > min_w:
                 widths.append(w)
 
     def _pick_median(ws):
         if not ws:
             return None
         m = float(np.median(ws))
-        return m if m > MIN_SHOULDER_PX else None
+        return m if m > min_w else None
 
     if not widths:
-        if session_shoulder_px and session_shoulder_px > MIN_SHOULDER_PX:
+        if session_shoulder_px and session_shoulder_px > min_w:
             return session_shoulder_px
-        return SHOULDER_FALLBACK_PX
+        return fb
 
     use_widths = widths
-    if session_shoulder_px and session_shoulder_px > MIN_SHOULDER_PX:
+    if session_shoulder_px and session_shoulder_px > min_w:
         lo = session_shoulder_px / SHOULDER_SESSION_BAND
         hi = session_shoulder_px * SHOULDER_SESSION_BAND
         filtered = [w for w in widths if lo <= w <= hi]
@@ -960,9 +1252,9 @@ def _shoulder_px_from_window(all_keypoints, start_f, end_f,
     if median_w is None:
         median_w = _pick_median(widths)
     if median_w is None:
-        if session_shoulder_px and session_shoulder_px > MIN_SHOULDER_PX:
+        if session_shoulder_px and session_shoulder_px > min_w:
             return session_shoulder_px
-        return SHOULDER_FALLBACK_PX
+        return fb
     return median_w
 
 
@@ -971,7 +1263,8 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
                          handedness='RHB',
                          fps=30.0,
                          shot_label='cover',
-                         session_shoulder_px=None):
+                         session_shoulder_px=None,
+                         pixel_scale=1.0):
     N = len(all_keypoints)
 
     def kp_at(f):
@@ -996,12 +1289,16 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     shoulder_px = _shoulder_px_from_window(
         all_keypoints, start_frame, end_frame,
         session_shoulder_px=session_shoulder_px,
+        pixel_scale=pixel_scale,
     )
+    _fb_shoulder = max(22.0, SHOULDER_FALLBACK_PX * pixel_scale)
 
     # ── Swing intensity (P90 of rolling-mean bilateral velocity) ────────
     swing_raw_p90 = _compute_swing_intensity_raw(clip_bilateral)
+    bat_speed_raw_px = _compute_bat_speed_raw_px(clip_bilateral)
     peak_swing_speed_kmh, speed_is_capped = _compute_bat_speed_kmh(
-        swing_raw_p90, shoulder_px, session_shoulder_px, fps
+        bat_speed_raw_px, shoulder_px, session_shoulder_px, fps,
+        fallback_shoulder_px=_fb_shoulder, pixel_scale=pixel_scale,
     )
     # swing_intensity (0-100) is computed post-hoc after all shots are scored,
     # so we store the raw P90 now and fill the percentile later.
@@ -1011,6 +1308,7 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     # Uses nose position (or ear midpoint fallback) from pre-shot onset
     # through contact. Front-on camera: X = lateral, Y = vertical.
     head_rule = HEAD_RULES.get(shot_label, HEAD_RULES_DEFAULT)
+    _head_mult = HEAD_SCORE_MULTIPLIER_BY_SHOT.get(shot_label, HEAD_SCORE_MULTIPLIER)
     lat_w, vert_w, vert_free = head_rule[0], head_rule[1], head_rule[2]
     lat_flag_thr  = head_rule[3]
     vert_flag_thr = head_rule[4]
@@ -1044,7 +1342,8 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
         penalised_vert = max(0.0, head_vertical_ratio - vert_free)
         combined = (lat_w * penalised_lat + vert_w * penalised_vert)
 
-        head_quality_score = round(100.0 / (1.0 + combined * HEAD_SCORE_MULTIPLIER), 1)
+        head_quality_score = _soft_head_score_display(
+            100.0 / (1.0 + combined * _head_mult))
 
         if head_frames_used < 5:
             head_confidence = "low"
@@ -1060,13 +1359,13 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
                 head_flag = "HEAD_DUCKING_PULL"
 
     elif head_frames_used == 1 and shoulder_px > 10:
-        head_quality_score = 45.0
+        head_quality_score = _soft_head_score_display(50.0)
         head_confidence = "estimated"
     else:
         # Zero nose frames: conservative default by shot type
-        _defaults = {'pull': 55.0, 'sweep': 50.0, 'cover': 40.0,
-                     'straight': 40.0, 'flick': 35.0}
-        head_quality_score = _defaults.get(shot_label, 40.0)
+        _defaults = {'pull': 58.0, 'sweep': 54.0, 'cover': 48.0,
+                     'straight': 48.0, 'flick': 44.0}
+        head_quality_score = _soft_head_score_display(_defaults.get(shot_label, 44.0))
         head_confidence = "estimated"
 
     # ── STANCE SYMMETRY (shoulder + hip tilt) ───────────────────────────
@@ -1162,16 +1461,17 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
             elbow_collapse = "marginal"
 
     elbow_behind_pad = False
+    pad_gap = max(5.0, 0.11 * float(shoulder_px))
     if shot_label == 'sweep':
         cf_kp = kp_at(contact_frame)
         if handedness == 'RHB':
             le_c = cf_kp.get('le'); lk_c = cf_kp.get('lk')
-            if le_c and lk_c and le_c[0] > lk_c[0] + 10:
+            if le_c and lk_c and le_c[0] > lk_c[0] + pad_gap:
                 elbow_behind_pad = True
                 elbow_flag = "ELBOW_BEHIND_PAD"
         else:
             re_c = cf_kp.get('re'); rk_c = cf_kp.get('rk')
-            if re_c and rk_c and re_c[0] < rk_c[0] - 10:
+            if re_c and rk_c and re_c[0] < rk_c[0] - pad_gap:
                 elbow_behind_pad = True
                 elbow_flag = "ELBOW_BEHIND_PAD"
 
@@ -1180,9 +1480,11 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
         all_keypoints, pre_start, pre_end)
     plant_frame, plant_timing = _detect_foot_plant(
         all_keypoints, onset_frame, contact_frame, end_frame,
-        handedness, shot_label)
+        handedness, shot_label, pixel_scale=pixel_scale)
     footwork_score = _compute_footwork_score(
         pre_shot_movement, plant_timing, shot_label, shoulder_px)
+    feet_timing_score, feet_timing_band = _compute_feet_timing_score(
+        plant_timing, shot_label)
 
     # Foot activity level for display
     norm_move = pre_shot_movement / max(shoulder_px, 30.0)
@@ -1229,9 +1531,13 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     else:
         elbow_pts = elbow_pts_map.get(elbow_collapse, 7.5)
 
+    # Normalise to 0-100 for display parity with other metrics (max pts = 15)
+    elbow_score = round((elbow_pts / 15.0) * 100.0, 1)
+
     # Swing intensity (10 pts) — filled as session-relative percentile later;
-    # for now use raw P90 scaled against a reasonable max (~50 px/frame)
-    swing_intensity_preliminary = min(100.0, (_swing_raw / 50.0) * 100.0)
+    # scale divisor with camera distance (zoomed-out → lower px/frame for same effort).
+    swing_intensity_preliminary = min(
+        100.0, (_swing_raw / max(8.0, 50.0 * pixel_scale)) * 100.0)
     swing_pts = (swing_intensity_preliminary / 100.0) * 10.0
 
     raw_score  = head_pts + footwork_pts + sym_pts + elbow_pts + swing_pts
@@ -1273,6 +1579,8 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     return {
         # ── Head ──────────────────────────────────────────────────────────
         "head_quality_score"    : head_quality_score,
+        "head_rule_applied"     : shot_label if shot_label in HEAD_RULES else 'default',
+        "head_multiplier_used"  : _head_mult,
         "head_lateral_ratio"    : head_lateral_ratio,
         "head_vertical_ratio"   : head_vertical_ratio,
         "head_frames_used"      : head_frames_used,
@@ -1294,10 +1602,13 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
         "contact_elbow_ratio"   : round(contact_elbow_ratio, 3) if contact_elbow_ratio else None,
         "elbow_behind_pad"      : elbow_behind_pad,
         "elbow_flag"            : elbow_flag,
+        "elbow_score"           : elbow_score,
         # ── Footwork ──────────────────────────────────────────────────────
         "feet_active"           : feet_active,
         "pre_shot_movement"     : pre_shot_movement,
         "plant_timing"          : plant_timing,
+        "feet_timing_score"     : feet_timing_score,
+        "feet_timing_band"      : feet_timing_band,
         "footwork_score"        : footwork_score,
         "footwork_flag"         : footwork_flag,
         # ── Score ─────────────────────────────────────────────────────────
@@ -1695,6 +2006,7 @@ def run_session_analysis(shot_log, session_info):
                 'ELBOW_BEHIND_PAD_count'    : flag_counts.get('ELBOW_BEHIND_PAD', 0),
                 'FLAT_FOOTED_count'          : flag_counts.get('FLAT_FOOTED', 0),
                 'LATE_PLANT_count'           : flag_counts.get('LATE_PLANT', 0),
+                'BAT_SPEED_SESSION_LOCK_count': flag_counts.get('BAT_SPEED_SESSION_LOCK', 0),
             },
             'by_shot_type'         : type_stats,
         },
@@ -1713,6 +2025,65 @@ def run_session_analysis(shot_log, session_info):
         ],
     }
 
+
+def _session_stance_from_classifier_confirmed(stance_rows):
+    """Aggregate session RHB/LHB from classifier-confirmed shots only.
+
+    stance_rows: list of (shot_dom, shot_conf, classifier_conf) per swing.
+
+    **Majority rule:** each qualifying shot casts one vote for RHB or LHB.
+    This matches coach expectation: if most deliveries read RHB, the session
+    is RHB — a single low-confidence LHB frame cannot outweigh four RHB reads.
+
+    Qualifying row: classifier_conf >= CONF_THRESHOLD, shot_dom in RHB/LHB,
+    and pose stance confidence shot_conf >= SESSION_STANCE_VOTE_MIN (weak pose
+    reads are skipped for the session tally).
+
+    Tie on vote count: break by sum(shot_conf**2) per side (stronger lean wins).
+    """
+    SESSION_STANCE_VOTE_MIN = 0.50
+    rhb_votes = []
+    lhb_votes = []
+    for shot_dom, shot_conf, cls_conf in stance_rows:
+        if cls_conf < CONF_THRESHOLD:
+            continue
+        if shot_dom not in ('RHB', 'LHB'):
+            continue
+        if shot_conf is None or float(shot_conf) < SESSION_STANCE_VOTE_MIN:
+            continue
+        c = float(shot_conf)
+        if shot_dom == 'RHB':
+            rhb_votes.append(c)
+        else:
+            lhb_votes.append(c)
+
+    n_r = len(rhb_votes)
+    n_l = len(lhb_votes)
+    if n_r + n_l == 0:
+        return 'UNKNOWN', 0.0, {'handedness': 'UNKNOWN', 'conf': 0.0}
+
+    if n_r > n_l:
+        cur_hand = 'RHB'
+        cur_conf = round(n_r / (n_r + n_l), 2)
+    elif n_l > n_r:
+        cur_hand = 'LHB'
+        cur_conf = round(n_l / (n_r + n_l), 2)
+    else:
+        wr = sum(c * c for c in rhb_votes)
+        wl = sum(c * c for c in lhb_votes)
+        if abs(wr - wl) < 1e-9:
+            return 'UNKNOWN', 0.0, {'handedness': 'UNCERTAIN', 'conf': 0.5}
+        if wr > wl:
+            cur_hand = 'RHB'
+            cur_conf = round(wr / (wr + wl), 2)
+        else:
+            cur_hand = 'LHB'
+            cur_conf = round(wl / (wr + wl), 2)
+
+    session_info = {'handedness': cur_hand, 'conf': cur_conf}
+    return cur_hand, cur_conf, session_info
+
+
 # -----------------------------------------------------------------
 # CLASSIFY ALL SHOTS
 # -----------------------------------------------------------------
@@ -1720,12 +2091,12 @@ def run_session_analysis(shot_log, session_info):
 def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
                        fps, total_frames, orig_w, shot_classifier, device,
                        lw_vels, rw_vels, bilateral,
-                       ws=None, loop=None):
+                       ws=None, loop=None,
+                       pixel_scale=1.0, session_shoulder_px=None):
 
-    shot_log           = []
-    session_rhb_weight = 0.0
-    session_lhb_weight = 0.0
-    session_info       = {'handedness': 'UNKNOWN', 'conf': 0.0}
+    shot_log     = []
+    stance_rows  = []
+    session_info = {'handedness': 'UNKNOWN', 'conf': 0.0}
 
     ws_emit(ws, loop, {
         "type": "stage", "stage": "classifying",
@@ -1734,9 +2105,11 @@ def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
     })
     print(f"\n[CrickEye] Classifying {len(shot_onsets)} shots ...")
 
-    session_shoulder_px = _session_shoulder_median_all_frames(all_keypoints)
+    if session_shoulder_px is None:
+        session_shoulder_px = _session_shoulder_median_all_frames(all_keypoints)
     if session_shoulder_px:
-        print(f"[CrickEye] Session shoulder width (median): {session_shoulder_px:.1f} px")
+        print(f"[CrickEye] Session shoulder width (median): {session_shoulder_px:.1f} px  "
+              f"(pixel_scale={pixel_scale:.2f})")
 
     for i, (onset_frame, onset_score) in enumerate(shot_onsets):
 
@@ -1746,28 +2119,15 @@ def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
         shot_dom, shot_conf = vote_handedness_from_keypoints(
             all_keypoints, pre_start, pre_end, orig_w)
 
-        if shot_dom is not None and shot_conf >= 0.60:
-            vote_weight = shot_conf ** 2
-            if shot_dom == 'RHB': session_rhb_weight += vote_weight
-            else:                  session_lhb_weight += vote_weight
-
-        session_total = session_rhb_weight + session_lhb_weight
-        if session_total > 0:
-            if session_rhb_weight >= session_lhb_weight:
-                cur_hand = 'RHB'; cur_conf = round(session_rhb_weight / session_total, 2)
-            else:
-                cur_hand = 'LHB'; cur_conf = round(session_lhb_weight / session_total, 2)
-            session_info['handedness'] = cur_hand if cur_conf >= STANCE_THRESHOLD else 'UNCERTAIN'
-            session_info['conf']       = cur_conf
-        else:
-            cur_hand = 'UNKNOWN'; cur_conf = 0.0
-
         start = max(0, onset_frame - CLIP_PRE_FRAMES)
         end   = min(total_frames - 1, onset_frame + CLIP_POST_FRAMES)
         clip  = all_frames_rgb[start : end + 1]
 
         label, conf, probs = classify_shot(shot_classifier, clip, device)
         ts = f"{int(onset_frame/fps//60):02d}:{onset_frame/fps%60:05.2f}"
+
+        stance_rows.append((shot_dom, shot_conf, conf))
+        cur_hand, cur_conf, session_info = _session_stance_from_classifier_confirmed(stance_rows)
 
         biomech = extract_biomechanics(
             all_keypoints, lw_vels, rw_vels, bilateral,
@@ -1776,6 +2136,7 @@ def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
             fps=fps,
             shot_label=label,
             session_shoulder_px=session_shoulder_px,
+            pixel_scale=pixel_scale,
         )
 
         entry = dict(
@@ -1797,7 +2158,12 @@ def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
         shot_log.append(entry)
 
         flag_str = " ".join([f"[{f}]" for f in biomech['flags']]) if biomech['flags'] else ""
-        hand_str = f"{cur_hand}({cur_conf:.0%})" if shot_dom else "no-pose"
+        if cur_hand != 'UNKNOWN':
+            hand_str = f"{cur_hand}({cur_conf:.0%})"
+        elif shot_dom:
+            hand_str = f"{shot_dom}({shot_conf:.0%})"
+        else:
+            hand_str = "no-pose"
         _hq = biomech.get('head_quality_score')
         _sym = biomech.get('symmetry_score')
         _hq_s = f"{_hq:.0f}" if _hq is not None else "--"
@@ -1814,20 +2180,49 @@ def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
     raw_swings = [e.get('swing_raw_p90', 0) for e in shot_log if e.get('swing_raw_p90')]
     if raw_swings:
         max_raw = max(raw_swings) if raw_swings else 1.0
+        # Mild power curve so one outlier doesn't collapse the session.
+        pop_base = POPULATION_SWING_BASELINE_PX * pixel_scale
+        norm_ceiling = max(max_raw, pop_base)
+        _swing_gamma = 0.46
         for e in shot_log:
             raw = e.get('swing_raw_p90', 0) or 0
-            if max_raw > 0:
-                e['swing_intensity'] = round(min(100.0, (raw / max_raw) * 100.0), 1)
+            if norm_ceiling > 0:
+                ratio = min(1.0, raw / norm_ceiling)
+                e['swing_intensity'] = round(
+                    min(100.0, (ratio ** _swing_gamma) * 100.0), 1)
             else:
                 e['swing_intensity'] = 0.0
+            if max_raw > 0:
+                ratio_rel = min(1.0, raw / max_raw)
+                e['swing_intensity_session_relative'] = round(
+                    min(100.0, (ratio_rel ** _swing_gamma) * 100.0), 1)
+            else:
+                e['swing_intensity_session_relative'] = 0.0
+            # Label blends population + session-relative so similar absolute swings still
+            # get different wording when they rank differently in this net (adaptable copy).
+            si = float(e.get('swing_intensity') or 0)
+            sr = float(e.get('swing_intensity_session_relative') or 0)
+            swing_for_label = round(min(100.0, si * 0.56 + sr * 0.44), 1)
             e['swing_intensity_label'] = label_from_scale(
-                e['swing_intensity'], SWING_INTENSITY_LABEL)
+                swing_for_label, SWING_INTENSITY_LABEL)
+
+    _apply_session_bat_speed_lock(shot_log)
 
     for e in shot_log:
         finalize_shot_player_copy(e)
 
+    fin_hand = session_info['handedness']
+    fin_conf = session_info['conf']
+    for e in shot_log:
+        e['_session_hand'] = fin_hand
+        e['_session_conf'] = fin_conf
+
     final = session_info['handedness']
     fconf = session_info['conf']
+    session_info['camera_pixel_scale'] = pixel_scale
+    session_info['swing_pixel_scale'] = SWING_DETECTION_PIXEL_SCALE
+    session_info['session_shoulder_px'] = session_shoulder_px
+    session_info['ref_shoulder_px'] = REF_SHOULDER_PX
     print(f"\n[CrickEye] Session stance: {final} ({fconf:.0%})")
     return shot_log, session_info
 
@@ -1900,17 +2295,18 @@ def draw_skeleton(frame, kp):
     if ra: cv2.circle(frame, (int(ra[0]), int(ra[1])), 4, (200, 0, 255), -1)
 
 
-def draw_bilateral_bar(frame, bilateral_vel, h, w):
+def draw_bilateral_bar(frame, bilateral_vel, h, w, bil_threshold=None):
+    thr = bil_threshold if bil_threshold is not None else BILATERAL_VEL_THRESHOLD
     bar_h = int(h*0.45); bar_w = 10; bar_x = w-bar_w-6; bar_y = int(h*0.25)
-    norm  = min(bilateral_vel / max(BILATERAL_VEL_THRESHOLD*3, 1.0), 1.0)
+    norm  = min(bilateral_vel / max(thr * 3, 1.0), 1.0)
     filled = int(bar_h * norm)
     cv2.rectangle(frame, (bar_x, bar_y), (bar_x+bar_w, bar_y+bar_h), (30,30,30), -1)
-    col = (0,255,0) if bilateral_vel >= BILATERAL_VEL_THRESHOLD else \
+    col = (0,255,0) if bilateral_vel >= thr else \
           (0,165,255) if norm > 0.3 else (60,60,60)
     if filled > 0:
         cv2.rectangle(frame, (bar_x, bar_y+bar_h-filled),
                       (bar_x+bar_w, bar_y+bar_h), col, -1)
-    thr_y = bar_y+bar_h - int(bar_h*(BILATERAL_VEL_THRESHOLD/max(BILATERAL_VEL_THRESHOLD*3,1.0)))
+    thr_y = bar_y+bar_h - int(bar_h*(thr/max(thr*3,1.0)))
     cv2.line(frame, (bar_x-2, thr_y), (bar_x+bar_w+2, thr_y), (0,180,180), 1)
     cv2.rectangle(frame, (bar_x, bar_y), (bar_x+bar_w, bar_y+bar_h), (100,100,100), 1)
 
@@ -1918,7 +2314,8 @@ def draw_bilateral_bar(frame, bilateral_vel, h, w):
 def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
                  shot_log, lw_vels, rw_vels, bilateral,
                  fps, total_frames, orig_w, orig_h, session_info,
-                 slow_factor=3, ws=None, loop=None):
+                 slow_factor=3, ws=None, loop=None, ball_frame_overlays=None,
+                 ball_trajectories=None):
 
     fourcc  = cv2.VideoWriter_fourcc(*'mp4v')
     writer  = cv2.VideoWriter(output_path, fourcc, fps, (orig_w, orig_h))
@@ -1931,6 +2328,16 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
 
     handedness = session_info['handedness']
     conf       = session_info['conf']
+    bil_thr    = BILATERAL_VEL_THRESHOLD * float(
+        session_info.get('swing_pixel_scale', session_info.get('camera_pixel_scale', 1.0))
+    )
+    ball_frame_overlays = ball_frame_overlays or []
+    ball_trajectories = ball_trajectories or []
+    ball_overlay_map = {
+        int(item.get('frame', -1)): item.get('boxes', [])
+        for item in ball_frame_overlays
+        if isinstance(item, dict) and item.get('frame') is not None
+    }
 
     ws_emit(ws, loop, {"type": "stage", "stage": "rendering",
                        "message": "Rendering annotated video...",
@@ -1950,8 +2357,55 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
         in_clip = frame_idx in frame_to_shot
 
         draw_skeleton(out, kp)
-        draw_bilateral_bar(out, bil, orig_h, orig_w)
+        draw_bilateral_bar(out, bil, orig_h, orig_w, bil_threshold=bil_thr)
         draw_handedness_badge(out, handedness, conf, orig_w)
+
+        # Ball trajectories — polyline up to current frame. Optional rolling window
+        # (BALL_VIDEO_TRAIL_SPAN_FRAMES) so the trail follows the ball instead of
+        # leaving a permanent scribble for the whole clip.
+        trail_span = int(os.getenv("BALL_VIDEO_TRAIL_SPAN_FRAMES", "72") or 0)
+        for tr in ball_trajectories:
+            bgr = tr.get("bgr") or [0, 255, 255]
+            col = (int(bgr[0]), int(bgr[1]), int(bgr[2]))
+            pts = tr.get("points") or []
+            acc = []
+            for p in pts:
+                pf = int(p.get("frame", -1))
+                if pf > frame_idx:
+                    continue
+                if trail_span > 0 and pf < frame_idx - trail_span + 1:
+                    continue
+                acc.append((pf, int(p.get("x", 0)), int(p.get("y", 0))))
+            acc.sort(key=lambda t: t[0])
+            acc_xy = [(x, y) for _, x, y in acc]
+            if len(acc_xy) >= 2:
+                for i in range(1, len(acc_xy)):
+                    cv2.line(out, acc_xy[i - 1], acc_xy[i], col, 2, cv2.LINE_AA)
+
+        # Ball analytics overlay baked into rendered mp4.
+        # Use a visible bright box + center dot so ball detections are obvious.
+        for bb in ball_overlay_map.get(frame_idx, []):
+            cx = int(bb.get('cx', 0))
+            cy = int(bb.get('cy', 0))
+            bw = int(bb.get('w', 0))
+            bh = int(bb.get('h', 0))
+            # Enforce a minimum visible box size (small balls can be ~4-8 px)
+            bw = max(bw, 12)
+            bh = max(bh, 12)
+            # Pad slightly so the box doesn't sit flush on the ball edge
+            pad = 6
+            x1 = max(0, cx - bw // 2 - pad)
+            y1 = max(0, cy - bh // 2 - pad)
+            x2 = min(orig_w - 1, cx + bw // 2 + pad)
+            y2 = min(orig_h - 1, cy + bh // 2 + pad)
+            # Bright cyan rectangle (3px) + magenta center dot
+            cv2.rectangle(out, (x1, y1), (x2, y2), (0, 255, 255), 3)
+            cv2.circle(out, (cx, cy), 5, (220, 40, 220), -1)
+            # Small confidence label above the box
+            conf_val = bb.get('conf', 0)
+            if conf_val > 0:
+                cv2.putText(out, f"{conf_val:.0%}", (x1, max(y1 - 4, 12)),
+                            FONT, 0.42, (0, 255, 255), 1, cv2.LINE_AA)
 
         if is_peak:
             e  = frame_to_shot.get(frame_idx)
@@ -1993,7 +2447,8 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
             pct     = frame_idx / total_frames * 100
             elapsed = time.time() - t0
             eta     = (elapsed / frame_idx) * (total_frames - frame_idx)
-            print(f"  [{pct:5.1f}%] {frame_idx}/{total_frames}  ETA {eta:.0f}s")
+            if not _quiet_console():
+                print(f"  [{pct:5.1f}%] {frame_idx}/{total_frames}  ETA {eta:.0f}s")
             ws_emit(ws, loop, {
                 "type": "progress", "stage": "rendering",
                 "frame": frame_idx, "total": total_frames,
@@ -2061,7 +2516,7 @@ def save_csv(shot_log, csv_path, handedness, conf):
             'head_frames_used', 'head_flag',
             'symmetry_score', 'avg_shoulder_tilt', 'avg_hip_tilt', 'stance_flag',
             'elbow_collapse', 'elbow_delta', 'setup_elbow_ratio',
-            'contact_elbow_ratio', 'elbow_behind_pad', 'elbow_flag',
+            'contact_elbow_ratio', 'elbow_behind_pad', 'elbow_flag', 'elbow_score',
             'feet_active', 'pre_shot_movement', 'plant_timing',
             'footwork_score', 'footwork_flag',
             'shot_score', 'shot_quality',
@@ -2090,6 +2545,7 @@ def save_csv(shot_log, csv_path, handedness, conf):
                 e.get('contact_elbow_ratio'),
                 e.get('elbow_behind_pad', False),
                 e.get('elbow_flag', ''),
+                e.get('elbow_score'),
                 e.get('feet_active', False),
                 e.get('pre_shot_movement'),
                 e.get('plant_timing'),
@@ -2101,14 +2557,26 @@ def save_csv(shot_log, csv_path, handedness, conf):
     print(f"[CrickEye] CSV -> {csv_path}")
 
 
-def save_json(shot_log, fps, total_frames, session_info, analysis, json_path):
-    with open(json_path, 'w') as f:
-        json.dump({
+def save_json(shot_log, fps, total_frames, session_info, analysis, json_path, ball_analytics=None):
+    payload = {
             'total_frames'      : total_frames,
             'fps'               : fps,
             'session_handedness': session_info['handedness'],
             'stance_conf'       : session_info['conf'],
             'speed_unit'        : 'km/h',   # CALIBRATION: document unit
+            'camera_calibration': {
+                'mode': 'shoulder_median_scale',
+                'description': (
+                    'pixel_scale = session_median_shoulder_px / ref_shoulder_px; '
+                    'used for biomechanics (bat speed, foot plant, swing intensity baseline). '
+                    'Swing detection / shot clip boundaries use swing_pixel_scale (fixed 1.0) '
+                    'so the video shot classifier always sees the same framing as the legacy detector.'
+                ),
+                'ref_shoulder_px': REF_SHOULDER_PX,
+                'session_shoulder_px': session_info.get('session_shoulder_px'),
+                'pixel_scale': session_info.get('camera_pixel_scale', 1.0),
+                'swing_pixel_scale': session_info.get('swing_pixel_scale', 1.0),
+            },
             'analysis'          : analysis,
             'shots': [{
                 'shot_num'             : e['shot_num'],
@@ -2120,9 +2588,12 @@ def save_json(shot_log, fps, total_frames, session_info, analysis, json_path):
                 'peak_frame'           : e['peak_frame'],
                 'travel_px'            : e['onset_score'],
                 'swing_intensity'      : e.get('swing_intensity'),
+                'swing_intensity_session_relative': e.get('swing_intensity_session_relative'),
                 'peak_swing_speed'     : e.get('peak_swing_speed'),
                 'speed_is_capped'      : e.get('speed_is_capped', False),
                 'head_quality_score'   : e.get('head_quality_score'),
+                'head_rule_applied'    : e.get('head_rule_applied'),
+                'head_multiplier_used' : e.get('head_multiplier_used'),
                 'head_lateral_ratio'   : e.get('head_lateral_ratio'),
                 'head_vertical_ratio'  : e.get('head_vertical_ratio'),
                 'head_frames_used'     : e.get('head_frames_used'),
@@ -2137,9 +2608,12 @@ def save_json(shot_log, fps, total_frames, session_info, analysis, json_path):
                 'contact_elbow_ratio'  : e.get('contact_elbow_ratio'),
                 'elbow_behind_pad'     : e.get('elbow_behind_pad', False),
                 'elbow_flag'           : e.get('elbow_flag'),
+                'elbow_score'          : e.get('elbow_score'),
                 'feet_active'          : e.get('feet_active', False),
                 'pre_shot_movement'    : e.get('pre_shot_movement'),
                 'plant_timing'         : e.get('plant_timing'),
+                'feet_timing_score'    : e.get('feet_timing_score'),
+                'feet_timing_band'     : e.get('feet_timing_band'),
                 'footwork_score'       : e.get('footwork_score'),
                 'footwork_flag'        : e.get('footwork_flag'),
                 'shot_score'           : e.get('shot_score'),
@@ -2157,7 +2631,12 @@ def save_json(shot_log, fps, total_frames, session_info, analysis, json_path):
                 'probs'                : {cls: round(p, 4)
                                           for cls, p in zip(SHOT_CLASSES, e['probs'])},
             } for e in shot_log],
-        }, f, indent=2)
+    }
+    if ball_analytics is not None:
+        payload['ball_analytics'] = ball_analytics
+    payload = _to_jsonable(payload)
+    with open(json_path, 'w') as f:
+        json.dump(payload, f, indent=2)
     print(f"[CrickEye] JSON -> {json_path}")
 
 
@@ -2216,6 +2695,26 @@ def print_summary(shot_log, session_info, analysis):
     print("="*60 + "\n")
 
 # -----------------------------------------------------------------
+# Ball analytics (optional — does not affect pose / shot scoring)
+# -----------------------------------------------------------------
+
+def _run_ball_analytics_optional(video_path: str, shot_log, fps: float,
+                                 frame_w: int, frame_h: int, ws=None, loop=None):
+    """YOLO ball track + speed/length; failures are non-fatal."""
+    v = os.getenv('BALL_ANALYTICS_ENABLED', '1').strip().lower()
+    if v in ('0', 'false', 'no', 'off'):
+        return {'enabled': False, 'skipped': True, 'reason': 'BALL_ANALYTICS_DISABLED'}
+    try:
+        from ball_analytics import run_ball_analytics
+        return run_ball_analytics(
+            video_path, shot_log, fps, frame_w, frame_h, ws=ws, loop=loop)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {'enabled': False, 'error': str(e), 'deliveries': [], 'frame_overlays': []}
+
+
+# -----------------------------------------------------------------
 # ENTRY POINTS
 # -----------------------------------------------------------------
 
@@ -2232,24 +2731,43 @@ def run_pipeline(video_path=None, output_path=None):
     all_frames_rgb, all_keypoints, fps, total_frames, orig_w, orig_h = \
         extract_all_keypoints(vp)
     lw_vels, rw_vels, bilateral = compute_wrist_signals(all_keypoints)
-    shot_onsets = find_shot_onsets(lw_vels, rw_vels, bilateral, fps)
+    session_shoulder_px, pixel_scale = resolve_session_shoulder_and_scale(all_keypoints)
+    if session_shoulder_px:
+        print(
+            f"[CrickEye] Camera scale: shoulder≈{session_shoulder_px:.1f}px → "
+            f"pixel_scale={pixel_scale:.2f} (ref={REF_SHOULDER_PX:.0f}px)"
+        )
+    else:
+        print("[CrickEye] Camera scale: shoulder unknown → pixel_scale=1.00")
+    shot_onsets = find_shot_onsets(
+        lw_vels, rw_vels, bilateral, fps, pixel_scale=SWING_DETECTION_PIXEL_SCALE)
     shot_log, session_info = classify_all_shots(
         all_frames_rgb, all_keypoints, shot_onsets,
         fps, total_frames, orig_w, shot_classifier, device,
-        lw_vels, rw_vels, bilateral)
+        lw_vels, rw_vels, bilateral,
+        pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
 
     assign_display_numbers(shot_log)
     analysis = run_session_analysis(shot_log, session_info)
+    print(
+        "\n[CrickEye] Ball analytics: YOLO track() on full video "
+        "(often the longest step — watch for [ball …%] lines).\n"
+    )
+    ball_analytics = _run_ball_analytics_optional(
+        vp, shot_log, fps, orig_w, orig_h, ws=None, loop=None)
     pass2_render(vp, op, all_frames_rgb, all_keypoints, shot_log,
                  lw_vels, rw_vels, bilateral,
-                 fps, total_frames, orig_w, orig_h, session_info)
+                 fps, total_frames, orig_w, orig_h, session_info,
+                 ball_frame_overlays=ball_analytics.get('frame_overlays', []),
+                 ball_trajectories=ball_analytics.get('video_trajectories', []))
     save_csv(shot_log, CSV_PATH, session_info['handedness'], session_info['conf'])
-    save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH)
+    save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH,
+              ball_analytics=ball_analytics)
     print_summary(shot_log, session_info, analysis)
 
 
 def run_pipeline_ws_sync(video_path: str, ws, loop):
-    output_path = str(BASE_DIR / "assets" / "analysed_out.mp4")
+    output_path, output_video_url = output_video_paths(video_path)
 
     try:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -2264,25 +2782,47 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             extract_all_keypoints(video_path, ws, loop)
 
         lw_vels, rw_vels, bilateral = compute_wrist_signals(all_keypoints)
-        shot_onsets = find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws, loop)
+        session_shoulder_px, pixel_scale = resolve_session_shoulder_and_scale(all_keypoints)
+        if session_shoulder_px:
+            print(
+                f"[CrickEye] Camera scale: shoulder≈{session_shoulder_px:.1f}px → "
+                f"pixel_scale={pixel_scale:.2f} (ref={REF_SHOULDER_PX:.0f}px)"
+            )
+        else:
+            print("[CrickEye] Camera scale: shoulder unknown → pixel_scale=1.00")
+        shot_onsets = find_shot_onsets(
+            lw_vels, rw_vels, bilateral, fps, ws, loop,
+            pixel_scale=SWING_DETECTION_PIXEL_SCALE)
 
         shot_log, session_info = classify_all_shots(
             all_frames_rgb, all_keypoints, shot_onsets,
             fps, total_frames, orig_w, shot_classifier, device,
             lw_vels, rw_vels, bilateral,
-            ws, loop)
+            ws, loop,
+            pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
 
         assign_display_numbers(shot_log)
         analysis = run_session_analysis(shot_log, session_info)
+
+        print(
+            "\n[CrickEye] Ball analytics: running YOLO track() on the full video "
+            "(often the longest step — progress prints as [ball …%] until Pass 2 starts).\n"
+        )
+
+        ball_analytics = _run_ball_analytics_optional(
+            video_path, shot_log, fps, orig_w, orig_h, ws=ws, loop=loop)
 
         pass2_render(video_path, output_path,
                      all_frames_rgb, all_keypoints, shot_log,
                      lw_vels, rw_vels, bilateral,
                      fps, total_frames, orig_w, orig_h,
-                     session_info, ws=ws, loop=loop)
+                     session_info, ws=ws, loop=loop,
+                     ball_frame_overlays=ball_analytics.get('frame_overlays', []),
+                     ball_trajectories=ball_analytics.get('video_trajectories', []))
 
         save_csv(shot_log, CSV_PATH, session_info['handedness'], session_info['conf'])
-        save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH)
+        save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH,
+                  ball_analytics=ball_analytics)
         print_summary(shot_log, session_info, analysis)
 
         confirmed_shots = [e for e in shot_log if e['conf'] >= CONF_THRESHOLD]
@@ -2300,16 +2840,22 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
                 "handedness"           : e.get('_session_hand', session_info['handedness']),
                 "stance_conf"          : e.get('_session_conf', session_info['conf']),
                 "swing_intensity"      : e.get('swing_intensity'),
+                "swing_intensity_session_relative": e.get('swing_intensity_session_relative'),
                 "peak_swing_speed"     : e.get('peak_swing_speed'),
                 "speed_is_capped"      : e.get('speed_is_capped', False),
                 "head_quality_score"   : e.get('head_quality_score'),
+                "head_rule_applied"    : e.get('head_rule_applied'),
+                "head_multiplier_used" : e.get('head_multiplier_used'),
                 "head_flag"            : e.get('head_flag'),
                 "symmetry_score"       : e.get('symmetry_score'),
                 "stance_flag"          : e.get('stance_flag'),
                 "elbow_collapse"       : e.get('elbow_collapse'),
                 "elbow_flag"           : e.get('elbow_flag'),
+                "elbow_score"          : e.get('elbow_score'),
                 "feet_active"          : e.get('feet_active', False),
                 "plant_timing"         : e.get('plant_timing'),
+                "feet_timing_score"    : e.get('feet_timing_score'),
+                "feet_timing_band"     : e.get('feet_timing_band'),
                 "footwork_score"       : e.get('footwork_score'),
                 "footwork_flag"        : e.get('footwork_flag'),
                 "shot_score"           : e.get('shot_score'),
@@ -2343,12 +2889,12 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             if e['label'] in counts:
                 counts[e['label']] += 1
 
-        ws_emit(ws, loop, {
+        ws_emit(ws, loop, _to_jsonable({
             "type":         "complete",
             "total_shots":  len(shot_log),
             "confirmed":    len(confirmed_shots),
             "unclear":      len(shot_log) - len(confirmed_shots),
-            "output_video": "/assets/analysed_out.mp4",
+            "output_video": output_video_url,
             "handedness":   session_info['handedness'],
             "stance_conf":  session_info['conf'],
             "shot_counts":  counts,
@@ -2358,7 +2904,13 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             "fps":          round(fps, 3),
             "analysis":     analysis,
             "speed_unit":   "km/h",   # CALIBRATION: tell frontend the unit
-        })
+            "camera_calibration": {
+                "ref_shoulder_px": REF_SHOULDER_PX,
+                "session_shoulder_px": session_info.get("session_shoulder_px"),
+                "pixel_scale": session_info.get("camera_pixel_scale", 1.0),
+            },
+            "ball_analytics": ball_analytics,
+        }))
 
     except Exception as e:
         import traceback

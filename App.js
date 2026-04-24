@@ -89,6 +89,11 @@ const sessionDetailModal = document.getElementById('sessionDetailModal');
 const sessionDetailBody = document.getElementById('sessionDetailBody');
 const openSessionCompareBtn = document.getElementById('openSessionCompareBtn');
 const clearAllSessionsBtn = document.getElementById('clearAllSessionsBtn');
+const resetEverythingBtn = document.getElementById('resetEverythingBtn');
+const resetEverythingModal = document.getElementById('resetEverythingModal');
+const resetEverythingLead = document.getElementById('resetEverythingLead');
+const resetEverythingOrigin = document.getElementById('resetEverythingOrigin');
+const resetEverythingLogoutBtn = document.getElementById('resetEverythingLogoutBtn');
 const sessionCompareModal = document.getElementById('sessionCompareModal');
 const compareSessionA = document.getElementById('compareSessionA');
 const compareSessionB = document.getElementById('compareSessionB');
@@ -136,6 +141,10 @@ async function bootstrapSupabase() {
     const res = await fetch('/api/public-config');
     if (res.ok) {
       const cfg = await res.json();
+      const av = cfg.analysisCacheVersion;
+      if (typeof av === 'number' && !Number.isNaN(av)) {
+        state.analysisCacheVersion = av;
+      }
       const url = (cfg.supabaseUrl || '').trim();
       const key = (cfg.supabaseAnonKey || '').trim();
       if (url && key) {
@@ -178,6 +187,8 @@ let state = {
   authMode:              'login',
   activeSessionId:       null,
   sessionsCache:         [],
+  /** From analysis / WebSocket `complete` — drives overlay frame index. */
+  videoFps:              30,
   /** SHA-256 hex for current run; used on save so cache can find this session later. */
   pendingAnalysisFileHash: null,
   /** Coach dashboard: include players with hidden_from_coach_dashboard. */
@@ -187,8 +198,46 @@ let state = {
   /** When set, Session Comparison modal uses this list instead of sessionsCache (coach per-player). */
   coachCompareSessions: null,
   coachComparePlayerLabel: null,
+  compareSessionLabelOverrides: null,
+  coachDashboardView: 'players',
+  /**
+   * From GET /api/public-config → analysisCacheVersion (pipeline_cache_version.py).
+   * Replay cache only hits when this matches saved results.analysis_cache_version.
+   */
+  analysisCacheVersion: null,
 };
+
 const SPEEDS = [1, 1.5, 0.5, 0.25];
+
+/** Loads current pipeline cache version from the FastAPI backend (no manual JS bump). */
+async function refreshAnalysisCacheVersion() {
+  try {
+    const res = await fetch('/api/public-config');
+    if (!res.ok) return;
+    const cfg = await res.json();
+    const v = cfg.analysisCacheVersion;
+    if (typeof v === 'number' && !Number.isNaN(v)) {
+      state.analysisCacheVersion = v;
+    }
+  } catch (e) {
+    console.warn('[CrickEye] Could not load analysisCacheVersion:', e);
+  }
+}
+
+function getResultsAnalysisCacheVersion(results) {
+  if (!results || typeof results !== 'object') return null;
+  const v = results.analysis_cache_version;
+  return typeof v === 'number' && !Number.isNaN(v) ? v : null;
+}
+
+/**
+ * Saved rows must match the server's current pipeline_cache_version.py value.
+ * If the server version is unknown (fetch failed), do not replay.
+ */
+function isReplayCacheFresh(results) {
+  if (state.analysisCacheVersion == null) return false;
+  return getResultsAnalysisCacheVersion(results) === state.analysisCacheVersion;
+}
 
 // ── Processing overlay ──────────────────────────────────────
 function createProcessingOverlay() {
@@ -241,7 +290,7 @@ function renderBiomechCard(shot) {
   const score  = shot.shot_score || 0;
   const sc = score>=8?'#10B981':score>=6?'#06B6D4':score>=4?'#EAB308':'#EF4444';
   const headQ = shot.head_quality_score != null ? Math.round(Number(shot.head_quality_score)) : 40;
-  const headEst = shot.head_confidence === 'estimated';
+  const headApprox = shot.head_confidence && shot.head_confidence !== 'measured';
   const sym = shot.symmetry_score != null ? Math.round(Number(shot.symmetry_score)) : null;
   const swingI = shot.swing_intensity != null ? Math.round(Number(shot.swing_intensity)) : null;
   const fwScore = shot.footwork_score != null ? Math.round(Number(shot.footwork_score)) : null;
@@ -280,7 +329,7 @@ function renderBiomechCard(shot) {
     </div>
     <div class="biomech-metrics">
       <div class="biomech-metric">
-        <span class="biomech-metric-val" style="color:${headCol}${headEst?';opacity:0.65':''}">${headEst?'~':''}${headQ}</span>
+        <span class="biomech-metric-val" style="color:${headCol}${headApprox?';opacity:0.65':''}">${headApprox?'~':''}${headQ}</span>
         <span class="biomech-metric-title">Head position</span>
         <span class="biomech-metric-desc">${escapeHtml(headLabel)}</span>
       </div>
@@ -427,7 +476,7 @@ function replaceAnalysisCards(analysis) {
   const sm=getAnalysisSummary(analysis);
   const fills=[
     {icon:'📊',title:'SESSION AVERAGES',score:'STATS',cls:'good',body:`Head ${sm.avgHead!=null?Math.round(sm.avgHead):'—'}/100 · Feet ${sm.avgFootwork!=null?Math.round(sm.avgFootwork):'—'}/100 · Stance ${sm.avgStability!=null?Math.round(sm.avgStability):'—'}/100 · Swing ${sm.avgSwingIntensity!=null?Math.round(sm.avgSwingIntensity):'—'}/100 · Bat ${(sm.avgSpeed||0).toFixed(1)} km/h · Execution ${sm.avgShotScore!=null?Number(sm.avgShotScore).toFixed(1):'—'}/10`},
-    {icon:'🎯',title:'FLAGS SUMMARY',score:'INFO',cls:'good',body:(()=>{const f=sm.flagsSummary||{};return`Head drift: ${f.HEAD_LATERAL_DRIFT_count||0} · Stance: ${f.STANCE_ASYMMETRIC_count||0} · Elbow: ${f.ELBOW_COLLAPSE_count||0} · Narrow base: ${f.NARROW_BASE_count||0} · Wide base: ${f.WIDE_BASE_count||0} · Low WT: ${f.LOW_WEIGHT_TRANSFER_count||0} · Over-commit: ${f.OVER_COMMITTED_count||0} · Spine: ${f.SPINE_COLLAPSE_count||0} · Stiff legs: ${f.STIFF_LEGGED_count||0}`;})()},
+    {icon:'🎯',title:'FLAGS SUMMARY',score:'INFO',cls:'good',body:(()=>{const f=sm.flagsSummary||{};return`Head drift: ${f.HEAD_LATERAL_DRIFT_count||0} · Stance: ${f.STANCE_ASYMMETRIC_count||0} · Elbow: ${f.ELBOW_COLLAPSE_count||0} · Flat feet: ${f.FLAT_FOOTED_count||0} · Late plant: ${f.LATE_PLANT_count||0} · Bat spd check: ${f.BAT_SPEED_SESSION_LOCK_count||0} · Narrow base: ${f.NARROW_BASE_count||0} · Wide base: ${f.WIDE_BASE_count||0} · Low WT: ${f.LOW_WEIGHT_TRANSFER_count||0} · Over-commit: ${f.OVER_COMMITTED_count||0} · Spine: ${f.SPINE_COLLAPSE_count||0} · Stiff legs: ${f.STIFF_LEGGED_count||0}`;})()},
   ];
   fills.forEach((fc,j)=>{
     const c=cards[alerts.length+j];
@@ -443,6 +492,9 @@ function updateAuthUi() {
   const loggedIn = !!state.currentUser;
   if (clearAllSessionsBtn) {
     clearAllSessionsBtn.hidden = !loggedIn || isCoachRole();
+  }
+  if (resetEverythingBtn) {
+    resetEverythingBtn.hidden = !loggedIn || isCoachRole();
   }
   if (authGate) authGate.classList.toggle('hidden', loggedIn);
   if (headerProfileBtn) headerProfileBtn.hidden = !loggedIn;
@@ -535,7 +587,7 @@ function parseSessionSummary(results) {
 
   const replay = getSessionReplay(results);
   const shots = replay && Array.isArray(replay.shots) ? replay.shots : null;
-  const confirmed = shots ? shots.filter((s) => Number(s.conf ?? s.confidence) > 0.5) : [];
+  const confirmed = shots ? shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3) : [];
   if (confirmed.length) {
     const mean = (field) => {
       const vals = confirmed.map((s) => Number(s[field])).filter((n) => Number.isFinite(n));
@@ -638,12 +690,81 @@ function coachPlayerSessionsBlockHtml(p, sessionsByUser) {
   </div>`;
 }
 
+function getPlayerCompletedSessionsForCompare(sessionsByUser, playerId) {
+  return (sessionsByUser.get(playerId) || [])
+    .filter((s) => (s.status || '').toLowerCase() === 'completed' && getSessionAnalysis(s.results))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+function buildCoachCompareFlowPanelHtml(players, sessionsByUser) {
+  const compareReady = (players || [])
+    .map((p) => ({
+      id: String(p.id || ''),
+      name: p.full_name || p.email || 'Player',
+      completed: getPlayerCompletedSessionsForCompare(sessionsByUser, p.id),
+    }))
+    .filter((x) => x.id && x.completed.length > 0);
+
+  if (compareReady.length < 2) {
+    return `
+      <section class="coach-flow-panel">
+        <div class="coach-flow-panel-head">
+          <h3 class="coach-flow-title">Coach flow</h3>
+          <p class="coach-flow-sub">Review players first, then compare once more completed sessions are available.</p>
+        </div>
+        <div class="coach-flow-grid">
+          <div class="coach-flow-card coach-flow-card--muted">
+            <div class="coach-flow-kicker">Cross-player compare</div>
+            <p>Need at least two players with completed analyses to compare across players.</p>
+          </div>
+        </div>
+      </section>`;
+  }
+
+  const opts = compareReady
+    .map(
+      (p) =>
+        `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${p.completed.length} completed)</option>`
+    )
+    .join('');
+
+  return `
+    <section class="coach-flow-panel">
+      <div class="coach-flow-panel-head">
+        <h3 class="coach-flow-title">Coach flow</h3>
+        <p class="coach-flow-sub">Use player cards for within-player progress and this lane for cross-player benchmarking.</p>
+      </div>
+      <div class="coach-flow-grid">
+        <div class="coach-flow-card">
+          <div class="coach-flow-kicker">Cross-player compare</div>
+          <div class="coach-cross-grid">
+            <label class="coach-cross-field">
+              <span>Player A</span>
+              <select id="coachCrossPlayerA">${opts}</select>
+            </label>
+            <label class="coach-cross-field">
+              <span>Player B</span>
+              <select id="coachCrossPlayerB">${opts}</select>
+            </label>
+          </div>
+          <button type="button" class="compare-sessions-btn coach-cross-compare-btn" data-coach-cross-compare>
+            Compare latest completed sessions
+          </button>
+          <p class="coach-cross-note">Opens Session Comparison with one recent completed session from each player.</p>
+        </div>
+      </div>
+    </section>`;
+}
+
 function coachPlayerCardHtml(p, sessionsByUser) {
   const rows = (sessionsByUser.get(p.id) || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   const completedRows = rows.filter((r) => r.status === 'completed');
   const metrics = completedRows.map((r) => parseSessionSummary(r.results));
-  const avgSpeed = avg(metrics.map((m) => m.avgSpeed));
   const avgScore = avg(metrics.map((m) => m.avgScore));
+  const latestSession = rows[0] || null;
+  const lastRecordedLabel = latestSession?.created_at
+    ? new Date(latestSession.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : 'No sessions yet';
 
   const hidden = isPlayerHiddenFromCoachDashboard(p);
   const canToggleHide = !isCoachPlayerRowSynthetic(p);
@@ -670,8 +791,11 @@ function coachPlayerCardHtml(p, sessionsByUser) {
       <div class="coach-player-grid">
         <div class="coach-player-metric"><div class="coach-player-metric-label">Sessions</div><div class="coach-player-metric-value">${rows.length}</div></div>
         <div class="coach-player-metric"><div class="coach-player-metric-label">Completed</div><div class="coach-player-metric-value">${completedRows.length}</div></div>
-        <div class="coach-player-metric"><div class="coach-player-metric-label">Avg Speed</div><div class="coach-player-metric-value">${fmtNum(avgSpeed, 1, ' km/h')}</div></div>
         <div class="coach-player-metric"><div class="coach-player-metric-label">Avg Score</div><div class="coach-player-metric-value">${fmtNum(avgScore, 1, '/10')}</div></div>
+      </div>
+      <div class="coach-player-last-recorded">
+        <span class="coach-player-last-recorded-label">Last recorded session</span>
+        <span class="coach-player-last-recorded-value">${escapeHtml(lastRecordedLabel)}</span>
       </div>
       ${coachPlayerSessionsBlockHtml(p, sessionsByUser)}
       ${hideRow}
@@ -705,41 +829,38 @@ function renderCoachDashboard(players, sessions) {
   }).length;
 
   const hiddenCount = hiddenPlayers.length;
-  const hiddenStat =
-    hiddenCount > 0
-      ? `<div class="coach-stat coach-stat--muted"><div class="coach-stat-label">Hidden from view</div><div class="coach-stat-value">${hiddenCount}</div></div>`
-      : '';
-
   coachStatsRow.innerHTML = `
     <div class="coach-stat"><div class="coach-stat-label">Players on dashboard</div><div class="coach-stat-value">${totalPlayers}</div></div>
-    ${hiddenStat}
     <div class="coach-stat"><div class="coach-stat-label">Total Sessions</div><div class="coach-stat-value">${totalSessions}</div><div class="coach-stat-hint">Visible players only</div></div>
     <div class="coach-stat"><div class="coach-stat-label">Completed Sessions</div><div class="coach-stat-value">${totalCompleted}</div></div>
     <div class="coach-stat"><div class="coach-stat-label">Sessions Today</div><div class="coach-stat-value">${activeToday}</div></div>
   `;
 
   if (coachDashboardToolbar) {
-    if (hiddenCount > 0) {
-      coachDashboardToolbar.hidden = false;
-      coachDashboardToolbar.innerHTML = `
-        <label class="coach-show-hidden-label">
-          <input type="checkbox" id="coachShowHiddenCheckbox" ${state.showHiddenCoachPlayers ? 'checked' : ''} />
-          Show hidden players
-          <span class="coach-toolbar-muted">(${hiddenCount} demo / archived)</span>
-        </label>`;
-    } else {
-      coachDashboardToolbar.innerHTML = '';
-      coachDashboardToolbar.hidden = true;
-      state.showHiddenCoachPlayers = false;
-    }
+    coachDashboardToolbar.innerHTML = '';
+    coachDashboardToolbar.hidden = true;
   }
+  if (hiddenCount === 0) {
+    state.showHiddenCoachPlayers = false;
+  }
+  const bottomHiddenToggleHtml =
+    hiddenCount > 0
+      ? `<div class="coach-bottom-toggle-wrap">
+          <label class="coach-show-hidden-label">
+            <input type="checkbox" id="coachShowHiddenCheckbox" ${state.showHiddenCoachPlayers ? 'checked' : ''} />
+            Show hidden players
+            <span class="coach-toolbar-muted">(${hiddenCount} demo / archived)</span>
+          </label>
+        </div>`
+      : '';
 
   if (!list.length) {
-    coachPlayersList.innerHTML = '<div class="session-item-empty">No player profiles found yet.</div>';
+    coachPlayersList.innerHTML = `<div class="session-item-empty">No player profiles found yet.</div>${bottomHiddenToggleHtml}`;
     return;
   }
 
   const visibleHtml = visiblePlayers.map((p) => coachPlayerCardHtml(p, sessionsByUser)).join('');
+  const flowPanelHtml = buildCoachCompareFlowPanelHtml(visiblePlayers, sessionsByUser);
   const hiddenHtml =
     state.showHiddenCoachPlayers && hiddenPlayers.length
       ? `<div class="coach-hidden-block">
@@ -753,17 +874,50 @@ function renderCoachDashboard(players, sessions) {
       <div class="coach-players-stack">
         <div class="session-item-empty">
           Every player is currently hidden from the dashboard.
-          ${hiddenCount ? 'Enable <strong>Show hidden players</strong> above to see or restore them.' : ''}
+          ${hiddenCount ? 'Enable <strong>Show hidden players</strong> below to see or restore them.' : ''}
         </div>
         ${hiddenHtml}
+        ${bottomHiddenToggleHtml}
       </div>`;
     return;
   }
 
-  coachPlayersList.innerHTML = `
-    <div class="coach-players-stack">
+  const activeView = state.coachDashboardView === 'compare' ? 'compare' : 'players';
+  const playersPane = `
+    <section class="coach-pane ${activeView === 'players' ? 'is-active' : ''}" data-coach-pane="players" ${activeView === 'players' ? '' : 'hidden'}>
+      <div class="coach-pane-head">
+        <h3>All players</h3>
+        <p>Open any player to review sessions and launch same-player comparisons.</p>
+      </div>
       <div class="coach-players-list">${visibleHtml}</div>
       ${hiddenHtml}
+    </section>`;
+  const comparePane = `
+    <section class="coach-pane ${activeView === 'compare' ? 'is-active' : ''}" data-coach-pane="compare" ${activeView === 'compare' ? '' : 'hidden'}>
+      <div class="coach-pane-head">
+        <h3>Player comparison</h3>
+        <p>Run cross-player compare from recent sessions, then open deep session comparison.</p>
+      </div>
+      ${flowPanelHtml}
+      <div class="coach-compare-help">
+        <div class="coach-compare-help-title">How to use this lane</div>
+        <ul>
+          <li>Choose Player A and Player B from the dropdowns.</li>
+          <li>Click compare to open side-by-side strengths, weaknesses, and shot trends.</li>
+          <li>Use each player card’s Compare Sessions for within-player progress tracking.</li>
+        </ul>
+      </div>
+    </section>`;
+
+  coachPlayersList.innerHTML = `
+    <div class="coach-players-stack">
+      <div class="coach-nav-strip" role="tablist" aria-label="Coach dashboard sections">
+        <button type="button" class="coach-nav-btn ${activeView === 'players' ? 'is-active' : ''}" data-coach-nav-view="players" role="tab" aria-selected="${activeView === 'players' ? 'true' : 'false'}">View Players</button>
+        <button type="button" class="coach-nav-btn ${activeView === 'compare' ? 'is-active' : ''}" data-coach-nav-view="compare" role="tab" aria-selected="${activeView === 'compare' ? 'true' : 'false'}">Player Comparison</button>
+      </div>
+      ${playersPane}
+      ${comparePane}
+      ${bottomHiddenToggleHtml}
     </div>`;
 }
 
@@ -938,6 +1092,7 @@ function closeModal(el) {
   if (el.id === 'sessionCompareModal' && state.coachCompareSessions) {
     state.coachCompareSessions = null;
     state.coachComparePlayerLabel = null;
+    state.compareSessionLabelOverrides = null;
     updateSessionCompareModalContext();
   }
   el.hidden = true;
@@ -1037,6 +1192,9 @@ function getAnalysisSummary(analysis) {
       ELBOW_COLLAPSE_count: flags.ELBOW_COLLAPSE_count ?? 0,
       ELBOW_REACHING_count: flags.ELBOW_REACHING_count ?? 0,
       ELBOW_BEHIND_PAD_count: flags.ELBOW_BEHIND_PAD_count ?? 0,
+      FLAT_FOOTED_count: flags.FLAT_FOOTED_count ?? 0,
+      LATE_PLANT_count: flags.LATE_PLANT_count ?? 0,
+      BAT_SPEED_SESSION_LOCK_count: flags.BAT_SPEED_SESSION_LOCK_count ?? 0,
       NARROW_BASE_count: flags.NARROW_BASE_count ?? 0,
       WIDE_BASE_count: flags.WIDE_BASE_count ?? 0,
       LOW_WEIGHT_TRANSFER_count: flags.LOW_WEIGHT_TRANSFER_count ?? 0,
@@ -1050,7 +1208,7 @@ function getAnalysisSummary(analysis) {
 function getAvgShotScoreFromResults(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return null;
-  const confirmed = replay.shots.filter((s) => Number(s.conf ?? s.confidence) > 0.5 && s.shot_score != null && !Number.isNaN(Number(s.shot_score)));
+  const confirmed = replay.shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3 && s.shot_score != null && !Number.isNaN(Number(s.shot_score)));
   if (!confirmed.length) return null;
   const sum = confirmed.reduce((acc, s) => acc + Number(s.shot_score || 0), 0);
   return sum / confirmed.length;
@@ -1060,6 +1218,8 @@ function getAvgShotScoreFromResults(results) {
  * Find latest completed session for this user that matches file hash and has replay data.
  * Uses DB column file_hash first, then scans recent rows for results.file_fingerprint (backfill).
  * Avoids .maybeSingle() — it errors when more than one row matches the same hash.
+ * Requires results.analysis_cache_version === ANALYSIS_CACHE_VERSION so pipeline changes
+ * are not masked by an old completed row for the same video bytes.
  */
 async function findReplayableCompletedSession(fileHash) {
   if (!supabaseClient || !state.currentUser || !fileHash) return null;
@@ -1077,7 +1237,12 @@ async function findReplayableCompletedSession(fileHash) {
     console.warn('[CrickEye] Cache lookup (file_hash):', err1.message);
   } else {
     const row = byHash?.[0];
-    if (row && getSessionReplay(row.results)) return row;
+    if (row && getSessionReplay(row.results) && isReplayCacheFresh(row.results)) return row;
+    if (row && getSessionReplay(row.results) && !isReplayCacheFresh(row.results)) {
+      console.info(
+        '[CrickEye] Same file was analysed before, but saved results are from an older pipeline version — running a fresh analysis.'
+      );
+    }
   }
 
   const { data: recent, error: err2 } = await supabaseClient
@@ -1094,7 +1259,7 @@ async function findReplayableCompletedSession(fileHash) {
   }
 
   const hit = (recent || []).find((s) => {
-    if (!getSessionReplay(s.results)) return false;
+    if (!getSessionReplay(s.results) || !isReplayCacheFresh(s.results)) return false;
     if (s.file_hash === fileHash) return true;
     const fp = s.results && typeof s.results === 'object' ? s.results.file_fingerprint : null;
     return fp === fileHash;
@@ -1107,12 +1272,20 @@ function getSessionReplay(results) {
   return results.replay;
 }
 
+/** Ball tracking + length data for compare / session detail / report (persisted on save). */
+function getBallAnalyticsFromResults(results) {
+  if (!results || typeof results !== 'object') return null;
+  if (results.ball_analytics != null) return results.ball_analytics;
+  const nested = results.replay && results.replay.complete && results.replay.complete.ball_analytics;
+  return nested != null ? nested : null;
+}
+
 /** Per-shot rows for compare charts (same shape as ReportModal trendShots). */
 function getConfirmedTrendShotsFromResults(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return [];
   return replay.shots
-    .filter((s) => Number(s.conf ?? s.confidence) > 0.5)
+    .filter((s) => Number(s.conf ?? s.confidence) >= 0.3)
     .map((s) => ({
       shot_num: s.shot_num,
       speed: parseFloat((s.peak_swing_speed || 0).toFixed(1)),
@@ -1126,6 +1299,84 @@ function getConfirmedTrendShotsFromResults(results) {
       knee_flex: s.knee_flex != null ? Number(s.knee_flex) : null,
       spine_ratio: s.spine_ratio != null ? Number(s.spine_ratio) : null,
     }));
+}
+
+/** Confirmed replay shots for ball-length ↔ biomech join (same filter as trend charts). */
+function getConfirmedReplayShotsForLength(results) {
+  const replay = getSessionReplay(results);
+  if (!replay || !Array.isArray(replay.shots)) return [];
+  return replay.shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+}
+
+function buildCompareLengthPairHtml(sessionA, sessionB) {
+  if (typeof CrickEyeLengthInsights === 'undefined' || !sessionA || !sessionB) return '';
+  const baA = getBallAnalyticsFromResults(sessionA.results);
+  const baB = getBallAnalyticsFromResults(sessionB.results);
+  const nA = baA ? CrickEyeLengthInsights.confirmedBallDeliveries(baA).length : 0;
+  const nB = baB ? CrickEyeLengthInsights.confirmedBallDeliveries(baB).length : 0;
+  if (!nA && !nB) {
+    return `
+      <section class="compare-length-stack" aria-label="Ball length mix">
+        <header class="compare-blength-head">
+          <h3 class="compare-blength-title">Ball length mix</h3>
+          <p class="compare-blength-hint">No ball-tracking length data in these sessions yet. Re-run analysis with ball analytics enabled to compare yorker / full / good / short mix.</p>
+        </header>
+      </section>`;
+  }
+  const completedPeers = getCompletedSessionsForCompare();
+  const la = sessionCompareDisplayLabel(sessionA, completedPeers);
+  const lb = sessionCompareDisplayLabel(sessionB, completedPeers);
+  const htmlA = CrickEyeLengthInsights.buildLengthSectionHtml({
+    ballAnalytics: baA,
+    confirmedShots: getConfirmedReplayShotsForLength(sessionA.results),
+    heading: la,
+    compact: false,
+  });
+  const htmlB = CrickEyeLengthInsights.buildLengthSectionHtml({
+    ballAnalytics: baB,
+    confirmedShots: getConfirmedReplayShotsForLength(sessionB.results),
+    heading: lb,
+    compact: false,
+  });
+  return `
+    <section class="compare-length-stack" aria-label="Ball length mix comparison">
+      <header class="compare-blength-head">
+        <h3 class="compare-blength-title">Ball length mix</h3>
+        <p class="compare-blength-hint">Pitch length each session (tracked balls) and where your scores dipped or held up by zone.</p>
+      </header>
+      <div class="compare-blength-grid">
+        <div class="compare-blength-col">${htmlA}</div>
+        <div class="compare-blength-col">${htmlB}</div>
+      </div>
+    </section>`;
+}
+
+function buildCompareLengthMonthHtml(monthSessions) {
+  if (typeof CrickEyeLengthInsights === 'undefined' || !monthSessions?.length) return '';
+  const any = monthSessions.some((s) => {
+    const ba = getBallAnalyticsFromResults(s.results);
+    return ba && CrickEyeLengthInsights.confirmedBallDeliveries(ba).length > 0;
+  });
+  if (!any) return '';
+  const cards = monthSessions
+    .map((s) => {
+      const inner = CrickEyeLengthInsights.buildLengthSectionHtml({
+        ballAnalytics: getBallAnalyticsFromResults(s.results),
+        confirmedShots: getConfirmedReplayShotsForLength(s.results),
+        heading: sessionCompareDisplayLabel(s, monthSessions),
+        compact: true,
+      });
+      return `<div class="compare-blength-month-card">${inner}</div>`;
+    })
+    .join('');
+  return `
+    <section class="compare-length-stack compare-length-stack--month" aria-label="Length mix by session">
+      <header class="compare-blength-head">
+        <h3 class="compare-blength-title">Length mix by session</h3>
+        <p class="compare-blength-hint">Each card is one net: how balls broke by length and coaching tie-ins for that day.</p>
+      </header>
+      <div class="compare-blength-month-grid">${cards}</div>
+    </section>`;
 }
 
 let _compareChartGradSeq = 0;
@@ -1496,6 +1747,15 @@ function buildSessionDetailHtml(session) {
         <div class="session-metric"><span class="session-metric-label">Shot execution rating</span><span class="session-metric-val">${avgShotScoreResolved != null ? escapeHtml(Number(avgShotScoreResolved).toFixed(1)) : '—'}</span><span class="session-metric-sub">/10</span></div>
       </div></section>`;
 
+    if (typeof CrickEyeLengthInsights !== 'undefined') {
+      metrics += `<section class="session-detail-section session-detail-length">${CrickEyeLengthInsights.buildLengthSectionHtml({
+        ballAnalytics: getBallAnalyticsFromResults(session.results),
+        confirmedShots: getConfirmedReplayShotsForLength(session.results),
+        heading: 'Ball length vs performance',
+        compact: false,
+      })}</section>`;
+    }
+
     const best = r.best_shot;
     const worst = r.worst_shot;
     if (best || worst) {
@@ -1586,7 +1846,14 @@ function openCoachSessionNetReport(sessionId) {
   ReportModal.open(
     {
       shotLog: shots,
-      completePayload: { handedness: handed },
+      completePayload: {
+        handedness: handed,
+        ball_analytics: getBallAnalyticsFromResults(session.results),
+      },
+      originalVideoUrl: session.video_url || '',
+      originalVideoName: sessionVideoFilename(session.video_url),
+      sessionDateLabel: new Date(session.created_at).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }),
+      sessionStatus: String(session.status || '').toUpperCase(),
     },
     analysis
   );
@@ -1594,7 +1861,29 @@ function openCoachSessionNetReport(sessionId) {
 
 function openSessionDetailModal(sessionId) {
   const session = state.sessionsCache.find((x) => x.id === sessionId);
-  if (!session || !sessionDetailModal || !sessionDetailBody) return;
+  if (!session) return;
+  const analysis = getSessionAnalysis(session.results);
+  if (analysis && !analysis.error) {
+    const replay = getSessionReplay(session.results);
+    const shots = replay?.shots && Array.isArray(replay.shots) ? replay.shots : [];
+    const handed = analysis.session_handedness || 'RHB';
+    ReportModal.open(
+      {
+        shotLog: shots,
+        completePayload: {
+          handedness: handed,
+          ball_analytics: getBallAnalyticsFromResults(session.results),
+        },
+        originalVideoUrl: session.video_url || '',
+        originalVideoName: sessionVideoFilename(session.video_url),
+        sessionDateLabel: new Date(session.created_at).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }),
+        sessionStatus: String(session.status || '').toUpperCase(),
+      },
+      analysis
+    );
+    return;
+  }
+  if (!sessionDetailModal || !sessionDetailBody) return;
   const titleEl = document.getElementById('sessionDetailTitle');
   if (titleEl) {
     const d = new Date(session.created_at);
@@ -1634,6 +1923,8 @@ function getCompletedSessionsForCompare() {
  */
 function sessionCompareDisplayLabel(session, peerSessions) {
   if (!session) return '—';
+  const override = state.compareSessionLabelOverrides?.[String(session.id || '')];
+  if (override) return override;
   const d = new Date(session.created_at);
   const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   const peers = Array.isArray(peerSessions) ? peerSessions : [];
@@ -1642,6 +1933,31 @@ function sessionCompareDisplayLabel(session, peerSessions) {
   if (sameDay.length <= 1) return dateStr;
   const t = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   return `${dateStr}, ${t}`;
+}
+
+function isCrossPlayerCompareActive() {
+  if (!isCoachRole()) return false;
+  const lbl = String(state.coachComparePlayerLabel || '').toLowerCase();
+  return Boolean(state.compareSessionLabelOverrides) && lbl.includes(' vs ');
+}
+
+function trimSeriesForCrossPlayer(seriesA, seriesB) {
+  if (!isCrossPlayerCompareActive()) {
+    return { a: seriesA, b: seriesB, minShots: Math.max(seriesA.length, seriesB.length) };
+  }
+  const minShots = Math.max(0, Math.min(seriesA.length, seriesB.length));
+  if (minShots <= 0) return { a: [], b: [], minShots: 0 };
+  return {
+    a: seriesA.slice(0, minShots),
+    b: seriesB.slice(0, minShots),
+    minShots,
+  };
+}
+
+function crossPlayerNameFromSession(session, peers) {
+  const full = sessionCompareDisplayLabel(session, peers);
+  const parts = String(full).split(' · ');
+  return (parts[0] || full || 'Player').trim();
 }
 
 /** Completed sessions with analysis whose `created_at` falls in the current calendar month (local time). */
@@ -1775,7 +2091,7 @@ function buildMonthPlayerInsightHtml(monthSessions, analyses) {
     const replay = getSessionReplay(s.results);
     if (!replay?.shots) return;
     for (const sh of replay.shots) {
-      if (Number(sh.conf ?? sh.confidence) <= 0.5) continue;
+      if (Number(sh.conf ?? sh.confidence) < 0.3) continue;
       totalShots += 1;
       for (const f of sh.flags || []) {
         const base = String(f).split(':')[0];
@@ -2059,22 +2375,35 @@ function renderSessionComparison(sessionA, sessionB) {
     return;
   }
 
-  const seriesA = getConfirmedTrendShotsFromResults(sessionA.results);
-  const seriesB = getConfirmedTrendShotsFromResults(sessionB.results);
+  const rawSeriesA = getConfirmedTrendShotsFromResults(sessionA.results);
+  const rawSeriesB = getConfirmedTrendShotsFromResults(sessionB.results);
+  const trimmed = trimSeriesForCrossPlayer(rawSeriesA, rawSeriesB);
+  const seriesA = trimmed.a;
+  const seriesB = trimmed.b;
+  const pairInsight = buildPairSessionInsightHtml(sessionA, sessionB, a, b, seriesA, seriesB);
+  const showAggregateBlock = !isCrossPlayerCompareActive();
+  const aggregateBlock = showAggregateBlock
+    ? buildCompareAggregateCoreMetricsHtml([sessionA, sessionB], [a, b])
+    : '';
 
   if (!seriesA.length && !seriesB.length) {
     const bestA = a.best_shot?.label ? shotLabelPretty(a.best_shot.label) : '—';
     const bestB = b.best_shot?.label ? shotLabelPretty(b.best_shot.label) : '—';
+    const crossMode = isCrossPlayerCompareActive();
+    const metaA = crossMode ? 'Player A Signature Shot' : 'Signature Shot (S1)';
+    const metaB = crossMode ? 'Player B Signature Shot' : 'Signature Shot (S2)';
     sessionCompareBody.innerHTML = `
     <div class="compare-header-row">
       <div><strong>Session 1:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionA, completedPeers))}</div>
       <div><strong>Session 2:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionB, completedPeers))}</div>
     </div>
-    ${buildCompareAggregateCoreMetricsHtml([sessionA, sessionB], [a, b])}
+    ${aggregateBlock}
+    ${pairInsight}
+    ${buildCompareLengthPairHtml(sessionA, sessionB)}
     <p class="session-item-empty">No per-shot replay data in these session records, so trend charts cannot be drawn. Re-run analysis and ensure results include shot replay, or compare sessions processed with the current pipeline.</p>
     <div class="compare-meta-row">
-      <div><span class="compare-meta-k">Signature shot (S1):</span> ${escapeHtml(bestA)}</div>
-      <div><span class="compare-meta-k">Signature shot (S2):</span> ${escapeHtml(bestB)}</div>
+      <div><span class="compare-meta-k">${escapeHtml(metaA)}:</span> ${escapeHtml(bestA)}</div>
+      <div><span class="compare-meta-k">${escapeHtml(metaB)}:</span> ${escapeHtml(bestB)}</div>
     </div>`;
     requestAnimationFrame(() => animateComparePies());
     return;
@@ -2156,20 +2485,305 @@ function renderSessionComparison(sessionA, sessionB) {
 
   const bestA = a.best_shot?.label ? shotLabelPretty(a.best_shot.label) : '—';
   const bestB = b.best_shot?.label ? shotLabelPretty(b.best_shot.label) : '—';
+  const crossMode = isCrossPlayerCompareActive();
+  const metaA = crossMode ? 'Player A Signature Shot' : 'Signature Shot (S1)';
+  const metaB = crossMode ? 'Player B Signature Shot' : 'Signature Shot (S2)';
 
   sessionCompareBody.innerHTML = `
     <div class="compare-header-row">
       <div><strong>Session 1:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionA, completedPeers))}</div>
       <div><strong>Session 2:</strong> ${escapeHtml(sessionCompareDisplayLabel(sessionB, completedPeers))}</div>
     </div>
-    ${buildCompareAggregateCoreMetricsHtml([sessionA, sessionB], [a, b])}
+    ${aggregateBlock}
+    ${pairInsight}
+    ${buildCompareLengthPairHtml(sessionA, sessionB)}
     <div class="compare-trends-stack">${charts}</div>
     <div class="compare-meta-row">
-      <div><span class="compare-meta-k">Signature shot (S1):</span> ${escapeHtml(bestA)}</div>
-      <div><span class="compare-meta-k">Signature shot (S2):</span> ${escapeHtml(bestB)}</div>
+      <div><span class="compare-meta-k">${escapeHtml(metaA)}:</span> ${escapeHtml(bestA)}</div>
+      <div><span class="compare-meta-k">${escapeHtml(metaB)}:</span> ${escapeHtml(bestB)}</div>
     </div>
   `;
   requestAnimationFrame(() => animateComparePies());
+}
+
+function buildPairSessionInsightHtml(sessionA, sessionB, analysisA, analysisB, seriesA = [], seriesB = []) {
+  if (isCrossPlayerCompareActive()) {
+    return buildCrossPlayerInsightHtml(sessionA, sessionB, analysisA, analysisB, seriesA, seriesB);
+  }
+  const mA = resolveSessionAggregateMetrics(sessionA, analysisA);
+  const mB = resolveSessionAggregateMetrics(sessionB, analysisB);
+  const deltas = [];
+  const metrics = [
+    { key: 'head', label: 'Head position', thr: 3, unit: '/100' },
+    { key: 'balance', label: 'Batting stance', thr: 3, unit: '/100' },
+    { key: 'footwork', label: 'Foot movement', thr: 3, unit: '/100' },
+    { key: 'swingI', label: 'Swing intensity', thr: 3, unit: '/100' },
+    { key: 'speed', label: 'Bat speed', thr: 1.3, unit: ' km/h' },
+    { key: 'execution', label: 'Shot execution', thr: 0.25, unit: '/10' },
+  ];
+  for (const mt of metrics) {
+    const a = Number(mA[mt.key]);
+    const b = Number(mB[mt.key]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+    const d = b - a;
+    if (Math.abs(d) < mt.thr) continue;
+    deltas.push({ label: mt.label, delta: d, unit: mt.unit });
+  }
+
+  const sA = getAnalysisSummary(analysisA);
+  const sB = getAnalysisSummary(analysisB);
+  const flagTotalA = Object.values(sA.flagsSummary || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+  const flagTotalB = Object.values(sB.flagsSummary || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+  const flagDelta = flagTotalA - flagTotalB; // positive => improved
+
+  const improve = deltas
+    .filter((x) => x.delta > 0)
+    .sort((x, y) => y.delta - x.delta)
+    .slice(0, 3);
+  const focus = deltas
+    .filter((x) => x.delta < 0)
+    .sort((x, y) => x.delta - y.delta)
+    .slice(0, 3);
+
+  if (flagDelta >= 4) {
+    improve.push({ label: 'Shot flags', delta: flagDelta, unit: ' fewer flags' });
+  } else if (flagDelta <= -4) {
+    focus.push({ label: 'Shot flags', delta: flagDelta, unit: ' more flags' });
+  }
+
+  if (sA.fatigueDetected && !sB.fatigueDetected) {
+    improve.push({ label: 'Second-half fade', delta: 1, unit: ' improved' });
+  } else if (!sA.fatigueDetected && sB.fatigueDetected) {
+    focus.push({ label: 'Second-half fade', delta: -1, unit: ' now detected' });
+  }
+
+  const improveLis = improve.length
+    ? improve
+        .slice(0, 4)
+        .map((x) => {
+          if (x.label === 'Shot flags') return `<li>${escapeHtml(x.label)} dropped (${Math.abs(x.delta)}${escapeHtml(x.unit)}).</li>`;
+          if (x.label === 'Second-half fade') return `<li>${escapeHtml(x.label)}: no clear late-session drop in the recent session.</li>`;
+          return `<li>${escapeHtml(x.label)} improved by ${escapeHtml(x.delta.toFixed(1))}${escapeHtml(x.unit)}.</li>`;
+        })
+        .join('')
+    : '<li>No clear major jumps yet — progress is steady.</li>';
+
+  const focusLis = focus.length
+    ? focus
+        .slice(0, 4)
+        .map((x) => {
+          if (x.label === 'Shot flags') return `<li>${escapeHtml(x.label)} rose (${Math.abs(x.delta)}${escapeHtml(x.unit)}).</li>`;
+          if (x.label === 'Second-half fade') return '<li>Second-half swing fade appears in the recent session.</li>';
+          return `<li>${escapeHtml(x.label)} dipped by ${escapeHtml(Math.abs(x.delta).toFixed(1))}${escapeHtml(x.unit)}.</li>`;
+        })
+        .join('')
+    : '<li>No major declines detected from baseline.</li>';
+
+  return `
+    <section class="compare-pair-insight" aria-label="Recent improvements and focus areas">
+      <header class="compare-pair-insight-head">
+        <h3 class="compare-pair-insight-title">Recent session review</h3>
+        <p class="compare-pair-insight-sub">What improved in Session 2 vs Session 1, and what to focus on next net.</p>
+      </header>
+      <div class="compare-pair-insight-grid">
+        <article class="compare-pair-card compare-pair-card--up">
+          <div class="compare-pair-card-kicker">Improvements</div>
+          <ul>${improveLis}</ul>
+        </article>
+        <article class="compare-pair-card compare-pair-card--down">
+          <div class="compare-pair-card-kicker">Needs focus</div>
+          <ul>${focusLis}</ul>
+        </article>
+      </div>
+    </section>`;
+}
+
+function buildCrossPlayerInsightHtml(sessionA, sessionB, analysisA, analysisB, seriesA, seriesB) {
+  const peers = getCompletedSessionsForCompare();
+  const p1 = crossPlayerNameFromSession(sessionA, peers);
+  const p2 = crossPlayerNameFromSession(sessionB, peers);
+  const aRows = Array.isArray(seriesA) && seriesA.length ? seriesA : getConfirmedTrendShotsFromResults(sessionA.results);
+  const bRows = Array.isArray(seriesB) && seriesB.length ? seriesB : getConfirmedTrendShotsFromResults(sessionB.results);
+
+  function prettyLengthLabel(lbl) {
+    const map = {
+      yorker: 'Yorker',
+      full: 'Full',
+      good_length: 'Good length',
+      short: 'Short',
+      full_toss: 'Full toss',
+    };
+    return map[String(lbl || '').toLowerCase()] || (lbl ? String(lbl).replace(/_/g, ' ') : '—');
+  }
+
+  function summarizePlayer(session, rows) {
+    const replay = getSessionReplay(session.results);
+    const confirmed = (replay?.shots || []).filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+    const shotBuckets = new Map();
+    for (const sh of confirmed) {
+      const key = shotLabelPretty(sh.shot_type || sh.label || 'Unknown');
+      const score = Number(sh.shot_score);
+      if (!Number.isFinite(score)) continue;
+      const rec = shotBuckets.get(key) || { sum: 0, n: 0 };
+      rec.sum += score;
+      rec.n += 1;
+      shotBuckets.set(key, rec);
+    }
+    const shotAverages = [...shotBuckets.entries()]
+      .map(([label, v]) => ({ label, avg: v.sum / Math.max(1, v.n), n: v.n }))
+      .sort((x, y) => y.avg - x.avg);
+    const bestShots = shotAverages.slice(0, 2);
+    const weakShots = shotAverages.slice(-2).reverse();
+
+    const deliveries = getBallAnalyticsFromResults(session.results)?.deliveries || [];
+    const scoreByShotNum = new Map();
+    for (const sh of confirmed) {
+      const sn = Number(sh.shot_num);
+      const sc = Number(sh.shot_score);
+      if (Number.isFinite(sn) && Number.isFinite(sc)) scoreByShotNum.set(sn, sc);
+    }
+    const lengthBuckets = new Map();
+    for (const d of deliveries) {
+      const z = d?.length?.label;
+      if (!z) continue;
+      const sn = Number(d.shot_num ?? d.matched_confirmed_shot_num);
+      const sc = scoreByShotNum.get(sn);
+      const rec = lengthBuckets.get(z) || { sum: 0, n: 0 };
+      if (Number.isFinite(sc)) {
+        rec.sum += sc;
+        rec.n += 1;
+      }
+      lengthBuckets.set(z, rec);
+    }
+    const lengthAverages = [...lengthBuckets.entries()]
+      .map(([label, v]) => ({ label, avg: v.n > 0 ? v.sum / v.n : null, n: v.n }))
+      .filter((x) => x.avg != null)
+      .sort((x, y) => Number(y.avg) - Number(x.avg));
+    const bestRange = lengthAverages[0] || null;
+    const weakRange = lengthAverages.length > 1 ? lengthAverages[lengthAverages.length - 1] : null;
+
+    const avgExec = avg(rows.map((r) => Number(r.score)).filter((x) => Number.isFinite(x)));
+    const metrics = resolveSessionAggregateMetrics(session, getSessionAnalysis(session.results));
+    return { bestShots, weakShots, bestRange, weakRange, avgExec, metrics };
+  }
+
+  const s1 = summarizePlayer(sessionA, aRows);
+  const s2 = summarizePlayer(sessionB, bRows);
+
+  function shotLine(it) {
+    if (!it) return 'No strong shot pattern yet.';
+    return `${it.label} (${it.avg.toFixed(1)}/10 avg, ${it.n} shot${it.n === 1 ? '' : 's'})`;
+  }
+  function rangeLine(it, emptyMsg) {
+    if (!it) return emptyMsg;
+    return `${prettyLengthLabel(it.label)} (${Number(it.avg).toFixed(1)}/10 avg)`;
+  }
+
+  function profileHtml(name, info) {
+    const m = info.metrics || {};
+    const metricRows = [
+      { k: 'Head', v: m.head, u: '/100' },
+      { k: 'Stance', v: m.balance, u: '/100' },
+      { k: 'Feet', v: m.footwork, u: '/100' },
+      { k: 'Swing', v: m.swingI, u: '/100' },
+      { k: 'Bat Speed', v: m.speed, u: ' km/h' },
+      { k: 'Execution', v: m.execution, u: '/10' },
+    ].map((x) => ({
+      ...x,
+      score:
+        x.v == null || Number.isNaN(Number(x.v))
+          ? null
+          : x.u === '/10'
+            ? Number(x.v) * 10
+            : Number(x.v),
+    }));
+    const metricBest = metricRows
+      .filter((x) => x.score != null)
+      .sort((a, b) => Number(b.score) - Number(a.score))
+      .slice(0, 2)
+      .map((x) => x.k);
+    const metricWeak = metricRows
+      .filter((x) => x.score != null)
+      .sort((a, b) => Number(a.score) - Number(b.score))
+      .slice(0, 2)
+      .map((x) => x.k);
+
+    function strengthComment(metricKey) {
+      switch (metricKey) {
+        case 'Head': return 'Head position looks stable and controlled.';
+        case 'Stance': return 'Stance shape is balanced before contact.';
+        case 'Feet': return 'Foot movement is active and supports timing.';
+        case 'Swing': return 'Swing intent stays strong through the session.';
+        case 'Bat Speed': return 'Bat speed is a clear strength right now.';
+        case 'Execution': return 'Shot execution quality is consistently solid.';
+        default: return 'Overall rhythm looks good.';
+      }
+    }
+    function weaknessComment(metricKey) {
+      switch (metricKey) {
+        case 'Head': return 'Head stability can improve for cleaner contact.';
+        case 'Stance': return 'Stance balance needs tighter alignment.';
+        case 'Feet': return 'Footwork timing needs more consistency.';
+        case 'Swing': return 'Swing effort drops at times under pressure.';
+        case 'Bat Speed': return 'Bat speed needs more intent through impact.';
+        case 'Execution': return 'Execution consistency is the main growth area.';
+        default: return 'This area needs focused reps.';
+      }
+    }
+
+    const strengthNotes = metricBest.length
+      ? metricBest.map((k) => strengthComment(k)).slice(0, 2).join(' ')
+      : 'Strength profile will improve as more sessions are recorded.';
+    const weaknessNotes = metricWeak.length
+      ? metricWeak.map((k) => weaknessComment(k)).slice(0, 2).join(' ')
+      : 'No clear weakness detected yet.';
+    return `
+      <article class="compare-pair-card compare-pair-card--up">
+        <div class="compare-pair-card-kicker">${escapeHtml(name)}</div>
+        <div class="compare-player-summary-row">
+          <div class="compare-player-summary compare-player-summary--good">
+            <span class="compare-player-summary-k">Strengths</span>
+            <span class="compare-player-summary-metric">${escapeHtml(strengthNotes)}</span>
+          </div>
+          <div class="compare-player-summary compare-player-summary--warn">
+            <span class="compare-player-summary-k">Weaknesses</span>
+            <span class="compare-player-summary-metric">${escapeHtml(weaknessNotes)}</span>
+          </div>
+        </div>
+        <div class="compare-player-intel-grid">
+          <div class="compare-player-intel-box compare-player-intel-box--good">
+            <div class="compare-player-intel-title">Best shots</div>
+            <p>${escapeHtml(shotLine(info.bestShots[0]))}</p>
+            <p>${escapeHtml(shotLine(info.bestShots[1]))}</p>
+          </div>
+          <div class="compare-player-intel-box compare-player-intel-box--warn">
+            <div class="compare-player-intel-title">Weak shots</div>
+            <p>${escapeHtml(shotLine(info.weakShots[0]))}</p>
+            <p>${escapeHtml(shotLine(info.weakShots[1]))}</p>
+          </div>
+          <div class="compare-player-intel-box compare-player-intel-box--good">
+            <div class="compare-player-intel-title">Best ball range</div>
+            <p>${escapeHtml(rangeLine(info.bestRange, 'Not enough tracked-ball data yet.'))}</p>
+          </div>
+          <div class="compare-player-intel-box compare-player-intel-box--warn">
+            <div class="compare-player-intel-title">Weak ball range</div>
+            <p>${escapeHtml(rangeLine(info.weakRange, 'Need more tracked deliveries to rank ranges.'))}</p>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  return `
+    <section class="compare-pair-insight compare-pair-insight--cross" aria-label="Cross-player strengths and weaknesses">
+      <header class="compare-pair-insight-head">
+        <h3 class="compare-pair-insight-title">Cross-player review</h3>
+        <p class="compare-pair-insight-sub">Player-wise breakdown with shot strengths/weaknesses and ball-range comfort zones.</p>
+      </header>
+      <div class="compare-pair-insight-grid">
+        ${profileHtml(p1, s1)}
+        ${profileHtml(p2, s2)}
+      </div>
+    </section>`;
 }
 
 function updateSessionCompareModalContext() {
@@ -2241,6 +2855,7 @@ function renderMonthSessionsComparison() {
       </div>
       ${buildMonthPlayerInsightHtml(monthSessions, analyses)}
       ${buildCompareAggregateCoreMetricsHtml(monthSessions, analyses)}
+      ${buildCompareLengthMonthHtml(monthSessions)}
       <p class="session-item-empty">No per-shot replay data for any of these sessions, so charts cannot be drawn.</p>
       <div class="compare-meta-row compare-meta-row--month">${meta}</div>`;
     requestAnimationFrame(() => animateComparePies());
@@ -2284,6 +2899,7 @@ function renderMonthSessionsComparison() {
     </div>
     ${buildMonthPlayerInsightHtml(monthSessions, analyses)}
     ${buildCompareAggregateCoreMetricsHtml(monthSessions, analyses)}
+    ${buildCompareLengthMonthHtml(monthSessions)}
     <div class="compare-trends-stack">${charts}</div>
     <div class="compare-meta-row compare-meta-row--month">${bestCells}</div>
   `;
@@ -2337,6 +2953,7 @@ function refreshCompareSessionOptions() {
 function openSessionCompareModal() {
   state.coachCompareSessions = null;
   state.coachComparePlayerLabel = null;
+  state.compareSessionLabelOverrides = null;
   updateSessionCompareModalContext();
   refreshCompareSessionOptions();
   openModal(sessionCompareModal);
@@ -2353,6 +2970,45 @@ function openCoachSessionCompareForPlayer(playerId) {
   openModal(sessionCompareModal);
 }
 
+function openCoachCrossPlayerCompare(playerAId, playerBId) {
+  if (!isCoachRole()) return;
+  const pA = (state.coachPlayersRaw || []).find((p) => String(p.id) === String(playerAId));
+  const pB = (state.coachPlayersRaw || []).find((p) => String(p.id) === String(playerBId));
+  if (!pA || !pB) return;
+  if (String(playerAId) === String(playerBId)) {
+    alert('Pick two different players for cross-player compare.');
+    return;
+  }
+  const completedA = getPlayerCompletedSessionsForCompare(
+    new Map([[pA.id, (state.coachSessionsRaw || []).filter((s) => String(s.user_id) === String(pA.id))]]),
+    pA.id
+  );
+  const completedB = getPlayerCompletedSessionsForCompare(
+    new Map([[pB.id, (state.coachSessionsRaw || []).filter((s) => String(s.user_id) === String(pB.id))]]),
+    pB.id
+  );
+  const sA = completedA[0];
+  const sB = completedB[0];
+  if (!sA || !sB) {
+    alert('Both players need at least one completed analyzed session.');
+    return;
+  }
+  const labelA = pA.full_name || pA.email || 'Player A';
+  const labelB = pB.full_name || pB.email || 'Player B';
+  state.coachCompareSessions = [sA, sB];
+  state.coachComparePlayerLabel = `${labelA} vs ${labelB}`;
+  state.compareSessionLabelOverrides = {
+    [String(sA.id)]: `${labelA} · ${sessionCompareDisplayLabel({ ...sA, id: '' }, [])}`,
+    [String(sB.id)]: `${labelB} · ${sessionCompareDisplayLabel({ ...sB, id: '' }, [])}`,
+  };
+  updateSessionCompareModalContext();
+  refreshCompareSessionOptions();
+  if (compareSessionA) compareSessionA.value = sA.id;
+  if (compareSessionB) compareSessionB.value = sB.id;
+  renderSessionComparison(sA, sB);
+  openModal(sessionCompareModal);
+}
+
 function wireModalDismissals() {
   document.querySelectorAll('[data-close-modal]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -2366,6 +3022,7 @@ function wireModalDismissals() {
     closeModal(profileModal);
     closeModal(sessionDetailModal);
     closeModal(sessionCompareModal);
+    closeModal(resetEverythingModal);
   });
 }
 
@@ -2465,6 +3122,51 @@ async function deleteAllSessionsForCurrentUser() {
   }
   state.activeSessionId = null;
   await fetchUserSessions();
+}
+
+function fillResetEverythingModal({ hadSessions }) {
+  if (resetEverythingLead) {
+    resetEverythingLead.textContent =
+      hadSessions > 0
+        ? `Removed ${hadSessions} saved session row(s) from the cloud. Replay cache is cleared for your account.`
+        : 'No session rows were stored for this account (nothing to delete in the database).';
+  }
+  if (resetEverythingOrigin) {
+    resetEverythingOrigin.textContent =
+      typeof location !== 'undefined' ? location.origin : '';
+  }
+}
+
+/**
+ * Delete all Supabase session rows for this user, then show browser + disk cleanup tips.
+ */
+async function resetEverythingForCurrentUser() {
+  if (!supabaseClient || !state.currentUser) {
+    alert('Login is required to reset cloud sessions.');
+    return;
+  }
+  const ok = window.confirm(
+    'Reset everything?\n\n' +
+      '• Deletes ALL saved sessions in the cloud (replay cache for this account).\n' +
+      '• Then you will see optional steps to clear this site in your browser.\n\n' +
+      'Continue?'
+  );
+  if (!ok) return;
+  const uid = state.currentUser.id;
+  const hadSessions = state.sessionsCache.length;
+  const { error } = await supabaseClient.from('sessions').delete().eq('user_id', uid);
+  if (error) {
+    console.error('[CrickEye] reset everything (delete sessions) error:', error.message);
+    alert(
+      `Could not delete sessions: ${error.message}\n\n` +
+        'If this mentions RLS or policy, run backend/sql/sessions_delete_policy.sql in the Supabase SQL editor once.'
+    );
+    return;
+  }
+  state.activeSessionId = null;
+  await fetchUserSessions();
+  fillResetEverythingModal({ hadSessions });
+  openModal(resetEverythingModal);
 }
 
 async function signup() {
@@ -2682,7 +3384,9 @@ async function markSessionStatus(status) {
 
 async function saveLiveAnalysisResult(msg) {
   if (!supabaseClient || !state.activeSessionId || !state.currentUser) return;
+  if (state.analysisCacheVersion == null) await refreshAnalysisCacheVersion();
   const analysis = state.sessionAnalysis || msg.analysis || null;
+  const ballAnalyticsSaved = msg.ball_analytics || null;
   const replay = {
     complete: {
       type: 'complete',
@@ -2697,11 +3401,21 @@ async function saveLiveAnalysisResult(msg) {
       total_frames: msg.total_frames,
       fps: msg.fps,
       speed_unit: msg.speed_unit,
+      ball_analytics: ballAnalyticsSaved,
     },
     shots: JSON.parse(JSON.stringify(state.shotLog)),
   };
   const fp = state.pendingAnalysisFileHash || null;
-  const payload = { analysis, replay, file_fingerprint: fp };
+  const payload = {
+    analysis,
+    replay,
+    file_fingerprint: fp,
+    // Top-level: Compare Sessions + My Sessions detail read this for length vs performance.
+    ball_analytics: ballAnalyticsSaved,
+  };
+  if (typeof state.analysisCacheVersion === 'number' && !Number.isNaN(state.analysisCacheVersion)) {
+    payload.analysis_cache_version = state.analysisCacheVersion;
+  }
   const { error } = await supabaseClient
     .from('sessions')
     .update({
@@ -2755,10 +3469,12 @@ const STAGE_LABELS = {
   loading:'Loading AI models…', keypoints:'Pass 1 — Extracting pose keypoints…',
   detection:'Detecting swing windows…', classifying:'Classifying shots…',
   rendering:'Pass 2 — Rendering annotated video…', encoding:'Re-encoding for browser playback…',
+  ball_tracking:'Ball tracking & speed (YOLO)…',
 };
 function onStage(msg) {
   updateStageText(msg.message || STAGE_LABELS[msg.stage] || msg.stage);
   if (msg.stage==='keypoints' && msg.total_frames) updateProcStat('procFrame',`0 / ${msg.total_frames}`);
+  if (msg.stage==='ball_tracking' && msg.total_frames) updateProcStat('procFrame',`0 / ${msg.total_frames}`);
   if (msg.stage==='rendering') updateProcStat('procFrame',`0 / ${msg.total_frames||'—'}`);
 }
 function onProgress(msg) {
@@ -2785,6 +3501,11 @@ function onComplete(msg, opts = {}) {
   state.completePayload = msg;
   if (msg.total_frames && msg.fps) state.originalVideoDuration = msg.total_frames / msg.fps;
   if (msg.analysis && !state.sessionAnalysis) state.sessionAnalysis = msg.analysis;
+  if (msg.fps) state.videoFps = msg.fps;
+
+  if (typeof BallAnalytics !== 'undefined') {
+    BallAnalytics.setData(msg.ball_analytics || null, state.videoFps);
+  }
 
   state.pendingSpokes.sort((a,b) => a.timestamp_sec - b.timestamp_sec);
 
@@ -2861,7 +3582,7 @@ function flushDashboard() {
     const sm = getAnalysisSummary(state.sessionAnalysis);
     let avgScore = sm.avgShotScore != null ? sm.avgShotScore : null;
     if (avgScore === null && state.shotLog.length > 0) {
-      const confirmed = state.shotLog.filter(s => s.conf > 0.5);
+      const confirmed = state.shotLog.filter(s => Number(s.conf ?? s.confidence) >= 0.3);
       if (confirmed.length > 0) {
         avgScore = confirmed.reduce((sum, s) => sum + (s.shot_score || 0), 0) / confirmed.length;
       }
@@ -2972,6 +3693,8 @@ function clearWheelAndReset() {
   state.currentHand='left'; state.pendingSpokes=[]; state.drawnSpokes.clear();
   state.originalVideoDuration=null; state.sessionAnalysis=null;
   state.completePayload=null; state.videoFlushed=false;
+  state.videoFps = 30;
+  if (typeof BallAnalytics !== 'undefined') BallAnalytics.clear();
   shotCount.textContent=0; shotIndex.textContent='—'; shotName.textContent='AWAITING';
   shotTime.textContent='—'; shotColorBar.style.background='var(--border)'; shotColorBar.style.boxShadow='none';
   hudShot.textContent='—'; overTableBody.innerHTML='<tr><td>—</td><td>—</td></tr>';
@@ -3072,6 +3795,9 @@ async function startAnalysis() {
   if (progressWrap) progressWrap.style.display = 'block';
   if (progressFill) progressFill.style.width = '0%';
 
+  if (progressLabel) progressLabel.textContent = 'Syncing with server…';
+  await refreshAnalysisCacheVersion();
+
   let fileHash = null;
   try {
     if (progressLabel) progressLabel.textContent = 'Fingerprinting video…';
@@ -3082,7 +3808,14 @@ async function startAnalysis() {
 
   state.pendingAnalysisFileHash = fileHash;
 
-  if (fileHash && supabaseClient) {
+  const forceFullAnalysis =
+    typeof location !== 'undefined' &&
+    new URLSearchParams(location.search).get('forceAnalysis') === '1';
+  if (forceFullAnalysis) {
+    console.info('[CrickEye] ?forceAnalysis=1 — skipping replay cache; full pipeline will run.');
+  }
+
+  if (fileHash && supabaseClient && !forceFullAnalysis) {
     if (progressLabel) progressLabel.textContent = 'Checking for a previous run…';
     const cached = await findReplayableCompletedSession(fileHash);
 
@@ -3094,7 +3827,7 @@ async function startAnalysis() {
         const panel = document.getElementById('startPanel');
         if (panel) { panel.style.opacity = '0'; setTimeout(() => panel.remove(), 300); }
         createProcessingOverlay();
-        updateStageText('Same video — loading saved analysis (no re-run).');
+        updateStageText('Replay — same file: loading saved results (pipeline skipped).');
         setProgressBar(100);
         updateProcStat('procFrame', '—');
         updateProcStat('procEta', '—');
@@ -3160,6 +3893,10 @@ async function startAnalysis() {
 
     createProcessingOverlay();
     clearWheelAndReset();
+    updateStageText('Full analysis — Uploaded clip is being processed (replay cache not used).');
+    console.info(
+      `[CrickEye] Full pipeline — analyse_session will run on ${uploadResult.video_path} (not Supabase replay).`
+    );
 
     const wsMsg = { action: 'start', video_path: uploadResult.video_path };
 
@@ -3182,8 +3919,10 @@ function toggleLoop()  { state.looping=!state.looping; video.loop=state.looping;
 function onVideoTimeUpdate() {
   if (!video.duration) return;
   const t = video.currentTime;
+  const vfps = Number(state.videoFps) || Number(state.completePayload?.fps) || 30;
   hudTime.textContent  = formatTime(t);
-  hudFrame.textContent = 'FRAME ' + Math.floor(t * 30);
+  hudFrame.textContent = 'FRAME ' + Math.floor(t * vfps);
+  if (typeof BallAnalytics !== 'undefined') BallAnalytics.drawOverlayAtTime(t);
   const origDur = state.originalVideoDuration || video.duration;
   const scale   = video.duration / origDur;
   const AHEAD   = 0.4;
@@ -3270,6 +4009,15 @@ function init() {
   });
   coachDashboard?.addEventListener('click', (e) => {
     if (!isCoachRole()) return;
+    const navBtn = e.target.closest('[data-coach-nav-view]');
+    if (navBtn) {
+      const next = navBtn.getAttribute('data-coach-nav-view');
+      if (next === 'players' || next === 'compare') {
+        state.coachDashboardView = next;
+        renderCoachDashboard(state.coachPlayersRaw, state.coachSessionsRaw);
+      }
+      return;
+    }
     const cmpBtn = e.target.closest('[data-coach-open-compare]');
     if (cmpBtn && !cmpBtn.disabled) {
       e.preventDefault();
@@ -3296,6 +4044,16 @@ function init() {
     );
     if (!ok) return;
     setPlayerHiddenFromCoachDashboard(id, nextHidden);
+    return;
+  });
+  coachDashboard?.addEventListener('click', (e) => {
+    if (!isCoachRole()) return;
+    const xcmp = e.target.closest('[data-coach-cross-compare]');
+    if (!xcmp) return;
+    const aSel = document.getElementById('coachCrossPlayerA');
+    const bSel = document.getElementById('coachCrossPlayerB');
+    if (!aSel || !bSel) return;
+    openCoachCrossPlayerCompare(aSel.value, bSel.value);
   });
   wireModalDismissals();
   headerProfileBtn?.addEventListener('click', () => {
@@ -3344,7 +4102,22 @@ function init() {
     if (id) openSessionDetailModal(id);
   });
   clearAllSessionsBtn?.addEventListener('click', () => deleteAllSessionsForCurrentUser());
+  resetEverythingBtn?.addEventListener('click', () => resetEverythingForCurrentUser());
+  resetEverythingLogoutBtn?.addEventListener('click', async () => {
+    closeModal(resetEverythingModal);
+    await logout();
+  });
   WagonWheel.init(wagonCanvas);
+  if (typeof BallAnalytics !== 'undefined') {
+    BallAnalytics.init(
+      document.getElementById('pitchMapCanvas'),
+      video,
+      document.getElementById('ballOverlayCanvas'),
+    );
+  }
+  window.addEventListener('resize', () => {
+    if (typeof BallAnalytics !== 'undefined') BallAnalytics.resizeOverlay();
+  });
   injectBiomechStyles();
   buildStartPanel();
   injectOverlayStyles();

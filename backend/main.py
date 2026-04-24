@@ -46,6 +46,8 @@ load_dotenv(BASE_DIR / "backend" / ".env")
 
 sys.path.insert(0, str(BASE_DIR))
 
+from pipeline_cache_version import ANALYSIS_CACHE_VERSION
+
 # ── Dedicated thread pool ─────────────────────────────────────────────────────
 _executor = ThreadPoolExecutor(max_workers=1)
 
@@ -102,6 +104,8 @@ async def public_config():
     return {
         "supabaseUrl": os.getenv("SUPABASE_URL", "").strip(),
         "supabaseAnonKey": os.getenv("SUPABASE_ANON_KEY", "").strip(),
+        # Single source of truth: pipeline_cache_version.py (bump when analyser changes).
+        "analysisCacheVersion": ANALYSIS_CACHE_VERSION,
     }
 
 
@@ -249,6 +253,9 @@ async def _run_pipeline(video_path: str, websocket: WebSocket):
     loop = asyncio.get_event_loop()
 
     def _blocking():
+        # Quieter server console: progress still sent over the WebSocket.
+        os.environ.setdefault("CRICKEYE_QUIET", "1")
+        os.environ.setdefault("YOLO_VERBOSE", "false")
         ce.run_pipeline_ws_sync(video_path, websocket, loop)
 
     try:
