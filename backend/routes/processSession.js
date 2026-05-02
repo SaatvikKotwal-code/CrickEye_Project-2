@@ -5,6 +5,10 @@ const {
   runYoloPipeline,
   cleanupTempDir,
 } = require("../services/yoloRunner");
+const {
+  generateLlmInsights,
+  buildFallbackInsights,
+} = require("../services/llmInsights");
 
 const router = express.Router();
 
@@ -59,10 +63,20 @@ router.post("/", async (req, res) => {
     tempDir = download.tempDir;
 
     const results = await runYoloPipeline(download.filePath);
+    let llmInsights;
+    try {
+      llmInsights = await generateLlmInsights(results);
+    } catch (llmError) {
+      llmInsights = buildFallbackInsights(results, llmError?.message || "llm_error");
+    }
+    const mergedResults =
+      results && typeof results === "object"
+        ? { ...results, llm_insights: llmInsights }
+        : { raw_results: results, llm_insights: llmInsights };
 
     const { error: updateError } = await supabaseAdmin
       .from("sessions")
-      .update({ status: "completed", results })
+      .update({ status: "completed", results: mergedResults })
       .eq("id", sessionId);
 
     if (updateError) {

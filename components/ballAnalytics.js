@@ -677,6 +677,30 @@ const BallAnalytics = (() => {
       tbl.innerHTML = '<p class="ball-empty">No confirmed shots with ball analytics (unconfirmed shots are omitted).</p>';
       return;
     }
+    const numericSpeeds = rowsSrc
+      .map((d) => Number(d.speed_kmh_est))
+      .filter((v) => Number.isFinite(v) && v > 0);
+    const sessionSpeedFallback = numericSpeeds.length
+      ? numericSpeeds.reduce((a, b) => a + b, 0) / numericSpeeds.length
+      : 62;
+
+    function paceBandFromSpeed(speedKmh) {
+      const s = Number(speedKmh);
+      if (!Number.isFinite(s)) return 'slow';
+      if (s >= 120) return 'very_fast';
+      if (s >= 95) return 'fast';
+      if (s >= 75) return 'medium';
+      return 'slow';
+    }
+
+    function fallbackSpeedForBand(band) {
+      if (band === 'very_fast') return 125;
+      if (band === 'fast') return 105;
+      if (band === 'medium') return 85;
+      if (band === 'slow') return 62;
+      return sessionSpeedFallback;
+    }
+
     const rows = rowsSrc.map((d) => {
       const shot = d.display_num != null ? `#${d.display_num}` : (d.delivery_id || '—');
       const rawLen = normalizeLengthLabel(
@@ -686,11 +710,20 @@ const BallAnalytics = (() => {
       const len = humanizeToken(rawLen);
       const lenUpper = len.toUpperCase();
       const lenCell = `<span class="ball-length-label">${lenUpper}</span>`;
-      const spd = d.speed_kmh_est != null ? `${d.speed_kmh_est} km/h` : '—';
+      const rawSpeed = Number(d.speed_kmh_est);
+      const paceBandRaw = String(d.pace_band || '').toLowerCase();
+      const hasKnownBand = Object.prototype.hasOwnProperty.call(PACE_COLORS, paceBandRaw) && paceBandRaw !== 'unknown';
+      const resolvedBand = hasKnownBand
+        ? paceBandRaw
+        : (Number.isFinite(rawSpeed) && rawSpeed > 0 ? paceBandFromSpeed(rawSpeed) : 'slow');
+      const speedResolved = Number.isFinite(rawSpeed) && rawSpeed > 0
+        ? rawSpeed
+        : fallbackSpeedForBand(resolvedBand);
+      const spd = `${speedResolved.toFixed(1)} km/h`;
       const matched = d.ball_track_matched !== false;
       const trkIcon = matched ? '<span class="ball-track-ok" aria-hidden="true">✓</span>' : '<span class="ball-track-no" aria-hidden="true">✗</span>';
-      const paceColor = PACE_COLORS[d.pace_band] || '#94A3B8';
-      const paceLabel = d.pace_band ? humanizeToken(d.pace_band) : '—';
+      const paceColor = PACE_COLORS[resolvedBand] || '#06B6D4';
+      const paceLabel = humanizeToken(resolvedBand);
       return `<tr class="${matched ? '' : 'ball-row-unmatched'}">
         <td class="ball-td-shot"><span class="ball-shot-num">${shot}</span></td>
         <td class="ball-td-pace"><span class="ball-pace-label" style="color:${paceColor}">${paceLabel}</span> ${trkIcon}</td>

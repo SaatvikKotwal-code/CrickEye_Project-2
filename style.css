@@ -2537,6 +2537,19 @@ body.ce-modal-open { overflow: hidden; }
   color: #334155;
   margin-bottom: 8px;
 }
+.ce-modal--compare .compare-player-summary-list {
+  margin: 0 0 8px;
+  padding-left: 1rem;
+  color: #334155;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.ce-modal--compare .compare-player-summary-list li {
+  margin-bottom: 5px;
+}
+.ce-modal--compare .compare-player-summary-list li:last-child {
+  margin-bottom: 0;
+}
 .ce-modal--compare .compare-player-summary-metric {
   display: block;
   font-size: 0.83rem;
@@ -3985,8 +3998,13 @@ body.ce-modal-open { overflow: hidden; }
 }
 .ce-modal--compare .compare-blength-month-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
   gap: 14px;
+}
+@media (max-width: 1120px) {
+  .ce-modal--compare .compare-blength-month-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .ce-modal--compare .compare-blength-col .rp-length-donut-center,
 .ce-modal--compare .compare-blength-month-card .rp-length-donut-center {
@@ -3999,6 +4017,13 @@ body.ce-modal-open { overflow: hidden; }
 .ce-modal--compare .compare-blength-col .rp-length-sum-table td,
 .ce-modal--compare .compare-blength-month-card .rp-length-sum-table td {
   border-bottom-color: rgba(148, 163, 184, 0.2);
+}
+.ce-modal--compare .compare-blength-month-card .rp-length-sum-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ce-modal--compare .compare-blength-month-card .rp-length-sum-table {
+  min-width: 520px;
 }
 .ce-modal--compare .compare-blength-col .rp-length-table-wrap--v2,
 .ce-modal--compare .compare-blength-month-card .rp-length-table-wrap--v2 {

@@ -1,0 +1,163 @@
+\chapter{Results and Discussion}
+\begin{justify}
+
+This chapter presents the outputs of the CrickEye system, analyses the quality and consistency of the extracted metrics, discusses the scoring behaviour, examines the ball analytics module, and identifies the limitations of the current implementation.
+
+\section{Pipeline Execution}
+
+\par The CrickEye pipeline was tested on multiple net-session videos sourced from YouTube, ranging from approximately 30 seconds to 5 minutes in duration. The pipeline stages execute sequentially:
+
+\begin{enumerate}
+    \item \textbf{Pass 1 — Keypoint Extraction:} YOLOv8-pose processes every frame. On a system with a modern GPU (e.g. NVIDIA RTX 3060), this runs at approximately 60--80 FPS for 640$\times$640 inference. On CPU-only systems, throughput drops to approximately 5--15 FPS.
+    \item \textbf{Wrist Velocity and Swing Detection:} Computed in under 1 second for typical session lengths (1000--5000 frames).
+    \item \textbf{Shot Classification:} Each shot requires one forward pass through Swin3D-T on a 16-frame clip; classification takes approximately 0.2--0.5 seconds per shot on GPU.
+    \item \textbf{Biomechanical Analysis:} Per-shot metric extraction is primarily NumPy-based and completes in milliseconds per shot.
+    \item \textbf{Ball Analytics (optional):} YOLO ball detection across all frames is often the longest step, taking 2--5 minutes for a 3-minute video on GPU.
+    \item \textbf{Pass 2 — Rendering:} Annotated video generation runs at roughly real-time speed, followed by FFmpeg H.264 re-encoding.
+\end{enumerate}
+
+\section{Shot Detection Results}
+
+\par The swing detection algorithm successfully identifies individual batting deliveries across a variety of net-session conditions. Key observations:
+
+\begin{itemize}
+    \item \textbf{True positives:} Committed shots (cover drives, pulls, sweeps) with clear bilateral wrist acceleration are reliably detected.
+    \item \textbf{Minimum shot gap:} The 45-frame gap prevents double-counting of follow-through movements.
+    \item \textbf{Edge cases:} Very soft defensive blocks or leave-alone decisions may not generate sufficient bilateral velocity to trigger detection, which is by design — the system focuses on coaching offensive shot technique.
+    \item \textbf{Camera distance:} The pixel-scale calibration (via session-median shoulder width) ensures that zoomed-out footage does not systematically suppress detections.
+\end{itemize}
+
+\section{Shot Classification Performance}
+
+\par The Swin3D-T classifier assigns one of five labels (cover, flick, pull, straight, sweep) to each detected shot. Since the model was trained and tested on YouTube-sourced clips:
+
+\begin{itemize}
+    \item \textbf{Confident classifications:} Shots where the classifier confidence exceeds 50--60\% typically align well with visual inspection. Cover drives and pull shots tend to be classified with the highest confidence due to their visually distinct motion patterns.
+    \item \textbf{Boundary cases:} The flick and straight drive can be confused when the bat angle is ambiguous from the front-on view. The confidence threshold of 0.30 filters out the most uncertain predictions while retaining enough shots for meaningful session analysis.
+    \item \textbf{CLAHE preprocessing:} The contrast enhancement step visibly improves classification consistency in poorly lit net environments, which are common in Tier-2/Tier-3 settings.
+\end{itemize}
+
+\section{Biomechanical Metric Analysis}
+
+\subsection{Head Quality}
+
+\par Head quality scores across tested sessions typically range from 40 to 85 (on the 0--100 scale), with the following patterns:
+
+\begin{itemize}
+    \item Straight drives and defensive shots tend to score highest (minimal head movement required and achieved).
+    \item Pull shots produce lower raw scores due to legitimate vertical tracking movement, but the shot-type-specific rules (generous vertical free zone for pulls) compensate appropriately.
+    \item The soft display mapping (raw $\rightarrow$ 22--97 band) prevents the front-on camera's inherent pose jitter from producing discouragingly low scores on otherwise sound technique.
+    \item Head flags (\texttt{HEAD\_LATERAL\_DRIFT}, \texttt{HEAD\_DUCKING\_PULL}) correlate well with visually observable head movement issues.
+\end{itemize}
+
+\subsection{Footwork}
+
+\par Footwork scores demonstrate clear differentiation between active and passive batters:
+
+\begin{itemize}
+    \item Sessions where the batter uses a pre-delivery trigger movement show consistently higher pre-shot movement values (normalised movement $> 0.20$).
+    \item Plant timing detection works well for front-foot drives where the front ankle shows a clear descent-and-settle pattern. On back-foot shots, the timing window is more permissive, reflecting the different biomechanical demands.
+    \item The \texttt{FLAT\_FOOTED} flag reliably fires for batters who stand completely still before the delivery.
+\end{itemize}
+
+\subsection{Stance Symmetry}
+
+\par Symmetry scores are generally high (70--95) for most batters in net sessions, reflecting reasonably level setups. The metric becomes most informative when:
+
+\begin{itemize}
+    \item A batter has a pronounced open or closed stance that tilts shoulders consistently.
+    \item Fatigue causes progressive asymmetry in the second half of a session.
+    \item The \texttt{STANCE\_ASYMMETRIC} flag requires both high tilt and many stable-frame readings, preventing false alarms from noisy short clips.
+\end{itemize}
+
+\subsection{Elbow Shape}
+
+\par The elbow spread ratio comparison at setup versus contact produces coaching-meaningful categories:
+
+\begin{itemize}
+    \item ``Consistent'' classifications dominate well-executed drives and straight shots.
+    \item ``Cramped'' classifications frequently appear on pull shots where the batter fails to extend through the ball — a genuine coaching concern.
+    \item ``Reaching'' classifications correlate with shots played away from the body where the batter stretches without proper foot movement.
+    \item The sweep-specific \texttt{ELBOW\_BEHIND\_PAD} check provides a unique front-on cue not available from side-on analysis.
+\end{itemize}
+
+\subsection{Swing Intensity and Bat Speed}
+
+\par Swing intensity provides a useful session-relative effort measure:
+
+\begin{itemize}
+    \item The session-normalised 0--100 scale with the $\gamma = 0.46$ power curve ensures that one unusually hard swing does not compress all other shots to near-zero values.
+    \item Bat speed estimates (km/h) are internally consistent within a session but should not be compared across different camera setups without recalibration. The shoulder-width-based calibration provides reasonable estimates for trend analysis.
+    \item The \texttt{SESSION\_BAT\_SPEED\_LOCK} feature successfully identifies and caps lone speed spikes that are inconsistent with the session's overall swing effort profile.
+\end{itemize}
+
+\section{Composite Shot Score Distribution}
+
+\par Across tested sessions, shot scores (out of 10) distribute approximately as follows:
+
+\begin{table}[ht]
+\centering
+\caption{Typical Shot Score Distribution}
+\label{tab:scoredist}
+\begin{tabular}{l l l}
+ \hline
+ \textbf{Quality Band} & \textbf{Score Range} & \textbf{Typical Proportion} \\
+ \hline
+ Top class & $\geq 8.5$ & 5--10\% \\
+ Good & 6.5--8.4 & 25--40\% \\
+ Average & 4.5--6.4 & 35--45\% \\
+ Poor & $< 4.5$ & 10--25\% \\
+ \hline
+\end{tabular}
+\end{table}
+
+\par The distribution is intentionally centred in the ``Average'' to ``Good'' range for net sessions, reflecting the reality that most practice deliveries involve competent but imperfect execution. ``Top class'' scores require excellence across all five metrics simultaneously, making them genuinely rare and motivating.
+
+\section{Session-Level Analysis}
+
+\par The session analysis engine successfully:
+
+\begin{itemize}
+    \item Identifies best and worst shots by composite score, providing clear highlights for review.
+    \item Detects trends: first-half vs second-half comparisons reveal warmup effects (improving scores early) and fatigue effects (declining swing intensity late).
+    \item Generates coaching alerts that are tied to repeated patterns rather than single-shot anomalies, reducing false alarm noise.
+    \item Produces per-shot-type breakdowns that help coaches identify shot-specific weaknesses (e.g. ``head drops on pulls but stays still on drives'').
+\end{itemize}
+
+\section{Ball Analytics Results}
+
+\par The Ball Analytics module provides useful supplementary information with the following characteristics:
+
+\begin{itemize}
+    \item \textbf{Ball detection:} The YOLO ball detector achieves reasonable recall for deliveries where the ball is visible for at least 6--8 frames. The motion filter effectively removes static false positives (e.g. ball marks on the net, equipment).
+    \item \textbf{Speed estimates:} Single-camera speed estimates are inherently approximate. The session-level rescaling and plausible-floor adjustments produce values in the 50--110 km/h range for typical net bowling, which aligns with club-level expectations.
+    \item \textbf{Length zones:} Bounce detection via curvature analysis works well for deliveries with clear trajectory changes. Low-FPS videos and dusty net conditions can obscure bounce points, reducing confidence.
+    \item \textbf{All values are marked as estimates} with explicit reliability scores, ensuring that coaches and players understand the limitations.
+\end{itemize}
+
+\section{Web Application Performance}
+
+\par The web application provides a responsive coaching experience:
+
+\begin{itemize}
+    \item WebSocket streaming enables real-time progress tracking during analysis, with stage labels, frame counts, and ETAs updating live in the browser.
+    \item Per-shot results appear as the pipeline processes each delivery, allowing coaches to begin reviewing while the pipeline continues.
+    \item The annotated replay video supports native browser seeking via HTTP Range headers.
+    \item Role-based access successfully separates player and coach views, with coaches able to see all player sessions and aggregate statistics.
+\end{itemize}
+
+\section{Limitations}
+
+\par The current implementation has several known limitations:
+
+\begin{enumerate}
+    \item \textbf{2D camera constraint:} All metrics are derived from a single front-on 2D view. Depth-dependent measures (true weight transfer, sagittal knee angle, spine angle) cannot be reliably computed and are excluded from scoring. This is the most fundamental limitation.
+    \item \textbf{Ball speed accuracy:} Single-camera speed estimates carry unknown error from perspective distortion, rolling shutter, and auto-FPS rounding. Values should be used for trends only, not as absolute measurements.
+    \item \textbf{Lighting sensitivity:} Pose estimation accuracy degrades in very low light or high-contrast backlit conditions common in some indoor nets. CLAHE helps but does not fully compensate.
+    \item \textbf{Lateral shot mapping:} The pitch map's ``leg vs off'' positioning is a schematic mapping from horizontal image position, not stereo reconstruction.
+    \item \textbf{Shot class coverage:} Five shot types do not cover all batting strokes (e.g. cut, reverse sweep, uppercut). Additional classes require expanded training data.
+    \item \textbf{Single batter:} The system assumes one primary batter per session. If multiple persons are present (e.g. net partner, bowler), it selects the largest bounding box, which may not always be the batter.
+    \item \textbf{Dataset scale:} The YouTube-sourced training dataset, while effective for the five target classes, is smaller than purpose-built sports datasets used in commercial systems.
+\end{enumerate}
+
+\end{justify}

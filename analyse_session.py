@@ -6,17 +6,13 @@ KEY CHANGES vs v6.6 — Reliable Metrics Overhaul:
   - Only front-on-reliable metrics kept in shot score and player display.
   - Symmetry angle bug FIXED: was measuring line direction (~180 deg),
     now measures tilt-from-horizontal (0-15 deg). Score is real now.
-  - Swing Intensity: P90 of 5-frame rolling-mean bilateral velocity,
-    session-relative 0-100 scale. peak_swing_speed (km/h) is separate, smoothed,
-    then optional SESSION_BAT_SPEED_LOCK caps session outliers after scaling.
-  - FOOTWORK added: trigger movement detection (pre-delivery ankle Y dip-rise)
-    + front foot plant timing (ankle Y-velocity zero-crossing vs contact).
-  - Removed from score/display: weight_transfer, base_width, spine_ratio,
-    knee_flex (all Z-axis dependent, unreliable from front-on camera).
-    Still computed and stored in JSON for future validation.
-  - New shot score: Head 35 + Footwork 25 + Symmetry 15 + Elbow 15
-    + Swing Intensity 10 = 100 pts (/10 display).
-  - New alerts: NO_TRIGGER, LATE_PLANT.
+  - Swing intensity & bat speed: diagnostic only (Advanced); not in composite score.
+  - FOOTWORK: trigger + plant; optional ball-line alignment after ball analytics merge.
+  - Removed from composite score: weight_transfer, base_width, spine_ratio,
+    knee_flex (Z-axis). Still in JSON for dev where applicable.
+  - Shot score v8 (100 pts /10): Head 32 + Footwork 24 + Symmetry 14 + Elbow 14
+    + Execution×length 10 + Swing path quality 6. Execution filled after ball track.
+  - New alerts: NO_TRIGGER, LATE_PLANT; execution / swing-path / line-of-ball aware.
   - Zoomed-out front-on: median shoulder width estimates subject scale; px-based
     thresholds (swing detection, plant, population swing baseline) scale so
     metrics match long-lens / full-body footage, not only close-net cameras.
@@ -119,6 +115,144 @@ PRESHOT_END              = 3
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
 CONF_THRESHOLD           = 0.30
+
+# Composite shot score weights (must sum to 100). Diagnostic: swing_intensity, peak_swing_speed.
+SCORE_W_HEAD         = 28
+SCORE_W_FOOTWORK     = 20
+SCORE_W_SYMMETRY     = 12
+SCORE_W_ELBOW        = 12
+SCORE_W_EXECUTION    = 22
+SCORE_W_SWING_PATH   = 6
+EXECUTION_NEUTRAL    = 50.0   # 0-100 until ball length is known
+
+
+def _execution_pair_score(length_zone: str, shot_label: str) -> float:
+    """Coach-informed length × shot pairing strength (0–100). CAB / net batting."""
+    lz = (length_zone or "full").lower().strip()
+    sh = (shot_label or "cover").lower().strip()
+    grid = {
+        "yorker":     {"cover": 52, "flick": 93, "pull": 36, "straight": 80, "sweep": 74},
+        "full":       {"cover": 94, "flick": 76, "pull": 44, "straight": 96, "sweep": 46},
+        "good_length": {"cover": 88, "flick": 68, "pull": 76, "straight": 91, "sweep": 80},
+        "short":      {"cover": 62, "flick": 56, "pull": 95, "straight": 54, "sweep": 84},
+        "full_toss":  {"cover": 90, "flick": 86, "pull": 46, "straight": 94, "sweep": 50},
+    }
+    row = grid.get(lz) or grid["full"]
+    return float(row.get(sh, 55.0))
+
+
+def compute_swing_path_quality(
+    all_keypoints, bilateral, start_frame, end_frame, onset_frame, contact_frame,
+    shoulder_px, pixel_scale,
+):
+    """
+    Front-on proxy for backlift→downswing shape using wrist mid-path (no bat model).
+    Zoom-safe: normalises by shoulder_px. Returns (0-100, note).
+    """
+    N = len(all_keypoints)
+    if N < 5 or shoulder_px < 12:
+        return 50.0, "insufficient_pose"
+
+    def kp_at(f):
+        return all_keypoints[max(0, min(f, N - 1))]
+
+    lo = max(start_frame, onset_frame - 3)
+    hi = min(end_frame, N - 1)
+    segment = bilateral[lo: hi + 1] if hi >= lo else []
+    max_b = max(segment) if segment else 1.0
+    thr = max(2.5 * pixel_scale, 0.11 * max_b)
+    swing_start = onset_frame
+    for f in range(max(start_frame, onset_frame - 4), min(contact_frame + 1, N)):
+        if f < len(bilateral) and bilateral[f] >= thr:
+            swing_start = f
+            break
+
+    pts = []
+    for f in range(swing_start, min(contact_frame + 6, end_frame + 1, N)):
+        kp = kp_at(f)
+        if kp.get("pose_conf", 0) < 0.28:
+            continue
+        lw, rw = kp.get("lw"), kp.get("rw")
+        if lw and rw:
+            pts.append((0.5 * (lw[0] + rw[0]), 0.5 * (lw[1] + rw[1])))
+
+    if len(pts) < 4:
+        return 48.0, "too_few_wrists"
+
+    s = max(float(shoulder_px), 22.0) * max(0.75, float(pixel_scale))
+    arr = np.array(pts, dtype=float)
+    arr[:, 0] /= s
+    arr[:, 1] /= s
+    seg = np.diff(arr, axis=0)
+    step_len = np.linalg.norm(seg, axis=1)
+    total_path = float(np.sum(step_len)) + 1e-9
+    net = float(np.linalg.norm(arr[-1] - arr[0]))
+    directness = float(np.clip(net / total_path, 0.0, 1.0))
+    if len(seg) >= 2:
+        j = np.diff(seg, axis=0)
+        jitter = float(np.mean(np.linalg.norm(j, axis=1)))
+        smooth = float(np.clip(1.0 - min(jitter / 2.2, 1.0), 0.0, 1.0))
+    else:
+        smooth = 0.55
+    mid = max(1, len(arr) // 2)
+    if len(arr) > mid + 1:
+        dy = float(np.mean(np.diff(arr[mid:, 1])))
+        down_ok = 1.0 if dy > 0.018 else 0.45
+    else:
+        down_ok = 0.72
+
+    raw = 34.0 + 38.0 * directness + 18.0 * smooth + 10.0 * down_ok
+    score = float(np.clip(raw, 22.0, 96.0))
+    return round(score, 1), "ok"
+
+
+def _collect_striker_line_meta(all_keypoints, pre_start, pre_end, contact_frame, N, shoulder_px):
+    """Ankle / nose midline samples for ball-line footwork (single-camera lateral only)."""
+    def kp_at(f):
+        return all_keypoints[max(0, min(f, N - 1))]
+
+    pre_xs = []
+    for f in range(max(0, pre_start), min(pre_end, N)):
+        kp = kp_at(f)
+        if kp.get("pose_conf", 0) < 0.32:
+            continue
+        la, ra = kp.get("la"), kp.get("ra")
+        if la and ra:
+            pre_xs.append(0.5 * (la[0] + ra[0]))
+    nose_pre = []
+    for f in range(max(0, pre_start), min(pre_end, N)):
+        kp = kp_at(f)
+        n = kp.get("nose")
+        if n:
+            nose_pre.append(n[0])
+        else:
+            le, re = kp.get("l_ear"), kp.get("r_ear")
+            if le and re:
+                nose_pre.append(0.5 * (le[0] + re[0]))
+    striker_mid = float(np.median(nose_pre)) if nose_pre else None
+    if striker_mid is None and pre_xs:
+        striker_mid = float(np.median(pre_xs))
+
+    cx_window = []
+    for f in range(max(0, contact_frame - 2), min(contact_frame + 3, N)):
+        kp = kp_at(f)
+        if kp.get("pose_conf", 0) < 0.28:
+            continue
+        la, ra = kp.get("la"), kp.get("ra")
+        if la and ra:
+            cx_window.append(0.5 * (la[0] + ra[0]))
+    contact_ankle_mid = float(np.median(cx_window)) if cx_window else None
+    pre_ankle_mid = float(np.median(pre_xs)) if pre_xs else None
+    drift = None
+    if pre_ankle_mid is not None and contact_ankle_mid is not None:
+        drift = float(contact_ankle_mid - pre_ankle_mid)
+    return {
+        "striker_midline_x_px": striker_mid,
+        "ankle_mid_pre_x_px": pre_ankle_mid,
+        "ankle_drift_x_px": drift,
+        "shoulder_px_ref": float(shoulder_px),
+    }
+
 NUM_FRAMES               = 16
 IMG_SIZE                 = 224
 CLIP_PRE_FRAMES          = 10
@@ -192,8 +326,8 @@ HEAD_RULES = {
     'cover'    : (0.63, 0.37, 0.32, 0.27, 0.34, 0.16),
     'straight' : (0.70, 0.30, 0.22, 0.24, 0.28, 0.14),
     'flick'    : (0.70, 0.30, 0.24, 0.23, 0.28, 0.12),
-    'pull'     : (0.15, 0.85, 0.55, 0.32, 0.34, 0.30),
-    'sweep'    : (0.20, 0.80, 0.55, 0.32, 0.36, 0.28),
+    'pull'     : (0.10, 0.90, 0.62, 0.36, 0.38, 0.34),
+    'sweep'    : (0.16, 0.84, 0.60, 0.36, 0.40, 0.32),
 }
 HEAD_RULES_DEFAULT = (0.80, 0.20, 0.16, 0.18, 0.20, 0.10)
 
@@ -742,8 +876,11 @@ PLAIN_ENGLISH = {
     # Foot movement
     "FLAT_FOOTED"             : "Little movement with the feet",
     "LATE_PLANT"              : "Front foot down late",
-    # Fatigue
-    "LOW_BAT_SPEED"           : "Soft swing — add intent",
+    "FOOTWORK_LINE_MISMATCH"  : "Feet not moving to the line of the ball",
+    "LOW_SWING_PATH"          : "Swing path looks tight or choppy",
+    "LOW_SHOT_EXECUTION"      : "Shot choice vs length could be sharper",
+    # Fatigue / diagnostics
+    "LOW_BAT_SPEED"           : "Soft swing — add intent (diagnostic)",
     "FATIGUE"                 : "Swing dropping off late",
 }
 
@@ -755,7 +892,7 @@ HEAD_QUALITY_LABEL = [
     (54, "Small head movement"),
     (44, "Some head movement"),
     (34, "Noticeable head movement"),
-    (26, "Busy head through the shot"),
+    (26, "Busy head around contact"),
     (18, "A lot of head movement"),
     (10, "Head hard to track — check lighting / zoom"),
     (0,  "Not enough data — head score uncertain"),
@@ -802,6 +939,28 @@ SHOT_SCORE_LABEL = [
     (0,   "Poor"),
 ]
 
+SWING_PATH_LABEL = [
+    (88, "Smooth arc — hands through"),
+    (76, "Clean path"),
+    (64, "Solid swing shape"),
+    (52, "OK path"),
+    (40, "A bit tight or short"),
+    (28, "Choppy path"),
+    (16, "Very cramped swing"),
+    (0,  "Hard to read swing shape"),
+]
+
+EXECUTION_LABEL = [
+    (86, "Excellent choice for length"),
+    (74, "Strong execution"),
+    (62, "Sensible option"),
+    (50, "OK / neutral"),
+    (38, "Risky for this length"),
+    (26, "Tough match-up"),
+    (12, "Poor length choice"),
+    (0,  "No ball data"),
+]
+
 def plain_flag(flag_key):
     return PLAIN_ENGLISH.get(flag_key, flag_key.replace('_', ' ').title())
 
@@ -815,36 +974,47 @@ def label_from_scale(value, scale):
 
 
 # -----------------------------------------------------------------
-# Final shot score — uses session-normalized swing_intensity
+# Final shot score — v8 coaching model (no swing speed in composite)
 # -----------------------------------------------------------------
 
-def _recompute_shot_score_from_final_swing(e):
-    """Re-run composite /10 using session-normalized swing_intensity."""
-    hq = float(e.get('head_quality_score') or 0)
-    head_pts = (hq / 100.0) * 35.0
-    fw = float(e.get('footwork_score') or 0)
-    footwork_pts = (fw / 100.0) * 25.0
-    sym = e.get('symmetry_score')
-    if sym is not None:
-        sym_pts = (float(sym) / 100.0) * 15.0
-    else:
-        sym_pts = 7.5
-    elbow_collapse = e.get('elbow_collapse') or 'unknown'
-    label = e.get('label') or 'cover'
+def _elbow_points_for_label(label: str, elbow_collapse: str) -> float:
+    """Map elbow collapse to points out of SCORE_W_ELBOW (14)."""
+    cap = float(SCORE_W_ELBOW)
     elbow_pts_map = {
-        "consistent": 15.0,
-        "marginal":    9.0,
-        "reaching":    5.0,
-        "cramped":     3.0,
-        "unknown":     7.5,
+        "consistent": cap,
+        "marginal":    cap * 0.60,
+        "reaching":    cap * 0.36,
+        "cramped":     cap * 0.21,
+        "unknown":     cap * 0.54,
     }
     if label == 'pull' and elbow_collapse == 'cramped':
-        elbow_pts = 1.5
+        return cap * 0.11
+    return elbow_pts_map.get(elbow_collapse, cap * 0.54)
+
+
+def recompute_composite_shot_score(e):
+    """
+    Recompute /10 from stored 0-100 sub-scores. swing_intensity is NOT used.
+    execution_score 0-100 (default neutral until ball merge).
+    """
+    hq = float(e.get('head_quality_score') or 0)
+    head_pts = (hq / 100.0) * float(SCORE_W_HEAD)
+    fw = float(e.get('footwork_score') or 0)
+    footwork_pts = (fw / 100.0) * float(SCORE_W_FOOTWORK)
+    sym = e.get('symmetry_score')
+    if sym is not None:
+        sym_pts = (float(sym) / 100.0) * float(SCORE_W_SYMMETRY)
     else:
-        elbow_pts = elbow_pts_map.get(elbow_collapse, 7.5)
-    si = float(e.get('swing_intensity') or 0)
-    swing_pts = (si / 100.0) * 10.0
-    raw = head_pts + footwork_pts + sym_pts + elbow_pts + swing_pts
+        sym_pts = 0.5 * float(SCORE_W_SYMMETRY)
+    label = e.get('label') or 'cover'
+    elbow_pts = _elbow_points_for_label(label, e.get('elbow_collapse') or 'unknown')
+    ex = float(e.get('execution_score') if e.get('execution_score') is not None else EXECUTION_NEUTRAL)
+    ex = float(np.clip(ex, 0.0, 100.0))
+    execution_pts = (ex / 100.0) * float(SCORE_W_EXECUTION)
+    sp = float(e.get('swing_path_score') if e.get('swing_path_score') is not None else 50.0)
+    sp = float(np.clip(sp, 0.0, 100.0))
+    swing_path_pts = (sp / 100.0) * float(SCORE_W_SWING_PATH)
+    raw = head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts
     shot_score = round(raw / 10.0, 1)
     e['shot_score'] = shot_score
     if shot_score >= 8.5:
@@ -859,11 +1029,12 @@ def _recompute_shot_score_from_final_swing(e):
         shot_score * 10,
         [(85, "Top class"), (65, "Good"), (45, "Average"), (0, "Poor")],
     )
+    e['elbow_score'] = round((elbow_pts / max(float(SCORE_W_ELBOW), 1.0)) * 100.0, 1)
 
 
 def finalize_shot_player_copy(e):
-    """Call after swing_intensity is session-normalized. Updates shot_score / quality only."""
-    _recompute_shot_score_from_final_swing(e)
+    """Call after per-shot fields are final (optionally after ball merge)."""
+    recompute_composite_shot_score(e)
 
 
 def _bat_speed_session_lock_enabled() -> bool:
@@ -1117,12 +1288,12 @@ def _detect_foot_plant(all_keypoints, onset_frame, contact_frame, end_frame,
 
 
 FOOTWORK_LABEL = [
-    (85, "Good foot timing"),
+    (85, "Good foot timing — stable at contact"),
     (70, "Front foot used well"),
-    (55, "Slightly late or early"),
-    (35, "Late movement"),
-    (15, "Feet very quiet"),
-    (0,  "Almost no step"),
+    (55, "Timing inconsistent — plant a touch earlier"),
+    (35, "Front foot late — land before swing"),
+    (15, "Feet very quiet — add trigger movement"),
+    (0,  "Almost no step — start with a small press"),
 ]
 
 
@@ -1264,8 +1435,10 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
                          fps=30.0,
                          shot_label='cover',
                          session_shoulder_px=None,
-                         pixel_scale=1.0):
+                         pixel_scale=1.0,
+                         frame_w=1280, frame_h=720):
     N = len(all_keypoints)
+    _ = frame_w, frame_h  # reserved for future image-space normalisation
 
     def kp_at(f):
         return all_keypoints[max(0, min(f, N - 1))]
@@ -1305,8 +1478,8 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     _swing_raw = swing_raw_p90
 
     # ── HEAD POSITION QUALITY ────────────────────────────────────────────
-    # Uses nose position (or ear midpoint fallback) from pre-shot onset
-    # through contact. Front-on camera: X = lateral, Y = vertical.
+    # Pre-contact emphasis (CAB): score uses frames up to contact+2; flags can
+    # use a longer window (e.g. pull ducking through contact+8).
     head_rule = HEAD_RULES.get(shot_label, HEAD_RULES_DEFAULT)
     _head_mult = HEAD_SCORE_MULTIPLIER_BY_SHOT.get(shot_label, HEAD_SCORE_MULTIPLIER)
     lat_w, vert_w, vert_free = head_rule[0], head_rule[1], head_rule[2]
@@ -1314,8 +1487,10 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     vert_flag_thr = head_rule[4]
     lat_free      = head_rule[5] if len(head_rule) > 5 else 0.0
 
+    head_lo = max(start_frame, onset_frame - 8)
+    head_hi_score = min(N, contact_frame + 2)
     nose_pts = []
-    for f in range(max(start_frame, onset_frame - 6), min(N, contact_frame + 8)):
+    for f in range(head_lo, head_hi_score):
         n = kp_at(f).get('nose')
         if n:
             nose_pts.append(n)
@@ -1324,6 +1499,17 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
             re = kp_at(f).get('r_ear')
             if le and re:
                 nose_pts.append(((le[0]+re[0])/2.0, (le[1]+re[1])/2.0))
+
+    nose_pts_flag = []
+    for f in range(max(start_frame, onset_frame - 6), min(N, contact_frame + 8)):
+        n = kp_at(f).get('nose')
+        if n:
+            nose_pts_flag.append(n)
+        else:
+            le = kp_at(f).get('l_ear')
+            re = kp_at(f).get('r_ear')
+            if le and re:
+                nose_pts_flag.append(((le[0]+re[0])/2.0, (le[1]+re[1])/2.0))
 
     head_lateral_ratio  = None
     head_vertical_ratio = None
@@ -1352,9 +1538,9 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
             head_flag = "HEAD_LATERAL_DRIFT"
         elif shot_label not in ('pull', 'sweep') and penalised_vert > vert_flag_thr:
             head_flag = "HEAD_VERTICAL_DRIFT"
-        elif shot_label == 'pull' and head_frames_used >= 5:
-            early_y = float(np.mean([p[1] for p in nose_pts[:3]]))
-            late_y  = float(np.mean([p[1] for p in nose_pts[-3:]]))
+        elif shot_label == 'pull' and len(nose_pts_flag) >= 5:
+            early_y = float(np.mean([p[1] for p in nose_pts_flag[:3]]))
+            late_y  = float(np.mean([p[1] for p in nose_pts_flag[-3:]]))
             if (late_y - early_y) / shoulder_px > 0.15:
                 head_flag = "HEAD_DUCKING_PULL"
 
@@ -1367,6 +1553,11 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
                      'straight': 48.0, 'flick': 44.0}
         head_quality_score = _soft_head_score_display(_defaults.get(shot_label, 44.0))
         head_confidence = "estimated"
+
+    # Pull/sweep can look busier after contact in front-on. Keep pre-contact primary
+    # and avoid over-penalizing without a clear head fault flag.
+    if shot_label in ("pull", "sweep") and head_flag is None:
+        head_quality_score = max(head_quality_score, 44.0)
 
     # ── STANCE SYMMETRY (shoulder + hip tilt) ───────────────────────────
     # Symmetry: scan FULL clip for stable stance frames.
@@ -1496,51 +1687,53 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     elif plant_timing is not None and plant_timing > PLANT_GOOD_TIMING_FRAMES:
         footwork_flag = "LATE_PLANT"
 
+    # ── Swing path quality (wrist mid — zoom-safe) ───────────────────────
+    swing_path_score, swing_path_note = compute_swing_path_quality(
+        all_keypoints, bilateral, start_frame, end_frame, onset_frame, contact_frame,
+        shoulder_px, pixel_scale,
+    )
+
+    # ── Lateral line-of-ball samples (merge step blends with ball nx) ────
+    line_meta = _collect_striker_line_meta(
+        all_keypoints, pre_start, pre_end, contact_frame, N, shoulder_px,
+    )
+
     # ════════════════════════════════════════════════════════════════════
-    # SHOT SCORE — WEIGHTED COMPOSITE (100 pts / 10 for display)
-    # Only reliable front-on metrics:
-    #   Head quality   35% — #1 batting fundamental, most reliable metric
-    #   Footwork       25% — #2 coaching priority, trigger + plant
-    #   Symmetry       15% — pre-delivery setup quality (now fixed)
-    #   Elbow shape    15% — arm mechanics, relative delta is reliable
-    #   Swing intensity 10% — effort/consistency indicator
+    # SHOT SCORE — v8 (100 pts / 10 for display)
+    #   Head 32 · Footwork 24 · Symmetry 14 · Elbow 14 · Execution 10 · Path 6
+    #   execution_score defaults neutral until apply_ball_aware_shot_scoring()
     # ════════════════════════════════════════════════════════════════════
 
-    # Head (35 pts) — always has a score now (estimated if no nose frames)
-    head_pts = (head_quality_score / 100.0) * 35.0
-
-    # Footwork (25 pts)
-    footwork_pts = (footwork_score / 100.0) * 25.0
-
-    # Symmetry (15 pts)
-    if symmetry_score is not None:
-        sym_pts = (symmetry_score / 100.0) * 15.0
-    else:
-        sym_pts = 7.5   # neutral
-
-    # Elbow (15 pts)
+    cap_e = float(SCORE_W_ELBOW)
     elbow_pts_map = {
-        "consistent": 15.0,
-        "marginal":    9.0,
-        "reaching":    5.0,
-        "cramped":     3.0,
-        "unknown":     7.5,
+        "consistent": cap_e,
+        "marginal":    cap_e * 0.60,
+        "reaching":    cap_e * 0.36,
+        "cramped":     cap_e * 0.21,
+        "unknown":     cap_e * 0.54,
     }
     if shot_label == 'pull' and elbow_collapse == 'cramped':
-        elbow_pts = 1.5
+        elbow_pts = cap_e * 0.11
     else:
-        elbow_pts = elbow_pts_map.get(elbow_collapse, 7.5)
+        elbow_pts = elbow_pts_map.get(elbow_collapse, cap_e * 0.54)
 
-    # Normalise to 0-100 for display parity with other metrics (max pts = 15)
-    elbow_score = round((elbow_pts / 15.0) * 100.0, 1)
+    elbow_score = round((elbow_pts / max(cap_e, 1e-6)) * 100.0, 1)
 
-    # Swing intensity (10 pts) — filled as session-relative percentile later;
-    # scale divisor with camera distance (zoomed-out → lower px/frame for same effort).
     swing_intensity_preliminary = min(
         100.0, (_swing_raw / max(8.0, 50.0 * pixel_scale)) * 100.0)
-    swing_pts = (swing_intensity_preliminary / 100.0) * 10.0
 
-    raw_score  = head_pts + footwork_pts + sym_pts + elbow_pts + swing_pts
+    execution_score = EXECUTION_NEUTRAL
+    head_pts = (head_quality_score / 100.0) * float(SCORE_W_HEAD)
+    footwork_pts = (footwork_score / 100.0) * float(SCORE_W_FOOTWORK)
+    if symmetry_score is not None:
+        sym_pts = (symmetry_score / 100.0) * float(SCORE_W_SYMMETRY)
+    else:
+        sym_pts = 0.5 * float(SCORE_W_SYMMETRY)
+    execution_pts = (execution_score / 100.0) * float(SCORE_W_EXECUTION)
+    swing_path_pts = (swing_path_score / 100.0) * float(SCORE_W_SWING_PATH)
+    raw_score = (
+        head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts
+    )
     shot_score = round(raw_score / 10.0, 1)
 
     if shot_score >= 8.5:   shot_quality = "Top class"
@@ -1595,6 +1788,14 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
         "speed_is_capped"       : speed_is_capped,
         "swing_raw_p90"         : round(_swing_raw, 2),
         "swing_intensity"       : round(swing_intensity_preliminary, 1),
+        "swing_path_score"      : swing_path_score,
+        "swing_path_note"       : swing_path_note,
+        "execution_score"       : round(execution_score, 1),
+        "execution_confidence"  : 0.0,
+        "length_zone"           : None,
+        "striker_midline_x_px"  : line_meta.get("striker_midline_x_px"),
+        "ankle_drift_x_px"      : line_meta.get("ankle_drift_x_px"),
+        "shoulder_px_ref"       : line_meta.get("shoulder_px_ref"),
         # ── Elbow ─────────────────────────────────────────────────────────
         "elbow_collapse"        : elbow_collapse,
         "elbow_delta"           : elbow_delta,
@@ -1621,6 +1822,8 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
                                    + (" (approx.)" if head_confidence == "estimated" else "")),
         "symmetry_label"        : label_from_scale(symmetry_score, SYMMETRY_LABEL),
         "swing_intensity_label" : label_from_scale(swing_intensity_preliminary, SWING_INTENSITY_LABEL),
+        "swing_path_label"      : label_from_scale(swing_path_score, SWING_PATH_LABEL),
+        "execution_label"       : label_from_scale(execution_score, EXECUTION_LABEL),
         "footwork_label"        : label_from_scale(footwork_score, FOOTWORK_LABEL),
         "shot_quality_label"    : label_from_scale(shot_score * 10, [(85,"Top class"),(65,"Good"),(45,"Average"),(0,"Poor")]),
         "flags_plain"           : [plain_flag(f) for f in all_metric_flags],
@@ -1677,6 +1880,8 @@ def run_session_analysis(shot_log, session_info):
             'count'              : len(shots),
             'avg_conf'           : safe_mean([s['conf'] for s in shots]),
             'swing_intensity'    : agg('swing_intensity'),
+            'swing_path_score'   : agg('swing_path_score'),
+            'execution_score'    : agg('execution_score'),
             'head_quality_score' : agg('head_quality_score'),
             'symmetry_score'     : agg('symmetry_score'),
             'footwork_score'     : agg('footwork_score'),
@@ -1704,6 +1909,10 @@ def run_session_analysis(shot_log, session_info):
     trend = {
         'first_half_swing_intensity'     : half_mean(first_half,  'swing_intensity'),
         'second_half_swing_intensity'    : half_mean(second_half, 'swing_intensity'),
+        'first_half_swing_path_score'    : half_mean(first_half,  'swing_path_score'),
+        'second_half_swing_path_score'   : half_mean(second_half, 'swing_path_score'),
+        'first_half_execution_score'     : half_mean(first_half,  'execution_score'),
+        'second_half_execution_score'    : half_mean(second_half, 'execution_score'),
         'first_half_head_quality_score'  : half_mean(first_half,  'head_quality_score'),
         'second_half_head_quality_score' : half_mean(second_half, 'head_quality_score'),
         'first_half_symmetry_score'      : half_mean(first_half,  'symmetry_score'),
@@ -1715,6 +1924,9 @@ def run_session_analysis(shot_log, session_info):
     s1 = trend['first_half_swing_intensity']
     s2 = trend['second_half_swing_intensity']
     fatigue_flag = (s1 is not None and s2 is not None and s2 < s1 * 0.75)
+    sp1 = trend.get('first_half_swing_path_score')
+    sp2 = trend.get('second_half_swing_path_score')
+    path_fatigue = (sp1 is not None and sp2 is not None and sp2 < sp1 * 0.78 and sp1 > 30)
 
     all_speeds = [e.get('peak_swing_speed') for e in confirmed]
     valid_speeds = [s for s in all_speeds if s is not None]
@@ -1923,23 +2135,75 @@ def run_session_analysis(shot_log, session_info):
             ),
         })
 
-    # ── LOW BAT SPEED alert ───────────────────────────────────────────
-    avg_intensity = safe_mean([e.get('swing_intensity') for e in confirmed])
-    if avg_intensity is not None and avg_intensity < 30.0:
+    flm_count = flag_counts.get('FOOTWORK_LINE_MISMATCH', 0)
+    if flm_count >= 2:
         alerts.append({
             'severity'   : 'MEDIUM',
-            'metric'     : 'Swing',
-            'flag'       : 'LOW_BAT_SPEED',
+            'metric'     : 'Line of ball',
+            'flag'       : 'FOOTWORK_LINE_MISMATCH',
             'shot_type'  : 'all',
             'message'    : (
-                f"Swing looked soft across the session — mostly arms."
+                f"Feet not moving to the line of the ball on {flm_count} shots."
             ),
             'player_cue' : (
-                "Turn hips and trunk first, then let the arms follow."
+                "Step or lean toward where you see the ball in the net — head stays level."
             ),
             'drill'      : (
-                "10 hard shadow swings with a heavy bat, then 10 with your match bat."
+                "Tee on three lines — hit 10 balls each stepping slightly toward each line."
             ),
+        })
+
+    low_ex_n = sum(
+        1 for e in confirmed
+        if e.get('ball_track_matched')
+        and float(e.get('execution_score') or 50) < 38
+    )
+    if low_ex_n >= 2:
+        alerts.append({
+            'severity'   : 'MEDIUM',
+            'metric'     : 'Length × shot',
+            'flag'       : 'LOW_SHOT_EXECUTION',
+            'shot_type'  : 'all',
+            'message'    : (
+                f"Several deliveries ({low_ex_n}) where shot choice looked risky for the length."
+            ),
+            'player_cue' : (
+                "Match the stroke to length — hands calm when defending; punch drives only full."
+            ),
+            'drill'      : (
+                "Feed three lengths in order — call length early and rehearse the right shape."
+            ),
+        })
+
+    # ── Swing path quality (composite metric) ─────────────────────────
+    avg_swing_path = safe_mean([e.get('swing_path_score') for e in confirmed])
+    if avg_swing_path is not None and avg_swing_path < 32.0:
+        alerts.append({
+            'severity'   : 'MEDIUM',
+            'metric'     : 'Swing path',
+            'flag'       : 'LOW_SWING_PATH',
+            'shot_type'  : 'all',
+            'message'    : (
+                f"Swing path looks tight, choppy, or cut off (avg {avg_swing_path:.0f}/100)."
+            ),
+            'player_cue' : (
+                "Let the hands load, then a smooth downswing — backlift to full face (CAB)."
+            ),
+            'drill'      : (
+                "Shadow with a ball in the top hand only; feel a high-to-low smooth arc — 20 reps."
+            ),
+        })
+    if path_fatigue:
+        alerts.append({
+            'severity'   : 'LOW',
+            'metric'     : 'Shape',
+            'flag'       : 'SWING_PATH_FATIGUE',
+            'shot_type'  : 'all',
+            'message'    : (
+                f"Swing shape dipped in the second half ({sp1:.0f} → {sp2:.0f})."
+            ),
+            'player_cue' : "Shorten the next net or add a break when shape goes.",
+            'drill'      : "Light warm-up swings before the last 10 balls.",
         })
 
     mid_f = len(confirmed) // 2
@@ -1989,10 +2253,13 @@ def run_session_analysis(shot_log, session_info):
             'avg_symmetry_score'   : avg_sym,
             'avg_footwork_score'   : safe_mean([e.get('footwork_score') for e in confirmed]),
             'avg_swing_intensity'  : safe_mean([e.get('swing_intensity') for e in confirmed]),
+            'avg_swing_path_score' : safe_mean([e.get('swing_path_score') for e in confirmed]),
+            'avg_execution_score'  : safe_mean([e.get('execution_score') for e in confirmed]),
             'avg_shot_score'       : avg_shot_score,
             'feet_active_rate': round(
                 sum(1 for e in confirmed if e.get('feet_active')) / max(len(confirmed), 1), 2),
             'fatigue_detected'     : fatigue_flag,
+            'swing_path_fatigue'   : path_fatigue,
             'trend'                : trend,
             'flags_summary'        : {
                 'HEAD_LATERAL_DRIFT_count'  : flag_counts.get('HEAD_LATERAL_DRIFT', 0),
@@ -2006,6 +2273,7 @@ def run_session_analysis(shot_log, session_info):
                 'ELBOW_BEHIND_PAD_count'    : flag_counts.get('ELBOW_BEHIND_PAD', 0),
                 'FLAT_FOOTED_count'          : flag_counts.get('FLAT_FOOTED', 0),
                 'LATE_PLANT_count'           : flag_counts.get('LATE_PLANT', 0),
+                'FOOTWORK_LINE_MISMATCH_count': flag_counts.get('FOOTWORK_LINE_MISMATCH', 0),
                 'BAT_SPEED_SESSION_LOCK_count': flag_counts.get('BAT_SPEED_SESSION_LOCK', 0),
             },
             'by_shot_type'         : type_stats,
@@ -2089,7 +2357,7 @@ def _session_stance_from_classifier_confirmed(stance_rows):
 # -----------------------------------------------------------------
 
 def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
-                       fps, total_frames, orig_w, shot_classifier, device,
+                       fps, total_frames, orig_w, orig_h, shot_classifier, device,
                        lw_vels, rw_vels, bilateral,
                        ws=None, loop=None,
                        pixel_scale=1.0, session_shoulder_px=None):
@@ -2137,6 +2405,8 @@ def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
             shot_label=label,
             session_shoulder_px=session_shoulder_px,
             pixel_scale=pixel_scale,
+            frame_w=orig_w,
+            frame_h=orig_h,
         )
 
         entry = dict(
@@ -2589,6 +2859,15 @@ def save_json(shot_log, fps, total_frames, session_info, analysis, json_path, ba
                 'travel_px'            : e['onset_score'],
                 'swing_intensity'      : e.get('swing_intensity'),
                 'swing_intensity_session_relative': e.get('swing_intensity_session_relative'),
+                'swing_path_score'     : e.get('swing_path_score'),
+                'swing_path_label'     : e.get('swing_path_label'),
+                'swing_path_note'      : e.get('swing_path_note'),
+                'execution_score'      : e.get('execution_score'),
+                'execution_label'      : e.get('execution_label'),
+                'execution_confidence' : e.get('execution_confidence'),
+                'length_zone'          : e.get('length_zone'),
+                'ball_line_score'      : e.get('ball_line_score'),
+                'execution_length_note': e.get('execution_length_note'),
                 'peak_swing_speed'     : e.get('peak_swing_speed'),
                 'speed_is_capped'      : e.get('speed_is_capped', False),
                 'head_quality_score'   : e.get('head_quality_score'),
@@ -2688,14 +2967,171 @@ def print_summary(shot_log, session_info, analysis):
         if hs is not None: print(f"    avg_head_quality: {hs:.1f}/100")
         if st is not None: print(f"    avg_symmetry: {st:.1f}/100")
         if fw is not None: print(f"    avg_footwork: {fw:.1f}/100")
-        if si is not None: print(f"    avg_swing_intensity: {si:.1f}/100")
+        if si is not None: print(f"    avg_swing_intensity: {si:.1f}/100 (diagnostic)")
+        aex = summary.get('avg_execution_score')
+        asp = summary.get('avg_swing_path_score')
+        if aex is not None: print(f"    avg_execution (shot vs length): {aex:.1f}/100")
+        if asp is not None: print(f"    avg_swing_path: {asp:.1f}/100")
         if ss is not None: print(f"    avg_shot_score: {ss:.1f}/10")
         far = summary.get('feet_active_rate')
         if far is not None: print(f"    feet_active_rate: {far:.0%}")
     print("="*60 + "\n")
 
 # -----------------------------------------------------------------
-# Ball analytics (optional — does not affect pose / shot scoring)
+# Ball-aware coaching merge (length × shot + optional footwork line)
+# -----------------------------------------------------------------
+
+def _ball_nx_at_peak(delivery: dict, peak_frame: int):
+    """Normalized ball image X (0–1) near peak frame from trajectory or bounce."""
+    if not delivery:
+        return None
+    pp = delivery.get("pitch_plot") or {}
+    traj = pp.get("trajectory") or []
+    best_nx = None
+    best_df = 1e9
+    pf = int(peak_frame or 0)
+    for p in traj:
+        try:
+            fi = int(p.get("frame", -1))
+        except (TypeError, ValueError):
+            continue
+        df = abs(fi - pf)
+        if df < best_df:
+            best_df = df
+            nx = p.get("nx")
+            if nx is not None:
+                try:
+                    best_nx = float(nx)
+                except (TypeError, ValueError):
+                    pass
+    if best_nx is not None:
+        return best_nx
+    bn = delivery.get("bounce") or {}
+    pn = bn.get("point_norm") if isinstance(bn, dict) else None
+    if isinstance(pn, dict) and pn.get("nx") is not None:
+        try:
+            return float(pn["nx"])
+        except (TypeError, ValueError):
+            pass
+    li = delivery.get("length") or {}
+    td = li.get("distance_m")
+    traj_norm = pp.get("trajectory") if isinstance(pp, dict) else []
+    if traj_norm and td is not None:
+        try:
+            td_f = float(td)
+            hit = min(
+                traj_norm,
+                key=lambda p: abs(float(p.get("distance_from_batter_m") or 0) - td_f),
+            )
+            if hit.get("nx") is not None:
+                return float(hit["nx"])
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
+def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_h: int):
+    """
+    After ball YOLO: length zone, execution vs length, optional lateral footwork blend.
+    Mutates shots in place; call before run_session_analysis.
+    """
+    _ = frame_h
+    deliveries = []
+    if ball_analytics and ball_analytics.get("enabled") and not ball_analytics.get("error"):
+        deliveries = list(ball_analytics.get("deliveries") or [])
+    ordered = sorted(shot_log, key=lambda s: int(s.get("peak_frame", 0) or 0))
+    n_del = len(deliveries)
+    fw = float(frame_w or 1280)
+
+    for i, e in enumerate(ordered):
+        d = deliveries[i] if i < n_del else None
+        e["execution_length_note"] = None
+        e["ball_line_score"] = None
+        if d is None:
+            e["length_zone"] = None
+            e["ball_track_matched"] = False
+            e["execution_confidence"] = 0.0
+            e["execution_score"] = EXECUTION_NEUTRAL
+            e["execution_label"] = label_from_scale(EXECUTION_NEUTRAL, EXECUTION_LABEL)
+            e["ball_delivery_snapshot"] = None
+            continue
+
+        e["ball_delivery_snapshot"] = {
+            "delivery_id": d.get("delivery_id"),
+            "ball_track_matched": d.get("ball_track_matched"),
+            "length": d.get("length"),
+            "quality_flags": d.get("quality_flags") or [],
+        }
+        li = d.get("length") or {}
+        lz = li.get("label") or "full"
+        lconf = float(li.get("confidence") or 0.35)
+        e["length_zone"] = lz
+        e["ball_track_matched"] = bool(d.get("ball_track_matched"))
+        e["execution_confidence"] = round(lconf, 4)
+        qf = list(d.get("quality_flags") or [])
+        shot_lab = e.get("label") or "cover"
+        base = _execution_pair_score(lz, shot_lab)
+        if not e.get("ball_track_matched"):
+            base = 0.65 * base + 0.35 * EXECUTION_NEUTRAL
+        if "bounce_uncertain" in qf or "no_ball_track" in qf:
+            base = 0.72 * base + 0.28 * EXECUTION_NEUTRAL
+        if lconf < 0.42:
+            base = lconf * base + (1.0 - lconf) * EXECUTION_NEUTRAL
+        base = float(np.clip(base, 15.0, 98.0))
+        e["execution_score"] = round(base, 1)
+        e["execution_label"] = label_from_scale(base, EXECUTION_LABEL)
+        e["execution_length_note"] = f"{shot_lab} vs {lz.replace('_', ' ')}"
+
+        base_fw = float(e.get("footwork_score") or 0)
+        nx = _ball_nx_at_peak(d, int(e.get("peak_frame") or 0))
+        sm = e.get("striker_midline_x_px")
+        drift = e.get("ankle_drift_x_px")
+        sh_ref = float(e.get("shoulder_px_ref") or 60.0)
+        if (
+            e.get("ball_track_matched")
+            and nx is not None
+            and sm is not None
+            and drift is not None
+            and fw > 8
+        ):
+            ball_cx = nx * fw
+            need = float(np.sign(ball_cx - sm))
+            got = float(np.sign(drift)) if abs(drift) > 0.045 * sh_ref else 0.0
+            if got == 0.0:
+                line_score = 58.0
+            elif need == 0.0:
+                line_score = 66.0
+            elif need * got > 0:
+                line_score = 88.0
+            else:
+                line_score = 36.0
+                fl = e.get("flags")
+                if not isinstance(fl, list):
+                    e["flags"] = []
+                    fl = e["flags"]
+                if "FOOTWORK_LINE_MISMATCH" not in fl:
+                    fl.append("FOOTWORK_LINE_MISMATCH")
+                fp = e.get("flags_plain")
+                if not isinstance(fp, list):
+                    e["flags_plain"] = []
+                    fp = e["flags_plain"]
+                t = plain_flag("FOOTWORK_LINE_MISMATCH")
+                if t not in fp:
+                    fp.append(t)
+            e["ball_line_score"] = round(line_score, 1)
+            blended = min(100.0, base_fw * 0.84 + line_score * 0.16)
+            e["footwork_score"] = round(blended, 1)
+            e["footwork_label"] = label_from_scale(blended, FOOTWORK_LABEL)
+        else:
+            e["ball_line_score"] = None
+
+    for e in shot_log:
+        finalize_shot_player_copy(e)
+    return shot_log
+
+
+# -----------------------------------------------------------------
+# Ball analytics (optional YOLO pass; merge above updates coaching score)
 # -----------------------------------------------------------------
 
 def _run_ball_analytics_optional(video_path: str, shot_log, fps: float,
@@ -2743,18 +3179,19 @@ def run_pipeline(video_path=None, output_path=None):
         lw_vels, rw_vels, bilateral, fps, pixel_scale=SWING_DETECTION_PIXEL_SCALE)
     shot_log, session_info = classify_all_shots(
         all_frames_rgb, all_keypoints, shot_onsets,
-        fps, total_frames, orig_w, shot_classifier, device,
+        fps, total_frames, orig_w, orig_h, shot_classifier, device,
         lw_vels, rw_vels, bilateral,
         pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
 
     assign_display_numbers(shot_log)
-    analysis = run_session_analysis(shot_log, session_info)
     print(
         "\n[CrickEye] Ball analytics: YOLO track() on full video "
         "(often the longest step — watch for [ball …%] lines).\n"
     )
     ball_analytics = _run_ball_analytics_optional(
         vp, shot_log, fps, orig_w, orig_h, ws=None, loop=None)
+    apply_ball_aware_shot_scoring(shot_log, ball_analytics, orig_w, orig_h)
+    analysis = run_session_analysis(shot_log, session_info)
     pass2_render(vp, op, all_frames_rgb, all_keypoints, shot_log,
                  lw_vels, rw_vels, bilateral,
                  fps, total_frames, orig_w, orig_h, session_info,
@@ -2796,13 +3233,12 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
 
         shot_log, session_info = classify_all_shots(
             all_frames_rgb, all_keypoints, shot_onsets,
-            fps, total_frames, orig_w, shot_classifier, device,
+            fps, total_frames, orig_w, orig_h, shot_classifier, device,
             lw_vels, rw_vels, bilateral,
             ws, loop,
             pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
 
         assign_display_numbers(shot_log)
-        analysis = run_session_analysis(shot_log, session_info)
 
         print(
             "\n[CrickEye] Ball analytics: running YOLO track() on the full video "
@@ -2811,6 +3247,8 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
 
         ball_analytics = _run_ball_analytics_optional(
             video_path, shot_log, fps, orig_w, orig_h, ws=ws, loop=loop)
+        apply_ball_aware_shot_scoring(shot_log, ball_analytics, orig_w, orig_h)
+        analysis = run_session_analysis(shot_log, session_info)
 
         pass2_render(video_path, output_path,
                      all_frames_rgb, all_keypoints, shot_log,
@@ -2841,6 +3279,11 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
                 "stance_conf"          : e.get('_session_conf', session_info['conf']),
                 "swing_intensity"      : e.get('swing_intensity'),
                 "swing_intensity_session_relative": e.get('swing_intensity_session_relative'),
+                "swing_path_score"     : e.get('swing_path_score'),
+                "swing_path_label"     : e.get('swing_path_label'),
+                "execution_score"      : e.get('execution_score'),
+                "execution_label"      : e.get('execution_label'),
+                "length_zone"          : e.get('length_zone'),
                 "peak_swing_speed"     : e.get('peak_swing_speed'),
                 "speed_is_capped"      : e.get('speed_is_capped', False),
                 "head_quality_score"   : e.get('head_quality_score'),

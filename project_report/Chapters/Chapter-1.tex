@@ -1,0 +1,73 @@
+
+\chapter{Introduction}
+\begin{justify}
+This chapter introduces the CrickEye project — a low-cost, computer-vision-based cricket coaching system designed for batting net sessions. It presents the motivation behind the project, the problem it addresses, the objectives, the scope of work, and the overall organisation of this report.
+
+\section{Overview}
+
+\par Cricket is not merely a sport in India; it is a national passion that permeates every city, town, and village across the country. As of 2024, the Board of Control for Cricket in India (BCCI) estimates that over 30 million young players participate in organised cricket training at various levels \cite{BCCI2024}. The Indian Premier League alone generated revenues exceeding \$900 million in 2023, and the nation fields one of the largest grassroots player development ecosystems in the world \cite{IPL2023}.
+
+\par However, this massive participation base is served by a highly uneven coaching infrastructure. Elite academies in metropolitan centres such as Mumbai, Delhi, Bengaluru, and Chennai have access to sophisticated video analysis tools, Hawk-Eye ball-tracking systems, high-speed cameras, wearable inertial measurement units (IMUs), and dedicated biomechanics consultants. These tools enable precise, quantitative feedback on batting technique — from head position and footwork timing to bat speed and swing path. In contrast, academies in Tier-2 and Tier-3 cities — places like Jammu, Ranchi, Vadodara, or Coimbatore — rely almost entirely on the subjective observation of a single coach who must watch multiple batters simultaneously, often without any technological support.
+
+\par This disparity creates a systemic problem: talented players in smaller cities receive less precise, less consistent, and less data-driven feedback than their metropolitan counterparts, limiting their development trajectory despite equal or greater dedication. The gap is not one of talent but of infrastructure.
+
+\section{Problem Statement}
+
+\par The core problem addressed by this project is: \textit{How can a cricket academy with limited resources provide systematic, quantitative, and repeatable biomechanical feedback to its batters using nothing more than a standard smartphone camera?}
+
+\par Existing commercial solutions for cricket batting analysis fall into two categories. The first comprises expensive sensor-based systems (radar guns, Hawk-Eye, force plates, wearable IMUs) that cost tens of thousands of dollars and require specialised installation. The second consists of generic video analysis applications that let coaches manually annotate footage frame by frame — a tedious and subjective process that does not scale.
+
+\par Neither category serves the needs of a typical Tier-2 or Tier-3 academy coach who wants automated, real-time biomechanical analysis from a single, commodity camera positioned at the front of the batting net. CrickEye fills this gap.
+
+\section{Objectives}
+
+\par The objectives of this project are:
+
+\begin{enumerate}
+    \item To design and implement a complete, end-to-end video analytics pipeline that processes a single front-on net-session video and automatically detects, classifies, and biomechanically analyses every batting shot.
+    \item To develop a pose-estimation-based swing detection system using YOLOv8 that reliably identifies individual shot deliveries from continuous net-session footage.
+    \item To train a Swin Transformer 3D (Swin3D-T) video classifier to recognise five common cricket shot types — cover drive, flick, pull, straight drive, and sweep — using a dataset collected from publicly available YouTube cricket clips.
+    \item To extract and score five front-on-reliable biomechanical metrics per delivery: head stability, footwork timing, stance symmetry, elbow shape, and swing intensity.
+    \item To compute a weighted composite shot score (0--10) and generate automated coaching alerts tied to repeated biomechanical patterns.
+    \item To integrate an optional ball-tracking module for delivery speed estimation, bounce detection, and length-zone classification.
+    \item To build a web-based coaching dashboard with real-time pipeline progress via WebSocket, per-shot cards, session summaries, wagon-wheel visualisations, pitch maps, and role-based access for both players and coaches.
+    \item To validate the system on YouTube-sourced net-session footage and demonstrate that it provides actionable feedback from commodity hardware.
+\end{enumerate}
+
+\section{Scope of the Project}
+
+\par CrickEye is designed for the specific use case of analysing batting net sessions filmed from a \textbf{front-on} (batter-facing) camera angle. The system is not intended for broadcast-quality multi-camera analysis or for bowling/fielding analysis. The key boundaries of the current scope are:
+
+\begin{itemize}
+    \item \textbf{Camera:} Single, stationary, front-on camera (e.g. a smartphone on a tripod).
+    \item \textbf{Subject:} One primary batter per session; the system selects the largest detected person in each frame.
+    \item \textbf{Shot types:} Five classes (cover, flick, pull, straight, sweep).
+    \item \textbf{Metrics:} Only metrics reliable from a front-on 2D perspective are used for scoring. Depth-dependent measures (weight transfer, spine angle, knee flex) are computed but excluded from the composite score.
+    \item \textbf{Ball tracking:} Optional module using YOLO-based ball detection; speed and length estimates are single-camera approximations, not radar-grade measurements.
+    \item \textbf{Deployment:} Local web application; cloud integration via Supabase for authentication and session persistence.
+\end{itemize}
+
+\section{Significance of the Study}
+
+\par This project contributes to the emerging field of AI-assisted sports coaching in India by demonstrating that meaningful biomechanical analysis is achievable without specialised hardware. The key contributions are:
+
+\begin{enumerate}
+    \item A purpose-built pipeline that combines pose estimation with a 3D video transformer for cricket-specific shot recognition — a combination not commonly found in existing open-source cricket tools.
+    \item A set of front-on-reliable biomechanical metrics with explicit data-quality indicators and shot-type-aware scoring rules, addressing the known limitations of single-camera 2D analysis.
+    \item A coaching-first dashboard designed for academy use, with automated alerts, drills, and session trend analysis that translate raw data into actionable coaching language.
+    \item A dataset and training methodology based on freely available YouTube footage, demonstrating that competitive classifiers can be built without expensive proprietary data.
+\end{enumerate}
+
+\section{Organisation of the Report}
+
+\par The remainder of this report is organised as follows:
+
+\begin{itemize}
+    \item \textbf{Chapter 2: Literature Review} — Reviews existing work in computer vision for sports, pose estimation, video classification, and cricket-specific analytics.
+    \item \textbf{Chapter 3: Methodology} — Describes the system architecture, pipeline design, dataset collection, model training, biomechanical metric extraction, scoring logic, and frontend/backend implementation.
+    \item \textbf{Chapter 4: Results and Discussion} — Presents the system outputs, analyses the quality of metrics and classifications, and discusses limitations.
+    \item \textbf{Chapter 5: Conclusion and Future Work} — Summarises findings and outlines planned improvements.
+\end{itemize}
+
+\end{justify}
+

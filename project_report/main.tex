@@ -1,0 +1,80 @@
+\title{MIET Project Template}
+\author{Dr. Navin M. Upadhyay}
+\date{August 2024}
+
+\documentclass[12pt]{report}
+\usepackage[utf8]{inputenc}
+
+%additional packages
+\usepackage{amsmath}
+\usepackage{lipsum}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{longtable}
+\graphicspath{{figures/}}
+\usepackage[a4paper,width=160mm,top=25mm,bottom=25mm]{geometry}
+\usepackage{titlesec}
+\linespread{1.2}
+\usepackage{tikz}
+\usepackage{amsfonts,array,multirow,graphicx,amsmath,amsthm,tabularx,setspace,amssymb,multirow}
+\usetikzlibrary{circuits, arrows}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bbm}
+\usepackage{mathtools}
+\usepackage{textcomp}
+\usepackage{stackengine}
+\usepackage{booktabs}
+\usepackage{ragged2e}
+\usepackage{biblatex}
+%\usepackage[backend=biber,style=alphabetic,sorting=ynt]{biblatex}
+\addbibresource{references.bib}
+% hyperlinks
+\usepackage{hyperref} 
+\hypersetup{ colorlinks, citecolor=blue, filecolor=black, linkcolor=black, urlcolor=blue } 
+
+\def\mytitle{CrickEye: A Low-Cost Computer Vision Based Cricket Coaching System for Tier-2 and Tier-3 Academies in India}
+\def\myname{\textbf{Name of Student1 [Roll No]\\ \vspace{0.1cm} Name of Student2 [Roll No]\\ \vspace{0.1cm} Name of Student3 [Roll No]\\\vspace{0.1cm} Name of Student4 [Roll No] }\\}
+\def\degree{Bachelor of Technology}
+\def\mydegree{Computer Science \& Engineering}
+\def\mysupervisor{Dr. XXXXXXX \\ Assistant Professor, CSE}
+\def\myrollno{2021A1RXX}
+\def\mydep{Department of Computer Sciences and Engineering}
+% addbibresource already declared above
+\begin{document}
+
+%Front Matter
+\include{./FrontMatter/Title}
+ \pagenumbering{roman}
+\input{FrontMatter/certificate}
+\addcontentsline{toc}{chapter}{Certificate}
+\input{FrontMatter/examiner}
+\addcontentsline{toc}{chapter}{Certificate of Approval of Examiners}
+\input{FrontMatter/Acknowledgement}
+\addcontentsline{toc}{chapter}{Acknowlegement}
+\input{FrontMatter/declaration}
+\addcontentsline{toc}{chapter}{Declaration}
+\input{FrontMatter/Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\tableofcontents
+\listoffigures
+\addcontentsline{toc}{chapter}{List of Figures}
+\listoftables
+\addcontentsline{toc}{chapter}{List of Tables}
+\input{FrontMatter/abbreviations}
+\addcontentsline{toc}{chapter}{Abbreviations}
+%Chapters
+\clearpage
+ \pagenumbering{arabic}
+\include{./Chapters/Chapter-1}
+\include{./Chapters/Chapter-2}
+\include{./Chapters/Chapter-3}
+\include{./Chapters/Chapter-4}
+\input{Chapters/Chapter-5}
+\addcontentsline{toc}{chapter}{Future Work}
+\input{Chapters/References}
+\addcontentsline{toc}{chapter}{References}
+\end{document}

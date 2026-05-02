@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const processSessionRouter = require("./routes/processSession");
+const llmInsightsRouter = require("./routes/llmInsights");
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -15,6 +16,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/process-session", processSessionRouter);
+app.use("/llm-insights", llmInsightsRouter);
 
 app.listen(PORT, () => {
   console.log(`[CrickEye API] Listening on http://localhost:${PORT}`);

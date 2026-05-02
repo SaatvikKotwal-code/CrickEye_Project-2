@@ -102,7 +102,8 @@ const CrickEyeLengthInsights = (() => {
         symmetry: s.symmetry_score != null ? Number(s.symmetry_score) : null,
         footwork: s.footwork_score != null ? Number(s.footwork_score) : null,
         swing: s.swing_intensity != null ? Number(s.swing_intensity) : null,
-        bat: s.peak_swing_speed != null ? Number(s.peak_swing_speed) : null,
+        swingPath: s.swing_path_score != null ? Number(s.swing_path_score) : null,
+        shotVsLength: s.execution_score != null ? Number(s.execution_score) : null,
       });
     });
     return out;
@@ -193,7 +194,8 @@ const CrickEyeLengthInsights = (() => {
         head: meanFinite(rows.map((r) => r.head)),
         footwork: meanFinite(rows.map((r) => r.footwork)),
         swing: meanFinite(rows.map((r) => r.swing)),
-        bat: meanFinite(rows.map((r) => r.bat)),
+        swingPath: meanFinite(rows.map((r) => r.swingPath)),
+        shotVsLength: meanFinite(rows.map((r) => r.shotVsLength)),
       });
     });
     return stats;
@@ -205,7 +207,8 @@ const CrickEyeLengthInsights = (() => {
       head: meanFinite(joined.map((j) => j.head)),
       footwork: meanFinite(joined.map((j) => j.footwork)),
       swing: meanFinite(joined.map((j) => j.swing)),
-      bat: meanFinite(joined.map((j) => j.bat)),
+      swingPath: meanFinite(joined.map((j) => j.swingPath)),
+      shotVsLength: meanFinite(joined.map((j) => j.shotVsLength)),
     };
   }
 
@@ -273,35 +276,37 @@ const CrickEyeLengthInsights = (() => {
   }
 
   const STANDOUT_CARDS = [
-    { zoneKey: 'good_length', metric: 'bat', zlab: 'GOOD LENGTH', mlab: 'BAT SPEED', kind: 'kmh',
-      cue: 'You middled it well on the good length ball' },
+    { zoneKey: 'good_length', metric: 'shotVsLength', zlab: 'GOOD LENGTH', mlab: 'SHOT VS LENGTH', kind: '100',
+      cue: 'Pick the right shape for good length — defend straight or work the gap' },
     { zoneKey: 'short', metric: 'head', zlab: 'SHORT', mlab: 'HEAD QUALITY', kind: '100',
       cue: 'Eyes off early on the short ball — watch it longer' },
-    { zoneKey: 'short', metric: 'bat', zlab: 'SHORT', mlab: 'BAT SPEED', kind: 'kmh',
-      cue: 'Soft hands on the short ball — commit to the pull' },
-    { zoneKey: 'full', metric: 'bat', zlab: 'FULL', mlab: 'BAT SPEED', kind: 'kmh',
-      cue: 'Drive needs more follow-through on full deliveries' },
-    { zoneKey: 'full', metric: 'swing', zlab: 'FULL', mlab: 'SWING', kind: '100',
+    { zoneKey: 'short', metric: 'swingPath', zlab: 'SHORT', mlab: 'SWING PATH', kind: '100',
+      cue: 'Pull/hook: stay tall with a smooth path through contact' },
+    { zoneKey: 'full', metric: 'shotVsLength', zlab: 'FULL', mlab: 'SHOT VS LENGTH', kind: '100',
+      cue: 'Drive when it is full — weight forward and full face' },
+    { zoneKey: 'full', metric: 'swingPath', zlab: 'FULL', mlab: 'SWING PATH', kind: '100',
       cue: 'Tempo drops on the fuller ball — stay through it' },
-    { zoneKey: 'short', metric: 'exec', zlab: 'SHORT', mlab: 'EXECUTION', kind: '10',
+    { zoneKey: 'short', metric: 'exec', zlab: 'SHORT', mlab: 'SESSION SCORE', kind: '10',
       cue: 'Short ball is your weakest zone this session' },
   ];
 
   function zoneMetric(st, metric) {
     if (!st) return null;
-    if (metric === 'bat') return st.bat;
     if (metric === 'head') return st.head;
     if (metric === 'footwork') return st.footwork;
     if (metric === 'swing') return st.swing;
+    if (metric === 'swingPath') return st.swingPath;
+    if (metric === 'shotVsLength') return st.shotVsLength;
     if (metric === 'exec') return st.exec;
     return null;
   }
 
   function sessionMetric(session, metric) {
-    if (metric === 'bat') return session.bat;
     if (metric === 'head') return session.head;
     if (metric === 'footwork') return session.footwork;
     if (metric === 'swing') return session.swing;
+    if (metric === 'swingPath') return session.swingPath;
+    if (metric === 'shotVsLength') return session.shotVsLength;
     if (metric === 'exec') return session.exec;
     return null;
   }
@@ -400,7 +405,8 @@ const CrickEyeLengthInsights = (() => {
       byKeyPre[s.key] = s;
     });
     const session = joined.length ? sessionMeansFromJoined(joined) : {
-      exec: null, head: null, footwork: null, swing: null, bat: null,
+      exec: null, head: null, footwork: null, swing: null,
+      swingPath: null, shotVsLength: null,
     };
 
     let bestKey = null;
@@ -429,8 +435,9 @@ const CrickEyeLengthInsights = (() => {
           <td class="rp-length-td-vs">${vsSessionCellHtml(execD)}</td>
           <td>${metricCellHtml(st ? st.head : null)}</td>
           <td>${metricCellHtml(st ? st.footwork : null)}</td>
+          <td>${metricCellHtml(st ? st.swingPath : null)}</td>
+          <td>${metricCellHtml(st ? st.shotVsLength : null)}</td>
           <td>${metricCellHtml(st ? st.swing : null)}</td>
-          <td class="rp-length-td-bat">${st && st.bat != null ? `<strong>${Number(st.bat).toFixed(1)}</strong> <span class="rp-length-bat-unit">km/h</span>` : '—'}</td>
         </tr>`;
       })
       .join('');
@@ -447,13 +454,14 @@ const CrickEyeLengthInsights = (() => {
               <th>BETTER OR WORSE THAN USUAL?</th>
               <th>Eyes on ball</th>
               <th>Footwork</th>
-              <th>Bat effort</th>
-              <th>Bat speed</th>
+              <th>Swing arc</th>
+              <th>Shot execution</th>
+              <th>Swing intensity</th>
             </tr>
           </thead>
           <tbody>${tableRows}</tbody>
         </table>
-        <p class="rp-length-table-footer">Scores compare how well you played each type of delivery this session.</p>
+        <p class="rp-length-table-footer">Simple view: shot execution tells if your stroke matched the ball length.</p>
       </div>`;
 
     return { zoneSummaryHtml, standoutHtml, tableHtml };
@@ -471,6 +479,7 @@ const CrickEyeLengthInsights = (() => {
     const confirmedShots = opts.confirmedShots || [];
     const heading = opts.heading;
     const compact = Boolean(opts.compact);
+  const hideStandout = Boolean(opts.hideStandout);
     const showHeading = heading != null && String(heading).trim() !== '';
 
     const ds = confirmedBallDeliveries(ballAnalytics);
@@ -530,7 +539,7 @@ const CrickEyeLengthInsights = (() => {
       : `<p class="rp-length-sub rp-length-sub--tab">${escapeHtml(sub)}</p>`;
 
     const tableBlock = compact ? '' : tableHtml;
-    const cardsBlock = compact ? '' : standoutHtml;
+  const cardsBlock = compact || hideStandout ? '' : standoutHtml;
 
     return `
       <div class="rp-length-section rp-length-section--v2${compact ? ' rp-length-section--compact' : ''}">

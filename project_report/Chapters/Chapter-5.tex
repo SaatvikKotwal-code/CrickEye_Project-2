@@ -1,0 +1,53 @@
+\chapter*{Conclusion and Future Work}
+\begin{justify}
+    \section*{Conclusion}
+
+    \par This project presented CrickEye, a low-cost, computer-vision-based cricket coaching system designed to bridge the technology gap between metropolitan elite academies and Tier-2 and Tier-3 cricket academies across India. The system demonstrates that meaningful, quantitative biomechanical feedback can be delivered from a single, commodity front-on camera — the kind of setup any academy can afford — without specialised sensors, wearable devices, or expensive infrastructure.
+
+    \par The key achievements of this project are:
+
+    \begin{enumerate}
+        \item \textbf{End-to-end automated pipeline:} CrickEye processes raw net-session video through a multi-pass pipeline — YOLOv8 pose estimation, bilateral wrist velocity analysis, swing detection, Swin3D-T shot classification, biomechanical metric extraction, composite scoring, and session-level analysis — producing actionable coaching outputs without manual intervention.
+
+        \item \textbf{Front-on-reliable metrics:} By explicitly acknowledging the limitations of single-camera 2D analysis, the system restricts its scoring to five metrics that are demonstrably reliable from a front-on camera: head stability (35\%), footwork timing (25\%), stance symmetry (15\%), elbow shape (15\%), and swing intensity (10\%). Depth-dependent measures are computed but excluded from the composite score, ensuring that coaches receive honest, trustworthy feedback.
+
+        \item \textbf{Shot-type-aware analysis:} The biomechanical engine applies different rules for different shot types — pull shots allow more vertical head tracking, front-foot drives require early foot plant, sweeps are checked for elbow-behind-pad geometry — reflecting the nuanced coaching reality that ``correct technique'' depends on the stroke being played.
+
+        \item \textbf{Session intelligence:} Beyond per-delivery analysis, the system detects session-level patterns: fatigue through second-half swing-intensity drop-off, repeated biomechanical issues (e.g. flat-footed across three or more shots), and shot-type-specific weaknesses. Coaching alerts with player-friendly cues and drill recommendations are generated automatically.
+
+        \item \textbf{Ball Analytics:} An optional YOLO-based ball tracking module provides estimated delivery speed, bounce detection via 2D path curvature, and length-zone classification, adding a bowling-side perspective to the coaching report while explicitly marking all values as estimates with reliability scores.
+
+        \item \textbf{Accessible technology stack:} The entire system runs on Python 3.10+ and Node.js 18+ with open-source libraries. The web dashboard streams real-time progress via WebSocket, supports both player and coach roles via Supabase authentication, and provides rich visualisations (wagon wheel, pitch map, per-shot cards, session trends) designed for coaching rather than engineering use.
+
+        \item \textbf{Public-data training methodology:} The Swin3D-T shot classifier was trained and tested entirely on publicly available YouTube cricket footage, demonstrating that competitive sport-specific classifiers can be built without proprietary datasets.
+    \end{enumerate}
+
+    \par CrickEye validates the thesis that AI-assisted coaching does not require prohibitive investment. A smartphone on a tripod, a laptop, and this software can provide a level of systematic, data-driven batting analysis that was previously available only to well-funded metropolitan programmes. For the millions of young cricketers training in smaller cities across India, this represents a meaningful step toward equitable access to quality coaching feedback.
+
+    \section*{Future Directions}
+
+    \par While the current system provides a solid foundation, several directions for future work have been identified:
+
+    \begin{enumerate}
+        \item \textbf{Multi-camera and depth estimation:} Incorporating a second camera angle (e.g. side-on) or monocular depth estimation models would enable the currently excluded metrics (weight transfer, spine angle, knee flexion) to be brought into the scoring pipeline, significantly enriching the biomechanical analysis.
+
+        \item \textbf{Expanded shot classification:} Adding additional shot types (cut, reverse sweep, uppercut, defensive block, leave) with expanded training data would improve the system's coverage of the full batting repertoire.
+
+        \item \textbf{Bowling analysis module:} Extending the pose estimation pipeline to analyse the bowler's action (front-foot no-ball detection, release point consistency, workload monitoring) would create a dual-purpose coaching tool.
+
+        \item \textbf{Temporal models for shot quality:} Replacing the current handcrafted biomechanical rules with learned temporal models (e.g. a Transformer that directly predicts shot quality from keypoint sequences) could improve accuracy and reduce the need for manual threshold tuning.
+
+        \item \textbf{Real-time inference:} Optimising the pipeline for real-time or near-real-time feedback (e.g. using TensorRT-optimised models on edge GPUs) would enable live coaching during net sessions rather than post-session review.
+
+        \item \textbf{Larger and more diverse datasets:} Collecting a larger, more diverse training dataset — spanning different lighting conditions, camera angles, player ages, skill levels, and handedness — would improve the robustness and generalisation of both the shot classifier and the biomechanical baselines.
+
+        \item \textbf{Longitudinal tracking:} Building player-level longitudinal dashboards that track metric trends across weeks and months of training would enable coaches to measure long-term development, not just single-session snapshots.
+
+        \item \textbf{Mobile application:} Packaging the pipeline as a mobile application (with on-device inference using ONNX or TensorFlow Lite) would eliminate the need for a laptop entirely, further lowering the barrier to adoption.
+
+        \item \textbf{Cloud deployment:} Deploying the analysis pipeline as a cloud service with GPU-backed inference would allow academies to upload videos from any device and receive results without local hardware requirements.
+
+        \item \textbf{Validation with coaching ground truth:} Conducting a formal study where experienced coaches independently rate shot quality on the same sessions analysed by CrickEye would provide a rigorous validation of the system's scoring against human expert judgement.
+    \end{enumerate}
+
+\end{justify}

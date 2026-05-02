@@ -41,7 +41,7 @@ const ReportModal = (() => {
   };
   const FLAG_INFO = {
     BAT_SPEED_SESSION_LOCK: { label: 'Bat speed session check', color: '#64748B', desc: 'Peak bat speed was aligned with swing intensity and the rest of this net so one frame spike does not dominate.' },
-    HEAD_LATERAL_DRIFT:   { label:'Head shifting sideways',       color:'#EF4444', desc:'More sideways movement than we like — often noise on front-on camera.' },
+    HEAD_LATERAL_DRIFT:   { label:'Head shifting sideways',       color:'#EF4444', desc:'More sideways movement than we want before contact.' },
     HEAD_VERTICAL_DRIFT:  { label:'Head dipping or lifting early', color:'#F97316', desc:'Noticeable up/down motion before or at contact on drives / flicks.' },
     HEAD_DUCKING_PULL:    { label:'Head low on the pull',         color:'#EF4444', desc:'Head dropping as you play the short ball — often a technique cue.' },
     STANCE_ASYMMETRIC:    { label:'Stance asymmetric',          color:'#EAB308', desc:'Shoulder or hip tilt at setup — directional bias before the ball arrives.' },
@@ -54,6 +54,10 @@ const ReportModal = (() => {
     WIDE_BASE:            { label:'Wide base',                  color:'#EA580C', desc:'Stance wider than ~1.6× shoulder width — hips can lock.' },
     LATE_PLANT:           { label:'Late front-foot plant',      color:'#64748B', desc:'Front foot lands noticeably after contact — harder to get weight through the ball.' },
     FLAT_FOOTED:          { label:'Quiet feet',                 color:'#64748B', desc:'Very little pre-shot foot movement — check trigger and weight into the shot.' },
+    FOOTWORK_LINE_MISMATCH: { label:'Feet off the line', color:'#F97316', desc:'Lateral foot movement did not match ball line.' },
+    LOW_SWING_PATH:       { label:'Tight swing arc',           color:'#EAB308', desc:'Session swing arc looked choppy or cut short.' },
+    LOW_SHOT_EXECUTION:   { label:'Length vs shot',             color:'#F97316', desc:'Several deliveries where shot choice looked risky for the length.' },
+    SWING_PATH_FATIGUE:   { label:'Path drops late',            color:'#94A3B8', desc:'Swing shape dipped in the second half of the net.' },
     LOW_WEIGHT_TRANSFER:  { label:'Low weight transfer',        color:'#EF4444', desc:'Hips not driving toward the ball on front-foot drives.' },
     OVER_COMMITTED:       { label:'Over-committed (lunge)',       color:'#CA8A04', desc:'Excessive hip shift — vulnerable to balls that hold up.' },
     SPINE_COLLAPSE:       { label:'Spine collapse',             color:'#CA8A04', desc:'Upper body crouching into contact — shape and control suffer.' },
@@ -94,7 +98,20 @@ const ReportModal = (() => {
     const band = (delivery.pace_band || 'unknown').toLowerCase();
     const label = BALL_PACE_LABEL[band] || String(band).replace(/_/g, ' ');
     const col = BALL_PACE_COLOR[band] || '#64748B';
-    const spd = delivery.speed_kmh_est;
+    const rawSpeed =
+      delivery.speed_kmh_est ??
+      delivery.speed_kmh ??
+      delivery.pace_kmh ??
+      null;
+    let spd = Number(rawSpeed);
+    if (!Number.isFinite(spd)) {
+      // Keep speed always present in UI: fall back to pace-band representative values.
+      if (band === 'very_fast') spd = 125;
+      else if (band === 'fast') spd = 105;
+      else if (band === 'medium') spd = 85;
+      else if (band === 'slow') spd = 62;
+      else spd = NaN;
+    }
     if (spd != null && spd !== '' && Number.isFinite(Number(spd))) {
       return `<span class="rp-col-ball-est" style="color:${col}">${label} <span class="rp-col-ball-spd">(${Number(spd).toFixed(1)} km/h)</span></span>`;
     }
@@ -102,6 +119,25 @@ const ReportModal = (() => {
       return `<span class="rp-col-ball-est" style="color:${col}">${label}</span>`;
     }
     return '<span class="rp-del-metric--empty">—</span>';
+  }
+
+  function formatBallContextCell(delivery) {
+    if (!delivery) return '<span class="rp-del-metric--empty">—</span>';
+    const paceHtml = formatBowlingFacedCell(delivery);
+    const lenLbl = String(delivery?.length?.label || '').trim();
+    const lenHtml = lenLbl
+      ? `<span class="rp-col-ball-est">${escapeHtml(lenLbl.replace(/_/g, ' '))}</span>`
+      : '<span class="rp-del-metric--empty">Length —</span>';
+    return `<div class="rp-col-ball-context">${lenHtml}<span class="rp-col-ball-divider">|</span>${paceHtml}</div>`;
+  }
+
+  function formatSwingIntensityLabelCell(labelRaw) {
+    const label = String(labelRaw == null ? '' : labelRaw)
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60);
+    if (!label) return '<span class="rp-col-swing-label">Measured swing</span>';
+    return `<span class="rp-col-swing-label">${escapeHtml(label)}</span>`;
   }
 
   function getAnalysisSummary(analysis) {
@@ -117,6 +153,8 @@ const ReportModal = (() => {
       avgStability: ss.avg_symmetry_score ?? av.symmetry_score ?? null,
       avgFootwork: ss.avg_footwork_score ?? av.footwork_score ?? null,
       avgSwingIntensity: ss.avg_swing_intensity ?? av.swing_intensity ?? null,
+      avgSwingPath: ss.avg_swing_path_score ?? av.swing_path_score ?? null,
+      avgExecution: ss.avg_execution_score ?? av.execution_score ?? null,
       avgShotScore: ss.avg_shot_score ?? null,
       avgWeightTransfer: ss.avg_weight_transfer ?? null,
       avgBaseWidth: ss.avg_base_width_ratio ?? null,
@@ -133,6 +171,10 @@ const ReportModal = (() => {
         second_half_footwork_score: tr.second_half_footwork_score ?? tr.footwork_score?.second_half ?? null,
         first_half_swing_intensity: tr.first_half_swing_intensity ?? tr.swing_intensity?.first_half ?? null,
         second_half_swing_intensity: tr.second_half_swing_intensity ?? tr.swing_intensity?.second_half ?? null,
+        first_half_swing_path_score: tr.first_half_swing_path_score ?? null,
+        second_half_swing_path_score: tr.second_half_swing_path_score ?? null,
+        first_half_execution_score: tr.first_half_execution_score ?? null,
+        second_half_execution_score: tr.second_half_execution_score ?? null,
       },
       flagsSummary: {
         HEAD_LATERAL_DRIFT_count: flags.HEAD_LATERAL_DRIFT_count ?? 0,
@@ -257,12 +299,18 @@ const ReportModal = (() => {
     const symQ = shot.symmetry_score != null ? Math.round(shot.symmetry_score) : null;
     const fwQ = shot.footwork_score != null ? Math.round(shot.footwork_score) : null;
     const swQ = shot.swing_intensity != null ? Math.round(shot.swing_intensity) : null;
+    const pathQ = shot.swing_path_score != null ? Math.round(shot.swing_path_score) : null;
+    const exQ = shot.execution_score != null ? Math.round(shot.execution_score) : null;
+    const lenZ = shot.length_zone ? String(shot.length_zone).replace(/_/g, ' ') : null;
     const bars = [
-      { label: 'Head position', value: headQ, max: 100, color: '#6C63FF', unit: '/100', desc: 'Shot-type-conditioned head quality (lateral vs vertical axes).' },
-      { label: 'Foot movement', value: fwQ, max: 100, color: '#06B6D4', unit: '/100', desc: 'Pre-shot foot activity and front-foot plant timing vs contact.' },
-      { label: 'Batting stance', value: symQ, max: 100, color: '#10B981', unit: '/100', desc: 'Shoulder and hip tilt symmetry in the pre-shot window.' },
-      { label: 'Swing intensity', value: swQ, max: 100, color: '#EAB308', unit: '/100', desc: 'Session-normalized bat-path effort (rolling peak velocity).' },
-      { label: 'Bat Speed', value: (shot.peak_swing_speed || 0).toFixed(1), max: 140, color: '#17B890', unit: 'km/h', desc: 'Bat-tip km/h from smoothed wrist-path peak, shoulder-width calibration, and bat-tip multiplier.' },
+      { label: 'Head position', value: headQ, max: 100, color: '#6C63FF', unit: '/100', desc: 'Pre-contact head stability; shot-type rules (CAB: eyes level into contact).' },
+      { label: 'Foot movement', value: fwQ, max: 100, color: '#06B6D4', unit: '/100', desc: 'Trigger + plant; when ball is tracked, lightly blended with line-of-ball (front-on lateral).' },
+      { label: 'Batting stance', value: symQ, max: 100, color: '#10B981', unit: '/100', desc: 'Shoulder and hip tilt symmetry in quiet frames (zoom-safe).' },
+      { label: 'Swing arc', value: pathQ, max: 100, color: '#8B5CF6', unit: '/100', desc: 'Smooth hand path into the ball (from both wrists on your video).' },
+      { label: 'Shot execution', value: exQ, max: 100, color: '#F97316', unit: '/100', desc: `Simple cue: did your stroke match the ball length${lenZ ? ` (${lenZ})` : ''}?` },
+    ];
+    const advancedBars = [
+      { label: 'Swing intensity', value: swQ, max: 100, color: '#EAB308', unit: '/100', desc: 'Diagnostic only — session-relative wrist effort (not in /10 score).' },
     ];
     const wt = shot.weight_transfer != null ? Number(shot.weight_transfer) : null;
     const bw = shot.base_width_ratio != null ? Number(shot.base_width_ratio) : null;
@@ -299,11 +347,22 @@ const ReportModal = (() => {
                 <div class="rp-bar-fill" style="width:${b.value == null ? 0 : Math.min(100,(Number(b.value)/b.max)*100).toFixed(1)}%;background:${b.color}"></div>
               </div>
             </div>`).join('')}
+          <div class="rp-shot-advanced-hint">Advanced metric</div>
+          ${advancedBars.map(b => `
+            <div class="rp-bar-row rp-bar-row--advanced">
+              <div class="rp-bar-meta">
+                <span class="rp-bar-label" title="${b.desc}">${b.label}</span>
+                <span class="rp-bar-val" style="color:${b.color}">${b.value != null && b.value !== '' ? b.value : '—'}<span class="rp-bar-unit">${b.unit}</span></span>
+              </div>
+              <div class="rp-bar-track">
+                <div class="rp-bar-fill" style="width:${b.value == null || b.value === '' ? 0 : Math.min(100,(Number(b.value)/b.max)*100).toFixed(1)}%;background:${b.color}"></div>
+              </div>
+            </div>`).join('')}
           <div class="rp-shot-submetrics">${subHead}</div>
           <div class="rp-shot-submetrics rp-shot-submetrics--posture">${subPosture}</div>
         </div>
         <div class="rp-shot-score-row">
-          <span class="rp-bar-label">Shot Execution Rating</span>
+          <span class="rp-bar-label">Overall score</span>
           <div class="rp-bar-track" style="flex:1;margin:0 12px">
             <div class="rp-bar-fill" style="width:${score*10}%;background:${sc}"></div>
           </div>
@@ -334,22 +393,28 @@ const ReportModal = (() => {
         tip: 'Level shoulders before the bowler runs in — avoid showing a preset bias too early.',
       },
       {
+        icon: '〰️', color: '#8B5CF6', title: 'Swing arc',
+        what: 'How smooth your swing shape is into the ball (0–100), from your hands on video — the path between both wrists.',
+        how: 'Steadier, smoother motion into contact scores higher; we scale for camera distance so nets compare fairly.',
+        tip: 'Hands together — smooth arc through the ball, not just harder.',
+      },
+      {
+        icon: '📏', color: '#F97316', title: 'Shot execution',
+        what: 'In simple words: did you play the right shot for that ball length (0–100).',
+        how: 'Coach matrix per length zone × shot type; down-weighted when bounce or track is uncertain.',
+        tip: 'Match stroke to length — drives when full, pull/hook when short, defence when good length.',
+      },
+      {
         icon: '💫', color: '#EAB308', title: 'Swing intensity',
-        what: 'How hard you swing through the ball (0–100), normalized within this session so effort is comparable shot to shot.',
-        how: 'P90 of a short rolling mean of bilateral wrist velocity in the swing window, scaled to the session max.',
-        tip: 'If intensity drops late in the net, check fatigue or rushing the trigger movement.',
+        what: 'How much intent and bat acceleration showed in your swing (0–100), session-normalized.',
+        how: 'P90 rolling bilateral wrist velocity vs session ceiling.',
+        tip: 'Use as context; good technique beats empty effort.',
       },
       {
-        icon: '💥', color: '#F97316', title: 'Bat speed (km/h)',
-        what: 'Bat-tip speed in km/h from wrist motion, shoulder-width calibration, and bat-tip leverage — useful for session-to-session comparison.',
-        how: 'Converted from pose-derived wrist motion using shoulder-width calibration and a bat-tip multiplier.',
-        tip: 'Use bat speed alongside swing intensity and timing — speed without head position rarely holds up in the middle.',
-      },
-      {
-        icon: '🏏', color: '#EF4444', title: 'Shot execution rating (/10)',
-        what: 'Composite from head (35%), footwork (25%), stance symmetry (15%), elbow shape (~25% band), swing intensity (10%).',
-        how: 'Elbow collapse/reaching and sweep elbow-behind-pad feed into the elbow band; scaled to /10.',
-        tip: 'Fix the lowest-contributing band first — often head axis, feet, or stance symmetry.',
+        icon: '🏏', color: '#EF4444', title: 'Overall score (/10)',
+        what: 'Composite: head 28%, footwork 20%, stance 12%, elbow 12%, shot execution 22%, swing arc 6%.',
+        how: 'Ball merge updates length × shot; footwork can blend with line of ball when the ball is tracked.',
+        tip: 'Fix head and feet first — then shot choice vs length and swing arc.',
       },
     ];
     return metrics.map(m => `
@@ -391,7 +456,7 @@ const ReportModal = (() => {
       return `<div class="rp-coach-card rp-coach-card--clean">
         <div class="rp-coach-title">CLEAN SESSION</div>
         <p class="rp-coach-text"><strong>What happened:</strong> No coaching alerts were raised for this session.</p>
-        <p class="rp-coach-text"><strong>Why it matters:</strong> Head position, feet, stance, and swing intensity look consistent with your shot mix.</p>
+        <p class="rp-coach-text"><strong>Why it matters:</strong> Head, feet, stance, swing arc, and shot execution look consistent with your session.</p>
         <div class="rp-coach-drill"><strong>Next step:</strong> Keep logging sessions so trends stay sharp.</div>
       </div>`;
     }
@@ -402,6 +467,408 @@ const ReportModal = (() => {
         ${a.player_cue ? `<p class="rp-coach-text"><strong>Player cue:</strong> ${escapeHtml(a.player_cue)}</p>` : ''}
         <div class="rp-coach-drill"><strong>Drill:</strong> ${escapeHtml(a.drill || a.action || '—')}</div>
       </div>`).join('');
+  }
+
+  function normalizeLlmInsights(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const strengths = Array.isArray(raw.strengths) ? raw.strengths.filter(Boolean).slice(0, 4) : [];
+    const improvements = Array.isArray(raw.improvements) ? raw.improvements.filter(Boolean).slice(0, 4) : [];
+    const shotTypeNotes = raw.shot_type_notes && typeof raw.shot_type_notes === 'object' ? raw.shot_type_notes : {};
+    const metricNotes = raw.metric_notes && typeof raw.metric_notes === 'object' ? raw.metric_notes : {};
+    const recommendedDrills = Array.isArray(raw.recommended_drills) ? raw.recommended_drills.filter(Boolean).slice(0, 5) : [];
+    return {
+      provider: String(raw.provider || '').toLowerCase(),
+      model: String(raw.model || ''),
+      fallbackUsed: Boolean(raw.fallback_used),
+      summary: String(raw.summary || '').trim(),
+      strengths,
+      improvements,
+      shotTypeNotes,
+      metricNotes,
+      recommendedDrills,
+      error: raw.error ? String(raw.error) : '',
+    };
+  }
+
+  function prettyLlmError(reasonRaw) {
+    const reason = String(reasonRaw || '').trim().toLowerCase();
+    if (!reason) return '';
+    if (reason === 'llm_request_failed' || reason.includes('aborted')) {
+      return 'AI request timed out for this save.';
+    }
+    if (reason === 'llm_missing_in_saved_session') {
+      return 'AI insight was not stored in this session record.';
+    }
+    if (reason === 'llm_disabled') {
+      return 'AI insights are disabled in backend settings.';
+    }
+    return 'AI insight fallback was used for this session.';
+  }
+
+  function buildUiFallbackInsights(analysis) {
+    const ss = analysis?.session_summary || {};
+    const av = analysis?.session_averages || {};
+    const avgHead = ss.avg_head_quality_score ?? av.head_quality_score ?? null;
+    const avgFoot = ss.avg_footwork_score ?? av.footwork_score ?? null;
+    const avgStance = ss.avg_symmetry_score ?? av.symmetry_score ?? null;
+    const alerts = Array.isArray(analysis?.coaching_alerts) ? analysis.coaching_alerts : [];
+    const strengths = [];
+    if (avgHead != null && Number(avgHead) >= 70) strengths.push('Head stays still through most balls.');
+    if (avgFoot != null && Number(avgFoot) >= 70) strengths.push('Footwork supports timing and balance.');
+    if (avgStance != null && Number(avgStance) >= 65) strengths.push('Stance shape is mostly balanced.');
+    if (!strengths.length) strengths.push('Keep building a repeatable setup and cleaner contact.');
+    const improvements = alerts
+      .slice(0, 3)
+      .map((a) => String(a?.player_cue || a?.message || '').trim())
+      .filter(Boolean);
+    if (!improvements.length) improvements.push('Record more sessions to surface clearer priorities.');
+    return {
+      provider: 'fallback_rules',
+      model: 'rule_based_ui',
+      fallback_used: true,
+      summary: 'AI coach was unavailable for this session. Showing rule-based coaching cues.',
+      strengths,
+      improvements,
+      shot_type_notes: {},
+      metric_notes: {},
+      recommended_drills: alerts
+        .slice(0, 4)
+        .map((a) => String(a?.drill || a?.action || '').trim())
+        .filter(Boolean),
+      error: 'llm_missing_in_saved_session',
+    };
+  }
+
+  function metricDisplayName(metricKey) {
+    const key = String(metricKey || '').toLowerCase();
+    if (key === 'head') return 'head position';
+    if (key === 'stance') return 'stance symmetry';
+    if (key === 'footwork') return 'front-foot movement';
+    if (key === 'swing') return 'swing intensity';
+    if (key === 'swing_path') return 'swing arc';
+    if (key === 'execution') return 'shot execution';
+    return key || 'batting setup';
+  }
+
+  function clarifyCoachCue(metricKey, rawText) {
+    const base = String(rawText || '').trim();
+    const key = String(metricKey || '').toLowerCase();
+    if (!base) {
+      if (key === 'head') return 'Keep your head still and eyes level at contact.';
+      if (key === 'stance') return 'Work on stance symmetry and body balance before release.';
+      if (key === 'footwork') return 'Get your front foot down early and stay balanced.';
+      if (key === 'swing') return 'Complete your bat swing through the line for better power.';
+      if (key === 'swing_path') return 'Keep a smooth swing arc through contact.';
+      if (key === 'execution') return 'Play the shot that best fits the ball length.';
+      return 'Stay balanced at setup and play with a stable base.';
+    }
+    const lower = base.toLowerCase();
+    if (key === 'stance') {
+      if (lower.includes('average') || lower.includes('inconsistent') || lower.includes('balance')) {
+        return 'Work on stance symmetry: keep shoulders level, hips square, and body balanced.';
+      }
+      return base.includes('stance') ? base : `${base}. Keep stance symmetry and body balance before playing.`;
+    }
+    if (key === 'head') {
+      if (lower.includes('drift') || lower.includes('movement')) {
+        return 'Head is moving too much. Keep your head still over the ball through contact.';
+      }
+      return base.includes('head') ? base : `${base}. Keep head still and eyes level at contact.`;
+    }
+    if (key === 'footwork') {
+      if (lower.includes('timing') || lower.includes('plant')) {
+        return 'Improve front-foot timing: land early, then swing through the line.';
+      }
+      return base.includes('foot') ? base : `${base}. Focus on front-foot timing and stable base.`;
+    }
+    if (key === 'swing') {
+      if (lower.includes('low') || lower.includes('power')) {
+        return 'Diagnostic swing effort is low — check intent and completion (not the main /10 score).';
+      }
+      return base.includes('swing') ? base : `${base}. Keep a full swing and strong follow-through.`;
+    }
+    if (key === 'swing_path') {
+      return base.includes('path') ? base : `${base}. Smooth backlift and downswing; hands in close (CAB).`;
+    }
+    if (key === 'execution') {
+      return base.includes('length') ? base : `${base}. Pick the stroke that fits where the ball pitched.`;
+    }
+    return base;
+  }
+
+  function resolveMetricKeyFromScores(head, stance, footwork, swingPath, execution) {
+    if (head != null && Number(head) < 55) return 'head';
+    if (footwork != null && Number(footwork) < 58) return 'footwork';
+    if (stance != null && Number(stance) < 60) return 'stance';
+    if (swingPath != null && Number(swingPath) < 45) return 'swing_path';
+    if (execution != null && Number(execution) < 48) return 'execution';
+    return 'execution';
+  }
+
+  function resolveShotTypeNoteForDelivery(llmInsights, shotLabelRaw) {
+    const llmShotKey = resolveLlmShotKey(shotLabelRaw);
+    if (!llmInsights?.shot_type_notes || !llmShotKey) return null;
+    return llmInsights.shot_type_notes[llmShotKey] || llmInsights.shot_type_notes[String(shotLabelRaw || '').toLowerCase()] || null;
+  }
+
+  function shotAliasesForKey(shotKey) {
+    const k = resolveLlmShotKey(shotKey);
+    if (k === 'cover_drive') return ['cover', 'cover drive'];
+    if (k === 'straight_drive') return ['straight', 'straight drive'];
+    if (k === 'pull') return ['pull', 'pull shot'];
+    if (k === 'flick') return ['flick'];
+    if (k === 'sweep') return ['sweep'];
+    return [String(k || '').replace(/_/g, ' ').trim()];
+  }
+
+  function textMentionsOtherShot(text, shotKey) {
+    const t = String(text || '').toLowerCase();
+    if (!t) return false;
+    const all = ['cover_drive', 'straight_drive', 'pull', 'flick', 'sweep'];
+    const target = resolveLlmShotKey(shotKey);
+    return all.some((k) => k !== target && shotAliasesForKey(k).some((a) => t.includes(a)));
+  }
+
+  function buildAiCoachPanelHtml(rawInsights, confirmedShots) {
+    const li = normalizeLlmInsights(rawInsights);
+    if (!li) {
+      return `<div class="rp-ai-card rp-ai-card--muted">
+        <div class="rp-ai-title-row">
+          <div class="rp-ai-title">AI Coach Analytics</div>
+          <span class="rp-ai-badge rp-ai-badge--muted">Not available</span>
+        </div>
+        <p class="rp-ai-summary">No AI coach insights were stored for this session.</p>
+      </div>`;
+    }
+
+    const usingFallback = li.fallbackUsed || li.provider === 'fallback_rules';
+    const badgeText = usingFallback ? 'Fallback' : (li.provider === 'dgx' ? 'DGX' : 'LLM');
+    const badgeClass = usingFallback ? 'rp-ai-badge--warn' : 'rp-ai-badge--ok';
+    const modelLine = li.model ? `<span class="rp-ai-model">${escapeHtml(li.model)}</span>` : '';
+
+    const strengthsHtml = li.strengths.length
+      ? `<div class="rp-ai-placard-list">${li.strengths.map((s) => `<div class="rp-ai-placard rp-ai-placard--good">✓ ${escapeHtml(s)}</div>`).join('')}</div>`
+      : '<div class="rp-ai-empty">No strengths captured.</div>';
+
+    const improvementsHtml = li.improvements.length
+      ? `<div class="rp-ai-placard-list">${li.improvements.map((s) => `<div class="rp-ai-placard rp-ai-placard--focus">• ${escapeHtml(s)}</div>`).join('')}</div>`
+      : '<div class="rp-ai-empty">No focus areas captured.</div>';
+
+    const playedShotKeys = [...new Set(
+      (confirmedShots || [])
+        .map((s) => resolveLlmShotKey(s?.shot_type || s?.label || ''))
+        .filter(Boolean)
+    )];
+    const shotNoteMap = { ...(li.shotTypeNotes || {}) };
+    const fallbackStrength = li.strengths[0] || 'Good base through setup and movement.';
+    const fallbackFocus = li.improvements[0] || clarifyCoachCue('execution', li.metricNotes?.shot_vs_length || li.metricNotes?.execution || '');
+    playedShotKeys.forEach((k) => {
+      const cur = shotNoteMap[k];
+      if (!cur || typeof cur !== 'object') {
+        shotNoteMap[k] = { strength: fallbackStrength, focus: fallbackFocus };
+        return;
+      }
+      const s = String(cur.strength || '').trim();
+      const f = String(cur.focus || '').trim();
+      shotNoteMap[k] = {
+        strength: s || fallbackStrength,
+        focus: f || fallbackFocus,
+      };
+    });
+    const shotTypeEntries = Object.entries(shotNoteMap);
+    const shotTypeHtml = shotTypeEntries.length
+      ? `<div class="rp-ai-grid">${shotTypeEntries.map(([k, v]) => {
+          const rawStrength = v && typeof v === 'object' ? String(v.strength || '').trim() : '';
+          const rawFocus = v && typeof v === 'object' ? String(v.focus || '').trim() : '';
+          const fallbackStrength = `${prettyToken(k)} intent is repeatable in this session.`;
+          const fallbackFocus = `For ${prettyToken(k).toLowerCase()}, keep head still and play through the line.`;
+          const strength = rawStrength && !textMentionsOtherShot(rawStrength, k) ? rawStrength : fallbackStrength;
+          const focus = rawFocus && !textMentionsOtherShot(rawFocus, k) ? rawFocus : fallbackFocus;
+          return `<div class="rp-ai-note">
+            <div class="rp-ai-note-k">${escapeHtml(String(k).replace(/_/g, ' '))}</div>
+            ${strength ? `<div class="rp-ai-note-v"><strong>Strength:</strong> ${escapeHtml(strength)}</div>` : ''}
+            ${focus ? `<div class="rp-ai-note-v"><strong>Focus:</strong> ${escapeHtml(focus)}</div>` : ''}
+          </div>`;
+        }).join('')}</div>`
+      : '<div class="rp-ai-empty">No shot-wise notes captured.</div>';
+
+    const metricOrder = ['head', 'stance', 'footwork', 'swing', 'execution'];
+    const metricItems = metricOrder
+      .map((k) => [k, li.metricNotes[k]])
+      .filter(([, v]) => v != null && String(v).trim() !== '');
+    const metricHtml = metricItems.length
+      ? `<div class="rp-ai-grid">${metricItems.map(([k, v]) => `<div class="rp-ai-note">
+          <div class="rp-ai-note-k">${escapeHtml(k)}</div>
+          <div class="rp-ai-note-v">${escapeHtml(clarifyCoachCue(k, String(v)))}</div>
+        </div>`).join('')}</div>`
+      : '<div class="rp-ai-empty">No metric notes captured.</div>';
+
+    return `<div class="rp-ai-card">
+      <div class="rp-ai-title-row">
+        <div class="rp-ai-title">AI Coach Analytics</div>
+        <div class="rp-ai-right">
+          ${modelLine}
+          <span class="rp-ai-badge ${badgeClass}">${badgeText}</span>
+        </div>
+      </div>
+      <p class="rp-ai-summary">${escapeHtml(li.summary || 'AI coach summary is unavailable for this session.')}</p>
+      ${li.error ? `<div class="rp-ai-error">${escapeHtml(prettyLlmError(li.error))}</div>` : ''}
+      <div class="rp-ai-section rp-ai-section--tile">
+        <div class="rp-ai-section-title">Top strengths</div>
+        ${strengthsHtml}
+      </div>
+      <div class="rp-ai-section rp-ai-section--tile">
+        <div class="rp-ai-section-title">Focus areas</div>
+        ${improvementsHtml}
+      </div>
+      <div class="rp-ai-section">
+        <div class="rp-ai-section-title">Shot-wise notes</div>
+        ${shotTypeHtml}
+      </div>
+      <div class="rp-ai-section">
+        <div class="rp-ai-section-title">Metric notes</div>
+        ${metricHtml}
+      </div>
+    </div>`;
+  }
+
+  function resolveLlmShotKey(labelRaw) {
+    const raw = String(labelRaw || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw === 'cover') return 'cover_drive';
+    if (raw === 'straight') return 'straight_drive';
+    return raw.replace(/\s+/g, '_');
+  }
+
+  function normalizeLengthLabel(lab, distM) {
+    if (lab == null || lab === '') lab = 'full';
+    if (String(lab).toLowerCase() !== 'uncertain') return String(lab).toLowerCase();
+    if (distM != null && Number.isFinite(Number(distM))) {
+      const d = Number(distM);
+      if (d < 2) return 'yorker';
+      if (d < 6) return 'full';
+      if (d < 8) return 'good_length';
+      return 'short';
+    }
+    return 'full';
+  }
+
+  function prettyToken(x) {
+    return String(x || '')
+      .split('_')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  function inferPaceBand(delivery) {
+    const raw = String(delivery?.pace_band || '').toLowerCase();
+    if (raw && raw !== 'unknown') return raw;
+    const spd = Number(delivery?.speed_kmh_est);
+    if (!Number.isFinite(spd)) return '';
+    if (spd < 90) return 'slow';
+    if (spd < 115) return 'medium';
+    if (spd < 130) return 'fast';
+    return 'very_fast';
+  }
+
+  function buildBallContextInsightHtml(confirmedShots, ballAnalytics) {
+    const ds = Array.isArray(ballAnalytics?.deliveries) ? ballAnalytics.deliveries.filter((d) => d.shot_confirmed !== false) : [];
+    if (!ds.length) {
+      return '<div class="rp-ai-empty">Ball pace/range coaching context needs tracked deliveries.</div>';
+    }
+    const scoreByShot = new Map();
+    (confirmedShots || []).forEach((s) => {
+      const sn = Number(s.shot_num);
+      const sc = Number(s.shot_score);
+      if (Number.isFinite(sn) && Number.isFinite(sc)) scoreByShot.set(sn, sc);
+    });
+    const paceAgg = new Map();
+    const lenAgg = new Map();
+    ds.forEach((d) => {
+      const sn = Number(d.shot_num ?? d.matched_confirmed_shot_num ?? d.display_num);
+      const sc = scoreByShot.get(sn);
+      if (!Number.isFinite(sc)) return;
+      const pace = inferPaceBand(d);
+      const len = normalizeLengthLabel(d?.length?.label || 'full', d?.length?.distance_m);
+      if (pace) {
+        const p = paceAgg.get(pace) || { sum: 0, n: 0 };
+        p.sum += sc;
+        p.n += 1;
+        paceAgg.set(pace, p);
+      }
+      const l = lenAgg.get(len) || { sum: 0, n: 0 };
+      l.sum += sc;
+      l.n += 1;
+      lenAgg.set(len, l);
+    });
+    const paceRows = [...paceAgg.entries()].map(([k, v]) => ({ key: k, avg: v.sum / Math.max(1, v.n), n: v.n })).sort((a, b) => b.avg - a.avg);
+    const lenRows = [...lenAgg.entries()].map(([k, v]) => ({ key: k, avg: v.sum / Math.max(1, v.n), n: v.n })).sort((a, b) => b.avg - a.avg);
+    const bestPace = paceRows[0] || null;
+    const focusPace = paceRows.length > 1 ? paceRows[paceRows.length - 1] : null;
+    const bestLen = lenRows[0] || null;
+    const focusLen = lenRows.length > 1 ? lenRows[lenRows.length - 1] : null;
+    const cards = [];
+    if (bestPace) {
+      cards.push(`<div class="rp-ai-note"><div class="rp-ai-note-k">Best vs pace</div><div class="rp-ai-note-v">${escapeHtml(prettyToken(bestPace.key))} balls are scoring best (${bestPace.avg.toFixed(1)}/10 over ${bestPace.n}).</div></div>`);
+    }
+    if (focusPace) {
+      cards.push(`<div class="rp-ai-note"><div class="rp-ai-note-k">Pace to improve</div><div class="rp-ai-note-v">More reps needed against ${escapeHtml(prettyToken(focusPace.key))} pace (${focusPace.avg.toFixed(1)}/10).</div></div>`);
+    }
+    if (bestLen) {
+      cards.push(`<div class="rp-ai-note"><div class="rp-ai-note-k">Best ball range</div><div class="rp-ai-note-v">${escapeHtml(prettyToken(bestLen.key))} length currently gives best outcomes (${bestLen.avg.toFixed(1)}/10).</div></div>`);
+    }
+    if (focusLen) {
+      cards.push(`<div class="rp-ai-note"><div class="rp-ai-note-k">Range to focus</div><div class="rp-ai-note-v">Spend extra drills on ${escapeHtml(prettyToken(focusLen.key))} length (${focusLen.avg.toFixed(1)}/10).</div></div>`);
+    }
+    return cards.length ? `<div class="rp-ai-grid">${cards.join('')}</div>` : '<div class="rp-ai-empty">Not enough matched shot/ball rows for pace-range coaching context.</div>';
+  }
+
+  function buildOverviewAiInsightsHtml(rawInsights, alertsList, confirmedShots, ballAnalytics) {
+    const li = normalizeLlmInsights(rawInsights);
+    const alerts = Array.isArray(alertsList) ? alertsList : [];
+    const dgxDrills = Array.isArray(li?.recommendedDrills) ? li.recommendedDrills : [];
+    const alertDrills = alerts.map((a) => String(a?.drill || a?.action || '').trim()).filter(Boolean);
+    const drills = [...new Set([...dgxDrills, ...alertDrills])].slice(0, 4);
+    const metricNotes = li?.metricNotes || {};
+    const postureCues = [
+      clarifyCoachCue('head', metricNotes.head),
+      clarifyCoachCue('stance', metricNotes.stance),
+      clarifyCoachCue('footwork', metricNotes.footwork),
+    ]
+      .map((x) => String(x || '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    const alertPostureCues = alerts
+      .map((a) => String(a?.player_cue || '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    const postureMerged = [...new Set([...postureCues, ...alertPostureCues])].slice(0, 3);
+    if (!postureMerged.length) {
+      postureMerged.push('Keep head still over the ball through contact.');
+      postureMerged.push('Land front foot early, then swing through the line.');
+      postureMerged.push('Stay balanced at setup with soft knees and relaxed shoulders.');
+    }
+    const drillsHtml = drills.length
+      ? `<div class="rp-ai-placard-list">${drills.map((d) => `<div class="rp-ai-placard rp-ai-placard--drill">🏏 ${escapeHtml(d)}</div>`).join('')}</div>`
+      : '<div class="rp-ai-empty">No drill suggestions available.</div>';
+    const postureHtml = `<div class="rp-ai-placard-list">${postureMerged.map((d) => `<div class="rp-ai-placard rp-ai-placard--posture">🧍 ${escapeHtml(d)}</div>`).join('')}</div>`;
+    return `
+      ${buildAiCoachPanelHtml(rawInsights, confirmedShots)}
+      <div class="rp-ai-card">
+        <div class="rp-ai-section">
+          <div class="rp-ai-section-title">Recommended drills</div>
+          ${drillsHtml}
+        </div>
+        <div class="rp-ai-section">
+          <div class="rp-ai-section-title">Posture and setup cues</div>
+          ${postureHtml}
+        </div>
+        <div class="rp-ai-section">
+          <div class="rp-ai-section-title">Pace and range game plan</div>
+          ${buildBallContextInsightHtml(confirmedShots, ballAnalytics)}
+        </div>
+      </div>`;
   }
 
   // ── Inject styles ────────────────────────────────────────
@@ -589,6 +1056,17 @@ const ReportModal = (() => {
 .rp-flag { font-family: Inter,sans-serif; font-size: 0.76rem; font-weight: 600; padding: 5px 11px; border-radius: 8px; cursor: help; letter-spacing: 0.02em; }
 .rp-shot-bars { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
 .rp-bar-row { display: flex; flex-direction: column; gap: 6px; }
+.rp-shot-advanced-hint {
+  font-family: JetBrains Mono, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  margin-top: 10px;
+  margin-bottom: 2px;
+}
+.rp-bar-row--advanced .rp-bar-label { opacity: 0.88; }
 .rp-bar-meta { display: flex; align-items: center; justify-content: space-between; }
 .rp-bar-label { font-family: Inter,sans-serif; font-size: 0.8rem; font-weight: 600; color: #334155; cursor: help; }
 .rp-bar-val   { font-family: Manrope,sans-serif; font-size: 0.96rem; font-weight: 800; }
@@ -646,6 +1124,7 @@ const ReportModal = (() => {
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 12px;
   overflow: auto;
+  max-height: 62vh;
   max-width: 100%;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   -webkit-overflow-scrolling: touch;
@@ -654,6 +1133,7 @@ const ReportModal = (() => {
 .rp-shots-table thead tr { background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%); text-align: left; }
 .rp-shots-table thead th {
   position: sticky; top: 0; z-index: 1;
+  background: #F1F5F9;
   padding: 12px 10px;
   font-size: 0.68rem;
   color: #64748B;
@@ -661,6 +1141,7 @@ const ReportModal = (() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(15,23,42,0.08);
+  box-shadow: inset 0 -1px 0 rgba(15,23,42,0.08);
   white-space: nowrap;
 }
 .rp-shots-table tbody tr:nth-child(even) { background: rgba(248,250,252,0.65); }
@@ -672,6 +1153,9 @@ const ReportModal = (() => {
 .rp-col-ball-contact { font-size: 0.82rem; white-space: nowrap; min-width: 9.5rem; }
 .rp-col-ball-est { font-weight: 700; font-family: Manrope, sans-serif; letter-spacing: 0.02em; }
 .rp-col-ball-spd { font-family: JetBrains Mono, monospace; font-weight: 600; font-size: 0.8rem; color: #475569; }
+.rp-col-ball-context { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 13rem; }
+.rp-col-ball-divider { color: #94A3B8; font-weight: 700; }
+.rp-col-swing-label { font-family: Inter,sans-serif; font-size: 0.82rem; font-weight: 700; color: #475569; }
 .rp-shots-table td.rp-col-exec { font-weight: 800; font-family: Manrope,sans-serif; color: #06B6D4; white-space: nowrap; }
 .rp-del-metric { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-width: 5.5rem; max-width: 11rem; }
 .rp-del-metric--empty { color: #94A3B8; }
@@ -732,6 +1216,33 @@ const ReportModal = (() => {
 .rp-metric-section { margin-bottom: 9px; }
 .rp-metric-tag { display: inline-block; font-family: JetBrains Mono,monospace; font-size: 0.55rem; font-weight: 600; color: #94A3B8; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 2px 7px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
 .rp-metric-section p { font-family: Inter,sans-serif; font-size: 0.82rem; color: #475569; line-height: 1.55; margin: 0; }
+.rp-ai-card { background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:14px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.05); margin-bottom:16px; }
+.rp-ai-card--muted { opacity:0.92; }
+.rp-ai-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+.rp-ai-title { font-family:Manrope,sans-serif; font-size:1rem; font-weight:800; color:#0F172A; }
+.rp-ai-right { display:flex; align-items:center; gap:8px; }
+.rp-ai-model { font-family:JetBrains Mono, ui-monospace, monospace; font-size:0.72rem; color:#64748B; }
+.rp-ai-badge { border-radius:999px; padding:2px 9px; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; border:1px solid transparent; }
+.rp-ai-badge--ok { color:#047857; background:rgba(16,185,129,0.14); border-color:rgba(16,185,129,0.3); }
+.rp-ai-badge--warn { color:#B45309; background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.3); }
+.rp-ai-badge--muted { color:#475569; background:rgba(148,163,184,0.14); border-color:rgba(148,163,184,0.3); }
+.rp-ai-summary { margin:0 0 10px; font-size:0.86rem; color:#334155; line-height:1.5; }
+.rp-ai-error { margin-bottom:10px; font-size:0.78rem; color:#B45309; }
+.rp-ai-section { margin-top:10px; }
+.rp-ai-section-title { font-size:0.73rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+.rp-ai-list { margin:0; padding-left:18px; color:#334155; font-size:0.84rem; line-height:1.45; }
+.rp-ai-empty { font-size:0.8rem; color:#94A3B8; }
+.rp-ai-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+.rp-ai-note { border:1px solid rgba(0,0,0,0.07); border-radius:10px; background:#F8FAFC; padding:8px 10px; }
+.rp-ai-note-k { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:#64748B; margin-bottom:4px; font-weight:700; }
+.rp-ai-note-v { font-size:0.82rem; color:#334155; line-height:1.4; }
+.rp-ai-section--tile { border-top:1px dashed rgba(15,23,42,0.12); padding-top:10px; }
+.rp-ai-placard-list { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+.rp-ai-placard { border-radius:10px; padding:8px 10px; font-size:0.82rem; line-height:1.35; border:1px solid rgba(15,23,42,0.1); border-left-width:4px; background:#F8FAFC; color:#334155; }
+.rp-ai-placard--good { background:rgba(16,185,129,0.10); border-color:rgba(16,185,129,0.28); }
+.rp-ai-placard--focus { background:rgba(245,158,11,0.10); border-color:rgba(245,158,11,0.28); }
+.rp-ai-placard--drill { background:rgba(59,130,246,0.09); border-color:rgba(59,130,246,0.25); }
+.rp-ai-placard--posture { background:rgba(14,165,233,0.09); border-color:rgba(14,165,233,0.25); }
 
 /* ── Optional original video block (player session reports) ── */
 .rp-video-block {
@@ -798,6 +1309,8 @@ const ReportModal = (() => {
   .rp-highlights { grid-template-columns: 1fr; }
   .rp-footwork { grid-template-columns: repeat(3,1fr); }
   .rp-metrics-grid { grid-template-columns: 1fr; }
+  .rp-ai-grid { grid-template-columns: 1fr; }
+  .rp-ai-placard-list { grid-template-columns: 1fr; }
   .rp-tabs { gap: 0; overflow-x: auto; }
   .rp-tab { white-space: nowrap; }
 }`;
@@ -808,6 +1321,11 @@ const ReportModal = (() => {
   function buildModal(data) {
     const { shots, analysis } = data;
     const ballAnalytics = data.ballAnalytics ?? data.completePayload?.ball_analytics ?? null;
+    const llmInsights =
+      data.llmInsights ??
+      data.completePayload?.llm_insights ??
+      analysis?.llm_insights ??
+      buildUiFallbackInsights(analysis);
     const originalVideoUrl = data.originalVideoUrl || '';
     const originalVideoName = data.originalVideoName || '';
     const sessionDateLabel = data.sessionDateLabel || '';
@@ -822,7 +1340,6 @@ const ReportModal = (() => {
     const confirmedShots = shots.filter(s => Number(s.conf ?? s.confidence) >= 0.3);
     const totalShots = confirmedShots.length;
     const confirmedCount = summary.shotsConfirmed || totalShots;
-    const avgSpeed = summary.avgSpeed != null ? Number(summary.avgSpeed).toFixed(1) : '—';
     const avgScore = summary.avgShotScore != null
       ? Number(summary.avgShotScore).toFixed(1)
       : (totalShots ? (confirmedShots.reduce((a,s) => a + (s.shot_score||0), 0) / totalShots).toFixed(1) : '—');
@@ -837,12 +1354,14 @@ const ReportModal = (() => {
     const avHead = summary.avgHead != null ? Math.round(summary.avgHead) : null;
     const avStab = summary.avgStability != null ? Math.round(summary.avgStability) : null;
     const avFw = summary.avgFootwork != null ? Math.round(summary.avgFootwork) : null;
-    const avSi = summary.avgSwingIntensity != null ? Math.round(summary.avgSwingIntensity) : null;
+    const avPath = summary.avgSwingPath != null ? Math.round(summary.avgSwingPath) : null;
+    const avEx = summary.avgExecution != null ? Math.round(summary.avgExecution) : null;
     const metricBits = [];
     if (avHead != null) metricBits.push(`Head ${avHead}`);
     if (avStab != null) metricBits.push(`Stance ${avStab}`);
     if (avFw != null) metricBits.push(`Feet ${avFw}`);
-    if (avSi != null) metricBits.push(`Swing ${avSi}`);
+    if (avPath != null) metricBits.push(`Swing arc ${avPath}`);
+    if (avEx != null) metricBits.push(`Shot execution ${avEx}`);
     const metricSubtitle = metricBits.length
       ? `<div class="rp-subtitle rp-subtitle-metrics">Session averages (0–100): ${metricBits.join(' · ')}</div>`
       : '';
@@ -855,6 +1374,8 @@ const ReportModal = (() => {
       symmetry_score: s.symmetry_score != null ? Math.round(s.symmetry_score) : 0,
       footwork_score: s.footwork_score != null ? Math.round(s.footwork_score) : 0,
       swing_intensity: s.swing_intensity != null ? Math.round(s.swing_intensity) : 0,
+      swing_path_score: s.swing_path_score != null ? Math.round(s.swing_path_score) : 0,
+      execution_score: s.execution_score != null ? Math.round(s.execution_score) : 0,
       score:    s.shot_score || 0,
     }));
 
@@ -867,6 +1388,7 @@ const ReportModal = (() => {
             compact: false,
           })
         : '<p class="rp-length-empty">Length insights require <code>lengthInsights.js</code> to load.</p>';
+    const aiOverviewHtml = buildOverviewAiInsightsHtml(llmInsights, alerts, confirmedShots, ballAnalytics);
 
     const videoPanel = originalVideoUrl
       ? `
@@ -895,7 +1417,7 @@ const ReportModal = (() => {
             <div class="rp-badge">${stance}</div>
             <div>
               <div class="rp-title">Net Session Report</div>
-              <div class="rp-subtitle">${summary.shotsConfirmed || totalShots} confirmed shots &nbsp;·&nbsp; Avg Speed: ${avgSpeed} km/h &nbsp;·&nbsp; Avg Score: ${avgScore}/10 ${usage ? `&nbsp;·&nbsp; ${usage}` : ''}</div>
+              <div class="rp-subtitle">${summary.shotsConfirmed || totalShots} confirmed shots &nbsp;·&nbsp; Avg Score: ${avgScore}/10 ${usage ? `&nbsp;·&nbsp; ${usage}` : ''}</div>
               ${metricSubtitle}
             </div>
           </div>
@@ -912,7 +1434,7 @@ const ReportModal = (() => {
           <button class="rp-tab" data-tab="shots">All Deliveries</button>
           <button class="rp-tab" data-tab="length">Ball length</button>
           <button class="rp-tab" data-tab="trends">Scoring Zones</button>
-          <button class="rp-tab" data-tab="metrics">Coaching Focus</button>
+          <button class="rp-tab" data-tab="metrics">What metrics mean</button>
           ${originalVideoUrl ? '<button class="rp-tab" data-tab="video">Recorded Video</button>' : ''}
         </div>
 
@@ -956,20 +1478,17 @@ const ReportModal = (() => {
                 ${buildPieChart(Math.round(summary.avgFootwork || 0), '#0891B2', 'Foot movement', 'Pre-shot feet and plant timing vs contact')}
               </div>
               <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgSwingIntensity || 0), '#EAB308', 'Swing intensity', 'Session-normalized swing effort (0–100)')}
+                ${buildPieChart(Math.round(summary.avgSwingPath || 0), '#8B5CF6', 'Swing arc', 'Average hand path quality into contact')}
               </div>
               <div class="rp-pie-card">
-                ${buildPieChart(Math.round((Number(avgScore) || 0) * 10), '#FAAD14', 'Shot execution', `${avgScore}/10 across confirmed deliveries`)}
+                ${buildPieChart(Math.round(summary.avgExecution || 0), '#F97316', 'Shot execution', 'Did your stroke match the ball length? (0–100)')}
+              </div>
+              <div class="rp-pie-card">
+                ${buildPieChart(Math.round((Number(avgScore) || 0) * 10), '#FAAD14', 'Overall score', `${avgScore}/10 across confirmed deliveries`)}
               </div>
             </div>
-            <div class="rp-speed-note">
-              <div class="rp-speed-note-title">Avg Bat Speed: ${avgSpeed} km/h</div>
-              <div class="rp-speed-note-range">Range this session: ${confirmedShots.length ? Math.min(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} – ${confirmedShots.length ? Math.max(...confirmedShots.map(s => Number(s.peak_swing_speed || 0))).toFixed(1) : '—'} km/h</div>
-              <div class="rp-speed-note-sub">Bat speed is shown alongside the five core scores; coaching flags and plain-language cues sit in <strong>All Deliveries</strong>.</div>
-            </div>
-
-            <div class="rp-section-title">Today's Coaching Focus</div>
-            <div class="rp-shots-grid">${buildCoachingFocus(alerts)}            </div>
+            <div class="rp-section-title">AI Coach Insights</div>
+            ${aiOverviewHtml}
           </div>
 
           <!-- ═══ BALL LENGTH ═══ -->
@@ -995,9 +1514,10 @@ const ReportModal = (() => {
                     <th>Head position <span class="rp-th-hint">/100</span></th>
                     <th>Batting stance <span class="rp-th-hint">/100</span></th>
                     <th>Foot movement <span class="rp-th-hint">/100</span></th>
-                    <th>Swing intensity <span class="rp-th-hint">/100</span></th>
-                    <th>Bat speed</th>
-                    <th>Ball at contact <span class="rp-th-hint">(track)</span></th>
+                    <th>Swing arc <span class="rp-th-hint">/100</span></th>
+                    <th>Shot execution <span class="rp-th-hint">/100</span></th>
+                    <th>Ball info <span class="rp-th-hint">(length + pace)</span></th>
+                    <th>Swing intensity</th>
                     <th>Coaching flags &amp; cues</th>
                   </tr>
                 </thead>
@@ -1007,17 +1527,27 @@ const ReportModal = (() => {
                     const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
                     const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
                     const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
+                    const pathSc = s.swing_path_score != null ? Math.round(s.swing_path_score) : null;
+                    const exSc = s.execution_score != null ? Math.round(s.execution_score) : null;
                     const sw = s.swing_intensity != null ? Math.round(s.swing_intensity) : null;
                     const flagRows = [];
+                    const seenFlags = new Set();
+                    const pushFlag = (row) => {
+                      if (!row) return;
+                      const key = String(row.label || '').trim().toLowerCase();
+                      if (!key || seenFlags.has(key)) return;
+                      seenFlags.add(key);
+                      flagRows.push(row);
+                    };
                     for (const f of s.flags || []) {
                       const base = String(f).split(':')[0];
                       const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: '#64748B', desc: '' };
-                      flagRows.push({ label: fi.label, color: fi.color, desc: fi.desc || '' });
+                      pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
                     }
                     if (s.footwork_flag) {
                       const ff = String(s.footwork_flag);
                       const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: '#64748B', desc: '' };
-                      flagRows.push({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
+                      pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
                     }
                     const chips = flagRows.length
                       ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:${r.color}18;color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
@@ -1025,8 +1555,35 @@ const ReportModal = (() => {
                     const flagDetails = flagRows.length
                       ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
                       : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
-                    const speed = Number(s.peak_swing_speed || 0);
-                    const speedText = speed >= 140 ? '~140+' : speed.toFixed(1);
+                    const llmShotNote = resolveShotTypeNoteForDelivery(llmInsights, s.shot_type || s.label || '');
+                    const deliveryShotKey = resolveLlmShotKey(s.shot_type || s.label || '');
+                    const llmStrengthRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.strength || '').trim() : '';
+                    const llmFocusRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.focus || '').trim() : '';
+                    const llmStrengthRaw = textMentionsOtherShot(llmStrengthRaw0, deliveryShotKey) ? '' : llmStrengthRaw0;
+                    const llmFocusRaw = textMentionsOtherShot(llmFocusRaw0, deliveryShotKey) ? '' : llmFocusRaw0;
+                    const metricNotes = llmInsights?.metric_notes && typeof llmInsights.metric_notes === 'object'
+                      ? llmInsights.metric_notes
+                      : null;
+                    const cueMetricKey = resolveMetricKeyFromScores(head, stab, fw, pathSc, exSc);
+                    const aiMetricHint = metricNotes
+                      ? (
+                          (cueMetricKey === 'head' && metricNotes.head) ? metricNotes.head :
+                          (cueMetricKey === 'footwork' && metricNotes.footwork) ? metricNotes.footwork :
+                          (cueMetricKey === 'stance' && metricNotes.stance) ? metricNotes.stance :
+                          (cueMetricKey === 'swing_path' && metricNotes.swing_path) ? metricNotes.swing_path :
+                          (cueMetricKey === 'swing' && metricNotes.swing) ? metricNotes.swing :
+                          (cueMetricKey === 'execution' && metricNotes.shot_vs_length) ? metricNotes.shot_vs_length :
+                          metricNotes.shot_vs_length || metricNotes.execution || ''
+                        )
+                      : '';
+                    const llmStrength = llmStrengthRaw || llmInsights?.strengths?.[0] || 'Good base; keep repeating this setup under pressure.';
+                    const llmFocus = llmFocusRaw || llmInsights?.improvements?.[0] || clarifyCoachCue(cueMetricKey, aiMetricHint);
+                    const aiCue = clarifyCoachCue(cueMetricKey, aiMetricHint);
+                    const llmDetailRows = [];
+                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0EA5E9">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
+                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#F59E0B">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
+                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0F766E">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
+                    const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
                     const exec = s.shot_score != null ? Number(s.shot_score) : 0;
                     const execCol = exec >= 7 ? '#10B981' : exec >= 5 ? '#06B6D4' : exec >= 3 ? '#EAB308' : '#EF4444';
                     return `
@@ -1037,13 +1594,14 @@ const ReportModal = (() => {
                       <td>${formatDeliveryMetric100(head, s.head_quality_label)}</td>
                       <td>${formatDeliveryMetric100(stab, s.symmetry_label)}</td>
                       <td>${formatDeliveryMetric100(fw, s.footwork_label)}</td>
-                      <td>${formatDeliveryMetric100(sw, s.swing_intensity_label)}</td>
-                      <td style="font-family:JetBrains Mono,monospace;font-size:0.84rem;font-weight:600;white-space:nowrap">${speedText} km/h</td>
-                      <td class="rp-col-ball-contact">${formatBowlingFacedCell(ballDel)}</td>
+                      <td>${formatDeliveryMetric100(pathSc, s.swing_path_label)}</td>
+                      <td>${formatDeliveryMetric100(exSc, s.execution_label)}</td>
+                      <td class="rp-col-ball-contact">${formatBallContextCell(ballDel)}</td>
+                      <td>${formatSwingIntensityLabelCell(s.swing_intensity_label)}</td>
                       <td class="rp-col-flags">
                         <div class="rp-flag-stack">${chips}</div>
-                        <details class="rp-shots-detail"><summary>▶ Coaching detail</summary>
-                          ${flagDetails}
+                        <details class="rp-shots-detail"><summary>▶ AI coach detail</summary>
+                          ${combinedDetails}
                         </details>
                       </td>
                     </tr>`;
@@ -1062,9 +1620,9 @@ const ReportModal = (() => {
             ${buildLineGraph(trendShots, 'head_quality_score',  '#6C63FF', 'Head position (0–100)', 100)}
             ${buildLineGraph(trendShots, 'symmetry_score',  '#10B981', 'Batting stance (0–100)', 100)}
             ${buildLineGraph(trendShots, 'footwork_score', '#0891B2', 'Foot movement (0–100)', 100)}
-            ${buildLineGraph(trendShots, 'swing_intensity', '#EAB308', 'Swing intensity (0–100)', 100)}
-            ${buildLineGraph(trendShots, 'speed', '#17B890', 'Bat speed (km/h)', 140)}
-            ${buildLineGraph(trendShots, 'score', '#FAAD14', 'Shot execution rating (/10)', 10)}
+            ${buildLineGraph(trendShots, 'swing_path_score', '#8B5CF6', 'Swing arc (0–100)', 100)}
+            ${buildLineGraph(trendShots, 'execution_score', '#F97316', 'Shot execution (0–100)', 100)}
+            ${buildLineGraph(trendShots, 'score', '#FAAD14', 'Overall score (/10)', 10)}
             ${summary.shotsConfirmed >= 6 ? `
               <div class="rp-trend-summary">
                 <div class="rp-trend-summary-title">Session Momentum (1st vs 2nd Half)</div>
@@ -1072,16 +1630,16 @@ const ReportModal = (() => {
                   Head position: ${Math.round(summary.trend.first_half_head_quality_score || 0)} → ${Math.round(summary.trend.second_half_head_quality_score || 0)}<br/>
                   Batting stance: ${Math.round(summary.trend.first_half_symmetry_score || 0)} → ${Math.round(summary.trend.second_half_symmetry_score || 0)}<br/>
                   Foot movement: ${Math.round(summary.trend.first_half_footwork_score || 0)} → ${Math.round(summary.trend.second_half_footwork_score || 0)}<br/>
-                  Swing intensity: ${Math.round(summary.trend.first_half_swing_intensity || 0)} → ${Math.round(summary.trend.second_half_swing_intensity || 0)}<br/>
-                  Bat speed: ${Math.round(summary.trend.first_half_speed || 0)} → ${Math.round(summary.trend.second_half_speed || 0)} km/h
+                  Swing arc: ${Math.round(summary.trend.first_half_swing_path_score || 0)} → ${Math.round(summary.trend.second_half_swing_path_score || 0)}<br/>
+                  Shot execution: ${Math.round(summary.trend.first_half_execution_score || 0)} → ${Math.round(summary.trend.second_half_execution_score || 0)}
                 </div>
-                ${summary.fatigue ? '<div class="rp-trend-summary-note">Swing intensity or bat speed dipped in the second half — check fatigue or rushing the trigger.</div>' : ''}
+                ${summary.fatigue ? '<div class="rp-trend-summary-note">Swing intensity or bat speed dipped in the second half — check fatigue. Also watch swing arc trend.</div>' : ''}
               </div>` : ''}
           </div>
 
           <!-- ═══ METRICS ═══ -->
           <div data-panel="metrics" style="display:none">
-            <div class="rp-section-title">Coaching Focus Playbook</div>
+            <div class="rp-section-title">What metrics mean</div>
             <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
               Cricket-first interpretation: read dominant hand, head position, base stability, and scoring arc together before setting work-on drills.
             </p>
@@ -1171,6 +1729,7 @@ const ReportModal = (() => {
       analysis,
       stance: appState.completePayload?.handedness || 'RHB',
       ballAnalytics: appState.completePayload?.ball_analytics || null,
+      llmInsights: appState.llmInsights || appState.latestLlmInsights || appState.completePayload?.llm_insights || null,
       originalVideoUrl: resolvedVideoUrl,
       originalVideoName: resolvedVideoName,
       sessionDateLabel: appState.sessionDateLabel || '',
