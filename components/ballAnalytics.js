@@ -18,6 +18,13 @@ const BallAnalytics = (() => {
   let showTrail = true;
   let togglesWired = false;
   let pitchMapPulseRaf = null;
+  /** Last payload from setData — insights / session speed / errors. */
+  let lastBallAnalyticsRef = null;
+  /**
+   * When a number: show pitch markers / splits / table rows only for deliveries with shot # ≤ cap (replay sync).
+   * When null: show all confirmed deliveries (no playback filter).
+   */
+  let playbackShotCap = null;
 
   /** Length-zone bars — sand + outfield greens (wagon-adjacent). */
   const ZONE_BAR_COLORS = {
@@ -135,7 +142,7 @@ const BallAnalytics = (() => {
 
   function startPitchMapAnimationIfNeeded() {
     stopPitchMapAnimation();
-    const ds = confirmedDeliveriesOnly();
+    const ds = visibleConfirmedDeliveries();
     let maxMatched = -1;
     ds.forEach((d) => {
       if (d.ball_track_matched === false) return;
@@ -162,6 +169,22 @@ const BallAnalytics = (() => {
   /** Classifier-confirmed shots only. `shot_confirmed === false` is hidden in table / pitch / splits; legacy rows omit the field and stay visible. */
   function confirmedDeliveriesOnly() {
     return deliveries.filter((d) => d.shot_confirmed !== false);
+  }
+
+  function deliveryShotNum(d) {
+    if (d.display_num != null && Number.isFinite(Number(d.display_num))) return Number(d.display_num);
+    if (d.shot_num != null && Number.isFinite(Number(d.shot_num))) return Number(d.shot_num);
+    return null;
+  }
+
+  /** Confirmed deliveries, optionally limited to shots revealed so far during video replay. */
+  function visibleConfirmedDeliveries() {
+    const base = confirmedDeliveriesOnly();
+    if (playbackShotCap === null) return base;
+    return base.filter((d) => {
+      const n = deliveryShotNum(d);
+      return n != null && n <= playbackShotCap;
+    });
   }
 
   function videoContentRect() {
@@ -204,6 +227,7 @@ const BallAnalytics = (() => {
         showTrail = tr.checked;
       }
     }
+    updatePitchMapUi();
   }
 
   function mapToPitchMapZone(lengthLabel) {
@@ -274,28 +298,78 @@ const BallAnalytics = (() => {
         deliveries: items,
         width: 980,
         height: 1320,
-        animated: true,
+        animated: Array.isArray(items) && items.length > 0,
       }),
     );
     return true;
   }
 
-  function clearReactPitchMap() {
-    if (pitchMapReactRoot) pitchMapReactRoot.render(null);
-    if (pitchMapReactRootEl) pitchMapReactRootEl.hidden = true;
-    if (pitchCanvas) pitchCanvas.hidden = false;
+  /** Pitch column stays visible (like wagon wheel); never tied to Ball Analytics section visibility. */
+  function syncPitchColumnWithSection() {
+    const pitchCol = document.getElementById('analysisPitchColumn');
+    if (pitchCol) pitchCol.hidden = false;
+  }
+
+  /** Always show pitch: React PitchMap with deliveries (or empty pitch); fallback canvas if React unavailable. */
+  function updatePitchMapUi() {
+    syncPitchColumnWithSection();
+
+    const pitchTitleEl = document.querySelector('.ball-pitch-title');
+    const defaultHalf = HALF_PITCH_FROM_STRIKER_M;
+    const sm =
+      lastBallAnalyticsRef &&
+      calibration &&
+      typeof calibration.segment_m === 'number' &&
+      calibration.segment_m > 0
+        ? calibration.segment_m
+        : defaultHalf;
+    if (pitchTitleEl) {
+      pitchTitleEl.textContent = `Pitch map · length zones (0–${sm.toFixed(2)} m from striker · 11 yd halfway)`;
+    }
+
+    const pitchMapItems = lastBallAnalyticsRef
+      ? mapDeliveriesForPitchMap(visibleConfirmedDeliveries(), sm)
+      : [];
+
+    const usedReactPitchMap = renderReactPitchMap(pitchMapItems);
+
+    if (!usedReactPitchMap && pitchCanvas && pctx) {
+      if (pitchMapReactRootEl) pitchMapReactRootEl.hidden = true;
+      pitchCanvas.hidden = false;
+      requestAnimationFrame(() => {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = pitchCanvas.getBoundingClientRect();
+        const rw = rect.width || 280;
+        const rh = rect.height || 360;
+        pitchCanvas.width = Math.floor(rw * dpr);
+        pitchCanvas.height = Math.floor(rh * dpr);
+        pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawPitchMap();
+        const wantLegacyPulse =
+          lastBallAnalyticsRef &&
+          (deliveries.length > 0 || Boolean(lastBallAnalyticsRef.error));
+        if (wantLegacyPulse) startPitchMapAnimationIfNeeded();
+        else stopPitchMapAnimation();
+      });
+    } else if (pitchCanvas) {
+      pitchCanvas.hidden = true;
+      stopPitchMapAnimation();
+    } else {
+      stopPitchMapAnimation();
+    }
   }
 
   function clear() {
     frameMap = new Map();
     deliveries = [];
     calibration = null;
-    clearReactPitchMap();
     if (pctx && pitchCanvas) {
       pctx.clearRect(0, 0, pitchCanvas.width, pitchCanvas.height);
     }
     const sec = document.getElementById('ballAnalyticsSection');
     if (sec) sec.hidden = true;
+    lastBallAnalyticsRef = null;
+    playbackShotCap = null;
     const paceEl = document.getElementById('ballPaceSplit');
     const lenEl = document.getElementById('ballLengthSplit');
     const ins = document.getElementById('ballInsights');
@@ -311,7 +385,7 @@ const BallAnalytics = (() => {
     }
     if (octx && overlayCanvas) octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     stopPitchMapAnimation();
-    clearReactPitchMap();
+    updatePitchMapUi();
   }
 
   function drawPitchMap() {
@@ -516,7 +590,7 @@ const BallAnalytics = (() => {
     pctx.restore();
 
     const rawMarkers = [];
-    confirmedDeliveriesOnly().forEach((d) => {
+    visibleConfirmedDeliveries().forEach((d) => {
       const lbl = d.display_num != null ? String(d.display_num) : (d.shot_num != null ? String(d.shot_num) : '?');
       const matched = d.ball_track_matched !== false;
       const bounce = d.pitch_plot && d.pitch_plot.bounce;
@@ -534,7 +608,7 @@ const BallAnalytics = (() => {
       rawMarkers.push({ lbl, matched, fillC, glowC, rDot, bx, by });
     });
     let maxMatchedNum = -1;
-    confirmedDeliveriesOnly().forEach((d) => {
+    visibleConfirmedDeliveries().forEach((d) => {
       if (d.ball_track_matched === false) return;
       const n = d.display_num != null ? Number(d.display_num) : (d.shot_num != null ? Number(d.shot_num) : NaN);
       if (Number.isFinite(n)) maxMatchedNum = Math.max(maxMatchedNum, n);
@@ -585,16 +659,29 @@ const BallAnalytics = (() => {
     });
   }
 
+  function resolvePaceBandKey(d) {
+    const raw = String(d.pace_band || '').toLowerCase();
+    if (raw && Object.prototype.hasOwnProperty.call(PACE_COLORS, raw) && raw !== 'unknown') return raw;
+    const s = Number(d.speed_kmh_est);
+    if (Number.isFinite(s) && s > 0) {
+      if (s >= 120) return 'very_fast';
+      if (s >= 95) return 'fast';
+      if (s >= 75) return 'medium';
+      return 'slow';
+    }
+    return 'slow';
+  }
+
   function renderSplits() {
     const paceEl = document.getElementById('ballPaceSplit');
     const lenEl = document.getElementById('ballLengthSplit');
     if (!paceEl || !lenEl) return;
-    const ds = confirmedDeliveriesOnly();
+    const ds = visibleConfirmedDeliveries();
     const pc = {};
     PACE_BAND_ORDER.forEach((k) => { pc[k] = 0; });
     ds.forEach((d) => {
-      const k = d.pace_band;
-      if (k && Object.prototype.hasOwnProperty.call(pc, k)) pc[k] += 1;
+      const k = resolvePaceBandKey(d);
+      if (Object.prototype.hasOwnProperty.call(pc, k)) pc[k] += 1;
     });
     const paceTotal = PACE_BAND_ORDER.reduce((a, k) => a + pc[k], 0) || 1;
 
@@ -647,7 +734,7 @@ const BallAnalytics = (() => {
     }
 
     paceEl.innerHTML = '<div class="ball-split-title">Pace band</div>'
-      + '<p class="ball-split-hint">Confirmed shots only. Share in each band (excludes unclassified pace).</p>'
+      + '<p class="ball-split-hint">Confirmed shots only (current replay window). Bands use km/h when pace label is missing.</p>'
       + PACE_BAND_ORDER.map((k) =>
         splitBarRow(humanizeToken(k), pc[k] || 0, paceTotal, PACE_COLORS[k] || '#64748B')).join('');
 
@@ -659,7 +746,7 @@ const BallAnalytics = (() => {
         ZONE_BAR_COLORS[k] || '#64748B',
       ));
     lenEl.innerHTML = '<div class="ball-split-title">Length zone</div>'
-      + '<p class="ball-split-hint">Confirmed shots only. Zones match ICC pitch length (22 yd); halfway ≈ 11 yd from striker.</p>'
+      + '<p class="ball-split-hint">Confirmed shots only (current replay window). Zones match ICC pitch length (22 yd); halfway ≈ 11 yd from striker.</p>'
       + (lenRows.length
         ? lenRows.join('')
         : '<p class="ball-muted">No length data for confirmed shots.</p>');
@@ -672,9 +759,14 @@ const BallAnalytics = (() => {
       tbl.innerHTML = '<p class="ball-empty">No ball deliveries detected (check model path and video).</p>';
       return;
     }
-    const rowsSrc = confirmedDeliveriesOnly();
+    const rowsSrc = visibleConfirmedDeliveries();
     if (!rowsSrc.length) {
-      tbl.innerHTML = '<p class="ball-empty">No confirmed shots with ball analytics (unconfirmed shots are omitted).</p>';
+      const hasAwaited =
+        playbackShotCap !== null
+        && confirmedDeliveriesOnly().length > 0;
+      tbl.innerHTML = hasAwaited
+        ? '<p class="ball-muted">Play the replay — each row appears when that shot is reached (same timing as biomechanics).</p>'
+        : '<p class="ball-empty">No confirmed shots with ball analytics (unconfirmed shots are omitted).</p>';
       return;
     }
     const numericSpeeds = rowsSrc
@@ -731,7 +823,7 @@ const BallAnalytics = (() => {
         <td class="ball-td-speed"><span class="ball-speed-val">${spd}</span></td>
       </tr>`;
     }).join('');
-    tbl.innerHTML = `<table class="ball-mini-table ball-delivery-table"><caption class="ball-table-caption">Per-delivery metrics — classifier-confirmed shots only (single-camera tracking).</caption><thead><tr><th scope="col" class="ball-th-shot">Shot</th><th scope="col" class="ball-th-pace">Pace</th><th scope="col" class="ball-th-length">Length</th><th scope="col" class="ball-th-speed">Speed</th></tr></thead><tbody>${rows}</tbody></table>`;
+    tbl.innerHTML = `<table class="ball-mini-table ball-delivery-table"><caption class="ball-table-caption">Per-delivery metrics — classifier-confirmed shots only (updates during replay).</caption><thead><tr><th scope="col" class="ball-th-shot">Shot</th><th scope="col" class="ball-th-pace">Pace</th><th scope="col" class="ball-th-length">Length</th><th scope="col" class="ball-th-speed">Speed</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function renderInsights(ins) {
@@ -744,15 +836,15 @@ const BallAnalytics = (() => {
   }
 
   /** Session-level ball speed summary (confirmed deliveries with a numeric speed). */
-  function renderBallSessionSpeed(ballAnalytics) {
+  function renderBallSessionSpeed() {
     const strip = document.getElementById('ballAvgSpeedStrip');
     if (!strip) return;
-    if (!ballAnalytics || ballAnalytics.error) {
+    if (!lastBallAnalyticsRef || lastBallAnalyticsRef.error) {
       strip.hidden = true;
       strip.innerHTML = '';
       return;
     }
-    const ds = confirmedDeliveriesOnly().filter(
+    const ds = visibleConfirmedDeliveries().filter(
       (d) => d.speed_kmh_est != null && Number.isFinite(Number(d.speed_kmh_est)),
     );
     if (!ds.length) {
@@ -770,6 +862,43 @@ const BallAnalytics = (() => {
       <div class="ball-speed-session-range">Range this session: ${lo.toFixed(1)} – ${hi.toFixed(1)} km/h</div>
       <div class="ball-speed-session-sub">Single-camera ball track — pace band and km/h align with the delivery table. Compare with bat speed in the session report.</div>
     `;
+  }
+
+  /** Rebuild pitch map, pace/length bars, and delivery table from current deliveries + playback cap. */
+  function syncPlaybackScopedUi() {
+    const sec = document.getElementById('ballAnalyticsSection');
+    const showStats =
+      Boolean(lastBallAnalyticsRef) &&
+      (deliveries.length > 0 || Boolean(lastBallAnalyticsRef.error));
+    if (sec) sec.hidden = !showStats;
+
+    updatePitchMapUi();
+
+    if (!lastBallAnalyticsRef) return;
+
+    renderSplits();
+    renderTable();
+    renderInsights(lastBallAnalyticsRef.insights || {});
+    renderBallSessionSpeed();
+  }
+
+  function setPlaybackVisibility(cap) {
+    if (!lastBallAnalyticsRef || lastBallAnalyticsRef.enabled === false) return;
+    let next = null;
+    if (cap === null || cap === undefined) next = null;
+    else {
+      const n = Number(cap);
+      next = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : null;
+    }
+    if (playbackShotCap === next) return;
+    playbackShotCap = next;
+    syncPlaybackScopedUi();
+    if (lastBallAnalyticsRef.error) {
+      const tbl = document.getElementById('ballDeliveryTable');
+      if (tbl) {
+        tbl.innerHTML = `<p class="ball-empty ball-warn">${escapeHtml(lastBallAnalyticsRef.error)}</p>`;
+      }
+    }
   }
 
   function escapeHtml(s) {
@@ -793,6 +922,8 @@ const BallAnalytics = (() => {
     frameMap = new Map();
     deliveries = [];
     calibration = null;
+    lastBallAnalyticsRef = null;
+    playbackShotCap = 0;
 
     const strip = document.getElementById('ballAvgSpeedStrip');
     if (strip) {
@@ -803,53 +934,20 @@ const BallAnalytics = (() => {
     if (!ballAnalytics || ballAnalytics.enabled === false) {
       if (sec) sec.hidden = true;
       stopPitchMapAnimation();
+      playbackShotCap = null;
+      updatePitchMapUi();
       return;
     }
 
     deliveries = ballAnalytics.deliveries || [];
     calibration = ballAnalytics.calibration || null;
+    lastBallAnalyticsRef = ballAnalytics;
     fps = videoFps || 30;
     (ballAnalytics.frame_overlays || []).forEach((fo) => {
       frameMap.set(fo.frame, fo.boxes || []);
     });
 
-    const show = deliveries.length > 0 || Boolean(ballAnalytics.error);
-    if (sec) sec.hidden = !show;
-
-    const pitchTitleEl = document.querySelector('.ball-pitch-title');
-    const sm =
-      calibration && typeof calibration.segment_m === 'number' && calibration.segment_m > 0
-        ? calibration.segment_m
-        : HALF_PITCH_FROM_STRIKER_M;
-    if (pitchTitleEl) {
-      pitchTitleEl.textContent =
-        `Pitch map · length zones (0–${sm.toFixed(2)} m from striker · 11 yd halfway)`;
-    }
-
-    const pitchMapItems = mapDeliveriesForPitchMap(confirmedDeliveriesOnly(), sm);
-    const usedReactPitchMap = renderReactPitchMap(pitchMapItems);
-
-    if (!usedReactPitchMap && pitchCanvas && show) {
-      pitchCanvas.hidden = false;
-      requestAnimationFrame(() => {
-        const dpr = window.devicePixelRatio || 1;
-        const rect = pitchCanvas.getBoundingClientRect();
-        const rw = rect.width || 280;
-        const rh = rect.height || 360;
-        pitchCanvas.width = Math.floor(rw * dpr);
-        pitchCanvas.height = Math.floor(rh * dpr);
-        if (pctx) pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawPitchMap();
-        startPitchMapAnimationIfNeeded();
-      });
-    } else {
-      stopPitchMapAnimation();
-    }
-
-    renderSplits();
-    renderTable();
-    renderInsights(ballAnalytics.insights || {});
-    renderBallSessionSpeed(ballAnalytics);
+    syncPlaybackScopedUi();
 
     if (ballAnalytics.error) {
       if (tbl) {
@@ -897,7 +995,7 @@ const BallAnalytics = (() => {
     if (showTrail && deliveries.length) {
       const trailSpan = 72;
       octx.lineWidth = 2;
-      confirmedDeliveriesOnly().forEach((d) => {
+      visibleConfirmedDeliveries().forEach((d) => {
         const traj = (d.pitch_plot && d.pitch_plot.trajectory) || [];
         if (traj.length < 2) return;
         octx.beginPath();
@@ -936,6 +1034,7 @@ const BallAnalytics = (() => {
   return {
     init,
     setData,
+    setPlaybackVisibility,
     clear,
     drawOverlayAtTime,
     resizeOverlay,

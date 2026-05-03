@@ -200,6 +200,8 @@ let state = {
   coachComparePlayerLabel: null,
   compareSessionLabelOverrides: null,
   coachDashboardView: 'players',
+  /** Dedupe BallAnalytics.setPlaybackVisibility calls during video timeupdate (vs last computed shot cap). */
+  ballPlaybackCap: -1,
   /**
    * From GET /api/public-config → analysisCacheVersion (pipeline_cache_version.py).
    * Replay cache only hits when this matches saved results.analysis_cache_version.
@@ -541,6 +543,8 @@ function setAuthMode(mode) {
 function setPlayerAppVisible(visible) {
   if (playerAppShell) playerAppShell.hidden = !visible;
   if (coachDashboard) coachDashboard.hidden = visible;
+  document.body.classList.toggle('criceye-role-coach', !visible);
+  document.body.classList.toggle('criceye-role-player', visible);
   const coachVisible = !visible;
   headerVerdictPills.forEach((el) => {
     el.hidden = coachVisible;
@@ -1402,6 +1406,7 @@ let _compareChartGradSeq = 0;
 
 /**
  * Dual area-spline chart (SVG) — same geometry/style as ReportModal.buildLineGraph.
+ * When shot counts differ, both series are trimmed to the same length (min) so the x-axis matches.
  */
 function buildDualLineCompareGraph(seriesA, seriesB, dataKey, colorA, colorB, label, maxVal, legendA, legendB) {
   const W = 520;
@@ -1412,14 +1417,19 @@ function buildDualLineCompareGraph(seriesA, seriesB, dataKey, colorA, colorB, la
   const PB = 28;
   const cW = W - PL - PR;
   const cH = H - PT - PB;
-  const n = Math.max(seriesA.length, seriesB.length);
+  const rawA = seriesA.length;
+  const rawB = seriesB.length;
+  const pairCap = Math.min(rawA, rawB);
+  const sA = pairCap > 0 ? seriesA.slice(0, pairCap) : [];
+  const sB = pairCap > 0 ? seriesB.slice(0, pairCap) : [];
+  const n = pairCap;
   if (n === 0) {
     return `<div class="compare-graph-empty">No per-shot replay data for this session.</div>`;
   }
 
   const allVals = [];
-  seriesA.forEach((s) => allVals.push(Number(s[dataKey]) || 0));
-  seriesB.forEach((s) => allVals.push(Number(s[dataKey]) || 0));
+  sA.forEach((s) => allVals.push(Number(s[dataKey]) || 0));
+  sB.forEach((s) => allVals.push(Number(s[dataKey]) || 0));
   const max = Math.max(maxVal || 0, ...allVals, 1);
 
   function xAt(i) {
@@ -1436,8 +1446,8 @@ function buildDualLineCompareGraph(seriesA, seriesB, dataKey, colorA, colorB, la
     });
   }
 
-  const ptsA = buildPts(seriesA);
-  const ptsB = buildPts(seriesB);
+  const ptsA = buildPts(sA);
+  const ptsB = buildPts(sB);
 
   function linePath(pts) {
     if (!pts.length) return '';
@@ -1484,7 +1494,11 @@ function buildDualLineCompareGraph(seriesA, seriesB, dataKey, colorA, colorB, la
   const unit =
     dataKey === 'speed' ? ' km/h' : dataKey === 'score' ? '/10' : '/100';
   const digits = 1;
-  const sub = `Session avg · ${escapeHtml(legendA)}: ${avgStr(seriesA, digits)}${unit} → ${escapeHtml(legendB)}: ${avgStr(seriesB, digits)}${unit}`;
+  const avgIntro =
+    rawA !== rawB
+      ? `Avg over comparable window (${n} shots each)`
+      : 'Session avg';
+  const sub = `${avgIntro} · ${escapeHtml(legendA)}: ${avgStr(sA, digits)}${unit} → ${escapeHtml(legendB)}: ${avgStr(sB, digits)}${unit}`;
 
   const grid = ticks
     .map(
@@ -1565,13 +1579,20 @@ function buildMultiLineCompareGraph(entries, dataKey, label, maxVal) {
   const cH = H - PT - PB;
 
   const nonEmpty = entries.filter((e) => e.series && e.series.length > 0);
-  const n = nonEmpty.length ? Math.max(...nonEmpty.map((e) => e.series.length)) : 0;
+  const lens = nonEmpty.map((e) => e.series.length);
+  const minLen = lens.length ? Math.min(...lens) : 0;
+  const maxLen = lens.length ? Math.max(...lens) : 0;
+  const trimmed = nonEmpty.map((e) => ({
+    ...e,
+    series: (e.series || []).slice(0, minLen),
+  }));
+  const n = minLen;
   if (n === 0) {
     return `<div class="compare-graph-empty">No per-shot replay data for these sessions.</div>`;
   }
 
   const allVals = [];
-  entries.forEach((e) => {
+  trimmed.forEach((e) => {
     (e.series || []).forEach((s) => allVals.push(Number(s[dataKey]) || 0));
   });
   const max = Math.max(maxVal || 0, ...allVals, 1);
@@ -1590,7 +1611,7 @@ function buildMultiLineCompareGraph(entries, dataKey, label, maxVal) {
     });
   }
 
-  const withPts = entries.map((e) => ({
+  const withPts = trimmed.map((e) => ({
     ...e,
     pts: buildPts(e.series),
   }));
@@ -1687,7 +1708,9 @@ function buildMultiLineCompareGraph(entries, dataKey, label, maxVal) {
     const avg = (sum / e.series.length).toFixed(digits);
     return `${escapeHtml(e.legend)}: ${avg}${unit}`;
   });
-  const sub = `Session avg · ${avgParts.join(' · ')}`;
+  const multiIntro =
+    minLen !== maxLen ? `Compared over ${minLen} shots each · ` : 'Session avg · ';
+  const sub = `${multiIntro}${avgParts.join(' · ')}`;
 
   const legendHtml = withPts
     .map(
@@ -3685,6 +3708,7 @@ function onComplete(msg, opts = {}) {
   if (msg.analysis && !state.sessionAnalysis) state.sessionAnalysis = msg.analysis;
   if (msg.fps) state.videoFps = msg.fps;
 
+  state.ballPlaybackCap = -1;
   if (typeof BallAnalytics !== 'undefined') {
     BallAnalytics.setData(msg.ball_analytics || null, state.videoFps);
   }
@@ -3701,6 +3725,8 @@ function onComplete(msg, opts = {}) {
 
   if (!video || !msg.output_video) {
     if (!skipPersist) saveLiveAnalysisResult(msg);
+    state.ballPlaybackCap = -1;
+    if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(null);
     return;
   }
   video.pause();
@@ -3785,6 +3811,8 @@ function flushDashboard() {
 
   const feed = document.getElementById('biomech-feed');
   if (feed) feed.innerHTML = '';
+
+  state.ballPlaybackCap = -1;
 
   overTableBody.innerHTML = '<tr><td>—</td><td>—</td></tr>';
 
@@ -3877,6 +3905,7 @@ function clearWheelAndReset() {
   state.completePayload=null; state.videoFlushed=false;
   state.latestLlmInsights = null;
   state.videoFps = 30;
+  state.ballPlaybackCap = -1;
   if (typeof BallAnalytics !== 'undefined') BallAnalytics.clear();
   shotCount.textContent=0; shotIndex.textContent='—'; shotName.textContent='AWAITING';
   shotTime.textContent='—'; shotColorBar.style.background='var(--border)'; shotColorBar.style.boxShadow='none';
@@ -4099,6 +4128,21 @@ async function startAnalysis() {
 function cycleSpeed() { state.speedIdx=(state.speedIdx+1)%SPEEDS.length; const sp=SPEEDS[state.speedIdx]; video.playbackRate=sp; btnSpeed.textContent=sp+'×'; }
 function toggleLoop()  { state.looping=!state.looping; video.loop=state.looping; btnLoop.style.color=state.looping?'var(--green)':''; btnLoop.style.borderColor=state.looping?'var(--green)':''; }
 
+/** Max shot # whose replay timestamp has been reached — drives progressive ball analytics (pitch / bars / table). */
+function computeBallPlaybackShotCap(t) {
+  if (!video || !video.duration || !state.pendingSpokes.length) return 0;
+  const origDur = state.originalVideoDuration || video.duration;
+  const scale = video.duration / origDur;
+  const AHEAD = 0.4;
+  let maxN = 0;
+  state.pendingSpokes.forEach((spoke) => {
+    if (t >= spoke.timestamp_sec * scale - AHEAD) {
+      maxN = Math.max(maxN, spoke.shot_num);
+    }
+  });
+  return maxN;
+}
+
 function onVideoTimeUpdate() {
   if (!video.duration) return;
   const t = video.currentTime;
@@ -4106,6 +4150,11 @@ function onVideoTimeUpdate() {
   hudTime.textContent  = formatTime(t);
   hudFrame.textContent = 'FRAME ' + Math.floor(t * vfps);
   if (typeof BallAnalytics !== 'undefined') BallAnalytics.drawOverlayAtTime(t);
+  const cap = computeBallPlaybackShotCap(t);
+  if (cap !== state.ballPlaybackCap) {
+    state.ballPlaybackCap = cap;
+    if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(cap);
+  }
   const origDur = state.originalVideoDuration || video.duration;
   const scale   = video.duration / origDur;
   const AHEAD   = 0.4;
@@ -4154,7 +4203,11 @@ function drawAllSpokesWithoutPlayback() {
   const spokes = [...state.pendingSpokes].sort((a, b) => a.timestamp_sec - b.timestamp_sec);
   let i = 0;
   function next() {
-    if (i >= spokes.length) return;
+    if (i >= spokes.length) {
+      state.ballPlaybackCap = -1;
+      if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(null);
+      return;
+    }
     drawSpokeNow(spokes[i++], () => setTimeout(next, 90));
   }
   next();

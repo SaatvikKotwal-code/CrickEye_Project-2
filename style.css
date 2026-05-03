@@ -174,14 +174,185 @@ body {
   line-height: 1;
 }
 
-/* ═══════════════════ MAIN GRID ═══════════════════ */
+/* ═══════════════════ PLAYER DASHBOARD — vertical stack ═══════════════════ */
+#playerAppShell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ═══════════════════ MAIN STACK (live video → wagon wheel) ═══════════════════ */
 .main-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  padding: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 28px 4px;
   max-width: 1680px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Pitch map (L) + Wagon wheel (R); full content visible, no viewport-height cropping */
+.analytics-split-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+/* Width balance: pitch (L) 45%, wagon (R) 55%; no height limits */
+.analytics-split-row__pitch {
+  flex: 0 1 45%;
+  max-width: 45%;
+  min-width: 0;
+}
+.analytics-split-row__wagon {
+  flex: 0 1 55%;
+  max-width: 55%;
+  min-width: 0;
+}
+.analytics-split-row__pitch[hidden] + .analytics-split-row__wagon {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+/* LEFT: full pitch (top→bottom) — height auto, no max-height clipping */
+.analytics-split-row__pitch .ball-pitch-card {
+  max-height: none;
+  overflow: visible;
+  padding: 2px 0 6px;
+}
+.analytics-split-row__pitch .ball-pitch-title {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+}
+.analytics-split-row__pitch .ball-pitch-canvas-wrap {
+  overflow: visible;
+  padding: 2px;
+}
+.analytics-split-row__pitch #pitchMapCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  max-width: 100%;
+  object-fit: contain;
+}
+.analytics-split-row__pitch #pitchMapReactRoot:not([hidden]) {
+  display: block !important;
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+}
+.analytics-split-row__pitch #pitchMapReactRoot[hidden] {
+  display: none !important;
+}
+.analytics-split-row__pitch #pitchMapReactRoot canvas {
+  display: block;
+  max-width: 100% !important;
+  max-height: none !important;
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+.analytics-split-row__pitch .ball-pitch-note {
+  margin: 6px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+/* RIGHT: full panel (wheel + legend + coverage + summary); override .panel overflow */
+.analytics-split-row__wagon .panel.panel--wagon-stack {
+  overflow: visible;
+  max-height: none;
+  width: 100%;
+}
+.analytics-split-row__wagon .panel-header {
+  padding: 8px 14px;
+}
+.analytics-split-row__wagon .wagon-wheel-container {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+}
+.analytics-split-row__wagon .panel--wagon-stack #wagonWheelCanvas {
+  max-width: min(520px, 100%);
+  width: 100%;
+  height: auto;
+}
+.analytics-split-row__wagon .wheel-legend {
+  margin-top: 6px;
+  padding: 6px 12px;
+  gap: 8px 14px;
+}
+.analytics-split-row__wagon .shot-distribution {
+  overflow: visible;
+  margin: 0 10px 10px;
+  padding: 12px 14px;
+}
+.analytics-split-row__wagon .dist-header {
+  margin-bottom: 10px;
+}
+.analytics-split-row__wagon .dist-rows {
+  gap: 12px;
+}
+.analytics-split-row__wagon .over-summary {
+  margin: 0 10px 12px;
+  padding: 12px 14px;
+}
+.analytics-split-row__wagon .over-summary-header {
+  margin-bottom: 8px;
+}
+.analytics-split-row__wagon .over-rating {
+  margin-bottom: 8px;
+}
+.analytics-split-row__wagon .over-table th,
+.analytics-split-row__wagon .over-table td {
+  padding: 6px 0;
+}
+
+@media (max-width: 900px) {
+  .analytics-split-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .analytics-split-row__pitch,
+  .analytics-split-row__wagon {
+    flex: 1 1 auto;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+/* Live Feed — centered dashboard card; wider than before but not full viewport */
+.panel--live-feed,
+.live-feed-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-self: center;
+  animation-delay: 0.05s;
+}
+
+.panel--live-feed .video-wrapper {
+  aspect-ratio: 16 / 9;
+  min-height: clamp(240px, 52vh, 720px);
+  background: radial-gradient(ellipse at center, #0f172a 0%, #020617 100%);
+}
+
+.panel--wagon-stack #wagonWheelCanvas {
+  max-width: min(440px, 92vw);
+}
+
+.panel--wagon-stack .shot-distribution,
+.panel--wagon-stack .over-summary {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .panel {
@@ -424,16 +595,26 @@ body {
 }
 .shot-count-display span { font-weight: 700; color: var(--text-secondary); }
 
-/* ═══════════════════ BIOMECHANICS SECTION — full width below grid ═══════════════════ */
+/* ═══════════════════ BIOMECHANICS SECTION — full width of shell, same gutters as dashboard ═══════════════════ */
 .biomech-section {
-  max-width: 1680px;
-  margin: 0 auto;
-  padding: 0 28px 24px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 24px 8px;
+  box-sizing: border-box;
   /* Distinct, dashboard-grade typography for this strip only */
   --font-display: 'Plus Jakarta Sans', 'Manrope', system-ui, sans-serif;
   --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Outer wrapper only — no max-width cap (inner header / feed styling unchanged) */
+.biomechanics-card {
+  width: 100%;
+  max-width: none;
+  margin: 24px 0;
+  box-sizing: border-box;
 }
 
 .biomech-section-header {
@@ -492,8 +673,10 @@ body {
 /* ═══════════════════ BALL ANALYTICS ═══════════════════ */
 .ball-analytics-section {
   max-width: 1680px;
-  margin: 0 auto 20px;
+  margin: 0 auto;
   padding: 0 28px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .ball-analytics-head {
   display: flex;
@@ -551,18 +734,13 @@ body {
 }
 .ball-analytics-grid {
   display: grid;
-  grid-template-columns: minmax(390px, 560px) 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
   padding: 20px;
   background: #FFFFFF;
   border: 1px solid var(--border);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   box-shadow: var(--shadow-panel);
-}
-@media (max-width: 900px) {
-  .ball-analytics-grid {
-    grid-template-columns: 1fr;
-  }
 }
 .ball-pitch-card {
   min-width: 0;
@@ -1259,13 +1437,22 @@ body {
 
 /* ═══════════════════ WAGON WHEEL ═══════════════════ */
 .wagon-wheel-container {
-  position: relative; padding: 16px;
-  display: flex; flex-direction: column; align-items: center;
+  position: relative;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+/* Vertical stretch only — width unchanged; subtle oval (no uniform radius bump) */
 #wagonWheelCanvas {
-  width: 100%; max-width: 340px; height: auto; display: block;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  display: block;
   border-radius: 50%;
   box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+  transform: scaleY(1.08);
+  transform-origin: center;
 }
 .wheel-legend {
   display: flex;
@@ -1416,10 +1603,16 @@ body {
 .over-table td:not(:first-child), .over-table th:not(:first-child) { text-align: center; }
 
 /* ═══════════════════ BOTTOM SECTION ═══════════════════ */
+/* Full viewport width (minus padding) — no 1680px cap so My Sessions isn’t letterboxed on wide screens */
 .bottom-section {
   padding: 8px 28px 28px;
-  max-width: 1680px; margin: 0 auto;
-  display: flex; flex-direction: column; gap: 20px;
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .stats-row {
@@ -1590,8 +1783,7 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 .panel, .stat-card, .analysis-card { animation: fadeIn 0.5s ease both; }
-.left-panel  { animation-delay: 0.05s; }
-.right-panel { animation-delay: 0.10s; }
+.panel--wagon-stack { animation-delay: 0.08s; }
 .stats-row .stat-card:nth-child(1) { animation-delay: 0.15s; }
 .stats-row .stat-card:nth-child(2) { animation-delay: 0.20s; }
 .stats-row .stat-card:nth-child(3) { animation-delay: 0.25s; }
@@ -1603,7 +1795,6 @@ body {
 
 /* ═══════════════════ RESPONSIVE ═══════════════════ */
 @media (max-width: 1100px) {
-  .main-grid    { grid-template-columns: 1fr; }
   .stats-row    { grid-template-columns: repeat(2, 1fr); }
   .analysis-row { grid-template-columns: repeat(2, 1fr); }
   #biomech-feed { grid-template-columns: repeat(2, 1fr); }
@@ -1616,7 +1807,7 @@ body {
   .analysis-row { grid-template-columns: 1fr; }
   .verdict-pill { padding: 6px 12px; }
   #biomech-feed { grid-template-columns: 1fr; }
-  .biomech-section { padding: 0 14px 20px; }
+  .biomech-section { padding: 0 14px 16px; }
 }
 /* ═══════════════════════════════════════════════════════
    ADD TO style.css — Generate Report button
@@ -1910,7 +2101,18 @@ body.ce-modal-open { overflow: hidden; }
 .profile-code { font-size: 0.72rem; color: #94a3b8; }
 
 /* My Sessions list + detail modal content */
-.user-sessions-panel { margin:18px 18px 10px; padding:14px; border:1px solid #1f2a44; border-radius:14px; background:#070d18; }
+/* Dark placard: use full width of .bottom-section (no inner max-width) */
+.user-sessions-panel,
+.my-sessions-container {
+  margin: 12px 0 10px;
+  padding: 14px;
+  border: 1px solid #1f2a44;
+  border-radius: 14px;
+  background: #070d18;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
 .user-sessions-panel .panel-header { align-items: center; }
 .compare-sessions-btn {
   border: 1px solid rgba(6, 182, 212, 0.45);
@@ -2037,7 +2239,20 @@ body.ce-modal-open { overflow: hidden; }
   outline-offset: 2px;
 }
 
-.sessions-list { display:flex; flex-direction:column; gap:10px; max-height:min(360px, 42vh); overflow:auto; margin-top:10px; padding-right: 4px; }
+/* Taller list viewport (~3–5 cards); scroll inside when content exceeds max-height */
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: min(380px, 42vh);
+  max-height: min(640px, 58vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 10px;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
 .session-item-empty { color:#64748b; font-size:.82rem; padding: 8px 4px; }
 
 .session-pill {
@@ -2853,6 +3068,14 @@ body.ce-modal-open { overflow: hidden; }
 }
 .auth-gate-actions .auth-btn:hover { filter: brightness(1.08); }
 .auth-gate-msg { min-height: 18px; color: #fda4af; font-size: .78rem; }
+
+/* Role-based UI: coaches use #coachDashboard only; player analysis never shown (defense in depth with [hidden] on #playerAppShell). */
+body.criceye-role-coach #playerAppShell {
+  display: none !important;
+}
+body.criceye-role-coach .player-analysis-only {
+  display: none !important;
+}
 
 .coach-dashboard {
   margin: 18px;

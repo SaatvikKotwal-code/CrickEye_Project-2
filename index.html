@@ -204,11 +204,13 @@
   </section>
 
   <div id="playerAppShell">
-  <!-- ───────────────── MAIN GRID ───────────────── -->
-  <main class="main-grid">
+  <!-- Player-only analysis (live feed, pitch map, wagon wheel, ball analytics, biomechanics). Hidden for coach role via App.js + body class. -->
+  <div id="playerAnalysisOnly" class="player-analysis-only">
+  <!-- ───────────────── MAIN STACK (video → wagon wheel) ───────────────── -->
+  <main class="main-grid player-dashboard-main">
 
-    <!-- ══════════ LEFT PANEL ══════════ -->
-    <section class="panel left-panel">
+    <!-- ══════════ LIVE FEED — full width ══════════ -->
+    <section class="panel panel--live-feed live-feed-container">
 
       <div class="panel-header">
         <div class="panel-label-group">
@@ -265,118 +267,111 @@
 
     </section>
 
-    <!-- ══════════ RIGHT PANEL — WAGON WHEEL ══════════ -->
-    <section class="panel right-panel">
-
-      <div class="panel-header">
-        <span class="panel-label">Wagon Wheel</span>
-        <div class="panel-controls">
-          <span class="ctrl-btn" id="btnClearWheel">Clear</span>
+    <!-- ══════════ PITCH MAP (L) + WAGON WHEEL (R) — two columns; Ball Analytics cards stay below ══════════ -->
+    <div class="analytics-split-row">
+      <div class="analytics-split-row__col analytics-split-row__pitch" id="analysisPitchColumn">
+        <div class="ball-pitch-card">
+          <div class="ball-pitch-title">Pitch map · length zones from striker</div>
+          <div class="ball-pitch-canvas-wrap">
+            <div id="pitchMapReactRoot" hidden></div>
+            <canvas id="pitchMapCanvas" width="280" height="360"></canvas>
+          </div>
+          <p class="ball-muted ball-pitch-note">Leg side / off side are schematic (RHB). Single-camera — lateral spread is approximate.</p>
         </div>
       </div>
+      <div class="analytics-split-row__col analytics-split-row__wagon">
+        <section class="panel panel--wagon-stack">
 
-      <div class="wagon-wheel-container">
-        <canvas id="wagonWheelCanvas"></canvas>
-      </div>
-
-      <div class="wheel-legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#06B6D4"></span>Cover Drive</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#10B981"></span>Straight Drive</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#F97316"></span>Pull Shot</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#A855F7"></span>Flick</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#EAB308"></span>Sweep</div>
-      </div>
-
-      <!-- Wagon Wheel Coverage -->
-      <div class="shot-distribution">
-        <div class="dist-header">Wagon Wheel Coverage</div>
-        <div class="dist-rows">
-          <div class="dist-row">
-            <div class="dist-row-top">
-              <span class="dist-label dist-label--orange">Leg Side</span>
-              <div class="dist-row-right">
-                <span class="dist-count" id="dist-leg-cnt">0</span>
-                <span class="dist-pct" id="dist-leg-pct">0%</span>
-              </div>
-            </div>
-            <div class="dist-track">
-              <div class="dist-bar leg" id="dist-leg-bar" style="width:0%"></div>
+          <div class="panel-header">
+            <span class="panel-label">Wagon Wheel</span>
+            <div class="panel-controls">
+              <span class="ctrl-btn" id="btnClearWheel">Clear</span>
             </div>
           </div>
-          <div class="dist-row">
-            <div class="dist-row-top">
-              <span class="dist-label dist-label--cyan">Off Side</span>
-              <div class="dist-row-right">
-                <span class="dist-count" id="dist-off-cnt">0</span>
-                <span class="dist-pct" id="dist-off-pct">0%</span>
+
+          <div class="wagon-wheel-container">
+            <canvas id="wagonWheelCanvas"></canvas>
+          </div>
+
+          <div class="wheel-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#06B6D4"></span>Cover Drive</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#10B981"></span>Straight Drive</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#F97316"></span>Pull Shot</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#A855F7"></span>Flick</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#EAB308"></span>Sweep</div>
+          </div>
+
+          <div class="shot-distribution">
+            <div class="dist-header">Wagon Wheel Coverage</div>
+            <div class="dist-rows">
+              <div class="dist-row">
+                <div class="dist-row-top">
+                  <span class="dist-label dist-label--orange">Leg Side</span>
+                  <div class="dist-row-right">
+                    <span class="dist-count" id="dist-leg-cnt">0</span>
+                    <span class="dist-pct" id="dist-leg-pct">0%</span>
+                  </div>
+                </div>
+                <div class="dist-track">
+                  <div class="dist-bar leg" id="dist-leg-bar" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="dist-row">
+                <div class="dist-row-top">
+                  <span class="dist-label dist-label--cyan">Off Side</span>
+                  <div class="dist-row-right">
+                    <span class="dist-count" id="dist-off-cnt">0</span>
+                    <span class="dist-pct" id="dist-off-pct">0%</span>
+                  </div>
+                </div>
+                <div class="dist-track">
+                  <div class="dist-bar off" id="dist-off-bar" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="dist-row">
+                <div class="dist-row-top">
+                  <span class="dist-label dist-label--green">Straight</span>
+                  <div class="dist-row-right">
+                    <span class="dist-count" id="dist-str-cnt">0</span>
+                    <span class="dist-pct" id="dist-str-pct">0%</span>
+                  </div>
+                </div>
+                <div class="dist-track">
+                  <div class="dist-bar str" id="dist-str-bar" style="width:0%"></div>
+                </div>
               </div>
             </div>
-            <div class="dist-track">
-              <div class="dist-bar off" id="dist-off-bar" style="width:0%"></div>
-            </div>
           </div>
-          <div class="dist-row">
-            <div class="dist-row-top">
-              <span class="dist-label dist-label--green">Straight</span>
-              <div class="dist-row-right">
-                <span class="dist-count" id="dist-str-cnt">0</span>
-                <span class="dist-pct" id="dist-str-pct">0%</span>
-              </div>
+
+          <div class="over-summary">
+            <div class="over-summary-header">Session Summary</div>
+            <div class="over-rating">
+              Rating:
+              <span id="sessionStars">
+                <span class="star">★</span>
+                <span class="star">★</span>
+                <span class="star">★</span>
+                <span class="star">★</span>
+                <span class="star">★</span>
+              </span>
+              <span class="rating-label" id="ratingLabel" style="font-family:JetBrains Mono,monospace;font-size:0.6rem;color:#94A3B8;margin-left:6px;letter-spacing:0.08em"></span>
             </div>
-            <div class="dist-track">
-              <div class="dist-bar str" id="dist-str-bar" style="width:0%"></div>
-            </div>
+            <table class="over-table" id="overTable">
+              <thead>
+                <tr><th>Shot Type</th><th>Count</th></tr>
+              </thead>
+              <tbody id="overTableBody">
+                <tr><td>—</td><td>—</td></tr>
+              </tbody>
+            </table>
           </div>
-        </div>
-      </div>
 
-      <!-- Session Summary
-           Stars are updated dynamically by updateSessionRating() in app.js
-           once analysis completes. Scale: ★★★★★ 8+  ★★★★ 6-7.9  ★★★ 4-5.9  ★★ 2-3.9  ★ 0-1.9
-      -->
-      <div class="over-summary">
-        <div class="over-summary-header">Session Summary</div>
-        <div class="over-rating">
-          Rating:
-          <span id="sessionStars">
-            <span class="star">★</span>
-            <span class="star">★</span>
-            <span class="star">★</span>
-            <span class="star">★</span>
-            <span class="star">★</span>
-          </span>
-          <span class="rating-label" id="ratingLabel" style="font-family:JetBrains Mono,monospace;font-size:0.6rem;color:#94A3B8;margin-left:6px;letter-spacing:0.08em"></span>
-        </div>
-        <table class="over-table" id="overTable">
-          <thead>
-            <tr><th>Shot Type</th><th>Count</th></tr>
-          </thead>
-          <tbody id="overTableBody">
-            <tr><td>—</td><td>—</td></tr>
-          </tbody>
-        </table>
+        </section>
       </div>
-
-    </section>
+    </div>
   </main>
 
-  <!-- ───────────────── BIOMECHANICS — FULL WIDTH ───────────────── -->
-  <section class="biomech-section">
-    <div class="biomech-section-header">
-      <div class="panel-label-group">
-        <span class="panel-label">Biomechanics</span>
-        <span class="live-chip">
-          <span class="live-chip-dot"></span>Live
-        </span>
-      </div>
-      <span class="shot-count-display">Shots: <span id="shotCount">0</span></span>
-    </div>
-    <div id="biomech-feed">
-      <div class="biomech-empty">AWAITING FIRST SHOT…</div>
-    </div>
-  </section>
-
-  <!-- ───────────────── BALL ANALYTICS (YOLO track) ───────────────── -->
+  <!-- ───────────────── BALL ANALYTICS (YOLO track) — below wagon ───────────────── -->
   <section class="ball-analytics-section" id="ballAnalyticsSection" hidden>
     <div class="ball-analytics-head">
       <div class="panel-label-group">
@@ -389,14 +384,6 @@
     </div>
     <div id="ballAvgSpeedStrip" class="ball-speed-session-strip" hidden></div>
     <div class="ball-analytics-grid">
-      <div class="ball-pitch-card">
-        <div class="ball-pitch-title">Pitch map · length zones from striker</div>
-        <div class="ball-pitch-canvas-wrap">
-          <div id="pitchMapReactRoot" hidden></div>
-          <canvas id="pitchMapCanvas" width="280" height="360"></canvas>
-        </div>
-        <p class="ball-muted ball-pitch-note">Leg side / off side are schematic (RHB). Single-camera — lateral spread is approximate.</p>
-      </div>
       <div class="ball-stats-stack">
         <div id="ballPaceSplit" class="ball-split-card"></div>
         <div id="ballLengthSplit" class="ball-split-card"></div>
@@ -406,9 +393,29 @@
     </div>
   </section>
 
-  <!-- ───────────────── BOTTOM SECTION ───────────────── -->
+  <!-- ───────────────── BIOMECHANICS — full width (same horizontal gutters as dashboard) ───────────────── -->
+  <section class="biomech-section">
+    <div class="biomechanics-card">
+      <div class="biomech-section-header">
+        <div class="panel-label-group">
+          <span class="panel-label">Biomechanics</span>
+          <span class="live-chip">
+            <span class="live-chip-dot"></span>Live
+          </span>
+        </div>
+        <span class="shot-count-display">Shots: <span id="shotCount">0</span></span>
+      </div>
+      <div id="biomech-feed">
+        <div class="biomech-empty">AWAITING FIRST SHOT…</div>
+      </div>
+    </div>
+  </section>
+
+  </div>
+
+  <!-- ───────────────── BOTTOM: MY SESSIONS + COMPARE ───────────────── -->
   <section class="bottom-section">
-    <section class="user-sessions-panel">
+    <section class="user-sessions-panel my-sessions-container">
       <div class="panel-header">
         <span class="panel-label">My Sessions</span>
         <div class="sessions-panel-actions">

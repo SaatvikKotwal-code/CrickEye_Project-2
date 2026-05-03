@@ -34,16 +34,6 @@ const DIST_MARKERS = [
   [0.87, 'HALF WAY'],
 ];
 
-const DEFAULT_DELIVERIES = [
-  { id: 1, fx: 0.60, fy: 0.44, zone: 'good',  outcome: 'dot' },
-  { id: 2, fx: 0.54, fy: 0.50, zone: 'good',  outcome: '1'   },
-  { id: 3, fx: 0.62, fy: 0.22, zone: 'full',  outcome: '4'   },
-  { id: 4, fx: 0.50, fy: 0.80, zone: 'short', outcome: 'dot' },
-  { id: 5, fx: 0.57, fy: 0.61, zone: 'back',  outcome: '2'   },
-  { id: 6, fx: 0.44, fy: 0.40, zone: 'good',  outcome: 'W'   },
-  { id: 7, fx: 0.61, fy: 0.47, zone: 'good',  outcome: 'dot' },
-];
-
 function ballColor(outcome) {
   if (outcome === 'W')                    return '#ff2ea6';
   if (outcome === '4' || outcome === '6') return '#00e5ff';
@@ -143,7 +133,7 @@ function computeBallLayout(deliveries, pX, pY) {
 }
 
 function PitchMap({
-  deliveries = DEFAULT_DELIVERIES,
+  deliveries = [],
   width      = 680,
   height     = 600,
   animated   = true,
@@ -345,16 +335,20 @@ function PitchMap({
       // 7. stumps — striker end only (no stumps in short / bowler crease band)
       drawStumps(ctx, 0.052, pX, pY);
 
-      // 8. animated balls
-      if (animRef.current) frameRef.current++;
+      // 8. ball markers (dynamic layer only — static pitch already drawn above)
+      if (animRef.current && deliveries.length > 0) frameRef.current++;
       const laidOut = computeBallLayout(deliveries, pX, pY);
       drawBalls(ctx, frameRef.current, laidOut);
 
-      rafRef.current = requestAnimationFrame(render);
+      if (animRef.current && deliveries.length > 0) {
+        rafRef.current = requestAnimationFrame(render);
+      }
     };
 
-    rafRef.current = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(rafRef.current);
+    render();
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
   }, [deliveries, W, H, pX, pY]);
 
   // ── mouse handlers ─────────────────────────────────────────────────────
@@ -453,7 +447,29 @@ function PitchMap({
           top:           0,
           left:          0,
         }
-      })
+      }),
+      deliveries.length === 0
+        ? React.createElement(
+            'div',
+            {
+              style: {
+                position: 'absolute',
+                left: '50%',
+                top: '54%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.26)',
+                pointerEvents: 'none',
+                fontFamily: "'Trebuchet MS', sans-serif",
+                zIndex: 4,
+              },
+            },
+            'No shots yet',
+          )
+        : null,
     )
   );
 }
