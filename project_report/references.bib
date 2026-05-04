@@ -1,15 +1,21 @@
-@online{BCCI2024,
-    author        = {{Board of Control for Cricket in India}},
-    title         = {Annual Report 2023--2024},
-    year          = {2024},
-    url           = {https://www.bcci.tv}
+% Verified DOIs and URLs (retested 2026-05). Use raw underscore in DOI fields (not \_).
+% Numbers [n] follow first citation order in main.tex (biblatex numeric, sorting=none).
+
+@online{BCCIportal,
+    author  = {{Board of Control for Cricket in India}},
+    title   = {Official {BCCI} website},
+    year    = {2026},
+    url     = {https://www.bcci.tv},
+    urldate = {2026-05-04}
 }
 
-@online{IPL2023,
-    author        = {{Indian Premier League}},
-    title         = {IPL Media Rights and Revenue Report},
-    year          = {2023},
-    url           = {https://www.iplt20.com}
+@online{ICC2023WorldCupIndia,
+    author  = {{International Cricket Council}},
+    title   = {{ICC} Men's Cricket World Cup 2023 Delivers Economic Boost to India},
+    year    = {2024},
+    url     = {https://www.icc-cricket.com/media-releases/icc-men-s-cricket-world-cup-2023-delivers-economic-boost-to-india},
+    urldate = {2026-05-04},
+    note    = {ICC media release summarising a Nielsen economic impact assessment (total impact USD 1.39B).}
 }
 
 @article{Thomas2017,
@@ -18,116 +24,260 @@
     journal = {Computer Vision and Image Understanding},
     volume  = {159},
     pages   = {3--18},
-    year    = {2017}
+    year    = {2017},
+    doi     = {10.1016/j.cviu.2017.04.011},
+    url     = {https://www.sciencedirect.com/science/article/pii/S1077314217300711}
 }
 
+% Correct venue: \emph{Journal of Sports Sciences} (not IJPAS). DOI resolves via Taylor \& Francis.
 @article{Kovalchik2018,
     author  = {Kovalchik, Stephanie Ann and Reid, Machar},
-    title   = {A shot taxonomy in professional tennis},
-    journal = {International Journal of Performance Analysis in Sport},
-    volume  = {18},
-    number  = {1},
-    pages   = {44--55},
-    year    = {2018}
+    title   = {A shot taxonomy in the era of tracking data in professional tennis},
+    journal = {Journal of Sports Sciences},
+    volume  = {36},
+    number  = {18},
+    pages   = {2096--2104},
+    year    = {2018},
+    doi     = {10.1080/02640414.2018.1438094},
+    url     = {https://vuir.vu.edu.au/38209/},
+    urldate = {2026-05-04}
 }
 
+% IEEE Xplore document 8909871 (DOI suffix ...8909871, not ...8909983).
 @inproceedings{Huang2019,
     author    = {Huang, Yu-Chuan and Liao, I-No and Chen, Ching-Hsuan and Ik, Tsi-Ui and Peng, Wen-Chih},
     title     = {TrackNet: A deep learning network for tracking high-speed and tiny objects in sports applications},
-    booktitle = {Proc. IEEE Int. Conf. on Advanced Video and Signal Based Surveillance (AVSS)},
+    booktitle = {Proc.\ IEEE Int.\ Conf.\ on Advanced Video and Signal Based Surveillance (AVSS)},
     pages     = {1--8},
-    year      = {2019}
+    year      = {2019},
+    doi       = {10.1109/AVSS.2019.8909871},
+    url       = {https://ieeexplore.ieee.org/document/8909871}
 }
 
 @online{HawkEye2001,
-    author = {{Hawk-Eye Innovations}},
-    title  = {Hawk-Eye ball tracking technology},
-    year   = {2001},
-    url    = {https://www.hawkeyeinnovations.com}
+    author  = {{Hawk-Eye Innovations}},
+    title   = {Hawk-Eye ball tracking and officiating technology},
+    year    = {2001},
+    url     = {https://www.hawkeyeinnovations.com},
+    urldate = {2026-05-04},
+    note    = {Company founded 2001; product documentation updated on the official site.}
 }
 
 @inproceedings{Cao2017,
     author    = {Cao, Zhe and Simon, Tomas and Wei, Shih-En and Sheikh, Yaser},
     title     = {Realtime multi-person 2D pose estimation using Part Affinity Fields},
-    booktitle = {Proc. IEEE Conf. on Computer Vision and Pattern Recognition (CVPR)},
+    booktitle = {Proc.\ IEEE Conf.\ on Computer Vision and Pattern Recognition (CVPR)},
     pages     = {7291--7299},
-    year      = {2017}
+    year      = {2017},
+    doi       = {10.1109/CVPR.2017.143},
+    url       = {https://ieeexplore.ieee.org/document/8100119}
 }
 
 @article{MediaPipe2019,
     author  = {Lugaresi, Camillo and Tang, Jiuqiang and Nash, Hadon and McClanahan, Chris and Uboweja, Esha and Hays, Michael and Zhang, Fan and Chang, Chuo-Ling and Yong, Ming Guang and Lee, Juhyun and Chang, Wan-Teh and Hua, Wei and Georg, Manfred and Grundmann, Matthias},
     title   = {MediaPipe: A framework for building perception pipelines},
     journal = {arXiv preprint arXiv:1906.08172},
-    year    = {2019}
+    year    = {2019},
+    url     = {https://arxiv.org/abs/1906.08172}
 }
 
 @online{YOLOv8,
-    author = {Jocher, Glenn and Chaurasia, Ayush and Qiu, Jing},
-    title  = {Ultralytics YOLO},
-    year   = {2023},
-    url    = {https://github.com/ultralytics/ultralytics}
+    author  = {Jocher, Glenn and Chaurasia, Ayush and Qiu, Jing},
+    title   = {Ultralytics {YOLOv8}},
+    year    = {2023},
+    url     = {https://github.com/ultralytics/ultralytics},
+    urldate = {2026-05-04},
+    note    = {Open-source repository and release documentation.}
+}
+
+% ECCV 2014 LNCS vol.~8693; chapter DOI uses underscore (not slash before chapter number).
+@inproceedings{Lin2014MicrosoftCOCO,
+    author    = {Lin, Tsung-Yi and Maire, Michael and Belongie, Serge and Hays, James and Perona, Pietro and Ramanan, Deva and Doll{\'a}r, Piotr and Zitnick, C. Lawrence},
+    title     = {{Microsoft} {COCO}: Common Objects in Context},
+    booktitle = {Proc.\ European Conf.\ on Computer Vision (ECCV)},
+    pages     = {740--755},
+    year      = {2014},
+    doi       = {10.1007/978-3-319-10602-1_48},
+    url       = {https://arxiv.org/abs/1405.0312}
 }
 
 @inproceedings{Wang2013,
     author    = {Wang, Heng and Schmid, Cordelia},
     title     = {Action recognition with improved trajectories},
-    booktitle = {Proc. IEEE Int. Conf. on Computer Vision (ICCV)},
+    booktitle = {Proc.\ IEEE Int.\ Conf.\ on Computer Vision (ICCV)},
     pages     = {3551--3558},
-    year      = {2013}
+    year      = {2013},
+    doi       = {10.1109/ICCV.2013.441},
+    url       = {https://ieeexplore.ieee.org/document/6751546}
 }
 
 @inproceedings{Tran2015,
     author    = {Tran, Du and Bourdev, Lubomir and Fergus, Rob and Torresani, Lorenzo and Paluri, Manohar},
     title     = {Learning spatiotemporal features with 3D convolutional networks},
-    booktitle = {Proc. IEEE Int. Conf. on Computer Vision (ICCV)},
+    booktitle = {Proc.\ IEEE Int.\ Conf.\ on Computer Vision (ICCV)},
     pages     = {4489--4497},
-    year      = {2015}
+    year      = {2015},
+    doi       = {10.1109/ICCV.2015.516},
+    url       = {https://ieeexplore.ieee.org/document/7410660}
 }
 
 @inproceedings{Carreira2017,
     author    = {Carreira, Joao and Zisserman, Andrew},
     title     = {Quo vadis, action recognition? A new model and the Kinetics dataset},
-    booktitle = {Proc. IEEE Conf. on Computer Vision and Pattern Recognition (CVPR)},
+    booktitle = {Proc.\ IEEE Conf.\ on Computer Vision and Pattern Recognition (CVPR)},
     pages     = {6299--6308},
-    year      = {2017}
+    year      = {2017},
+    doi       = {10.1109/CVPR.2017.502},
+    url       = {https://ieeexplore.ieee.org/document/8099985}
 }
 
 @inproceedings{Liu2022Swin3D,
     author    = {Liu, Ze and Ning, Jia and Cao, Yue and Wei, Yixuan and Zhang, Zheng and Lin, Stephen and Hu, Han},
     title     = {Video Swin Transformer},
-    booktitle = {Proc. IEEE/CVF Conf. on Computer Vision and Pattern Recognition (CVPR)},
+    booktitle = {Proc.\ IEEE/CVF Conf.\ on Computer Vision and Pattern Recognition (CVPR)},
     pages     = {3202--3211},
-    year      = {2022}
+    year      = {2022},
+    doi       = {10.1109/CVPR52688.2022.00313},
+    url       = {https://openaccess.thecvf.com/content/CVPR2022/html/Liu_Video_Swin_Transformer_CVPR_2022_paper.html}
+}
+
+% TimeSformer / MViT: stable arXiv pointers (also published at ICCV 2021).
+@article{Bertasius2021,
+    author  = {Bertasius, Gedas and Wang, Heng and Torresani, Lorenzo},
+    title   = {Is Space-Time Attention All You Need for Video Understanding?},
+    journal = {arXiv preprint arXiv:2102.05095},
+    year    = {2021},
+    url     = {https://arxiv.org/abs/2102.05095},
+    note    = {Proc.\ IEEE/CVF ICCV 2021; joint space--time self-attention for video.}
+}
+
+@article{Fan2021MViT,
+    author  = {Fan, Haoqi and Xiong, Bo and Mangalam, Karttikeya and Li, Yanghao and Yan, Zhicheng and Malik, Jitendra and Feichtenhofer, Christoph},
+    title   = {Multiscale Vision Transformers},
+    journal = {arXiv preprint arXiv:2104.11227},
+    year    = {2021},
+    url     = {https://arxiv.org/abs/2104.11227},
+    note    = {Proc.\ IEEE/CVF ICCV 2021; hierarchical MViT blocks for efficient video recognition.}
 }
 
 @inproceedings{Ren2009,
     author    = {Ren, Jing and Orwell, James and Jones, Graeme A. and Sherring, M.},
     title     = {Real-time 3D football ball tracking from multiple cameras},
-    booktitle = {Proc. British Machine Vision Conf. (BMVC)},
-    year      = {2009}
+    booktitle = {Proc.\ British Machine Vision Conf.\ (BMVC)},
+    year      = {2009},
+    url       = {https://www.bmvc2009.net},
+    urldate   = {2026-05-04},
+    note      = {BMVC~2009 proceedings; paper PDF via \texttt{bmvc2009.net} or institutional mirror.}
 }
 
 @inproceedings{Reno2018,
-    author    = {Reno, Vito and Mosca, Nicola and Marani, Roberto and Nitti, Massimiliano and D'Orazio, Tiziana and Stella, Ettore},
+    author    = {Reno, Vito and Mosca, Nicola and Marani, Roberto and Nitti, Massimiliano and {D'Orazio}, Tiziana and Stella, Ettore},
     title     = {Convolutional neural networks based ball detection in tennis games},
-    booktitle = {Proc. IEEE Int. Conf. on Computer Vision and Pattern Recognition Workshops},
+    booktitle = {Proc.\ IEEE/CVF Conf.\ on Computer Vision and Pattern Recognition Workshops},
     pages     = {1758--1764},
-    year      = {2018}
+    year      = {2018},
+    doi       = {10.1109/CVPRW.2018.00216},
+    url       = {https://ieeexplore.ieee.org/document/8575410}
 }
 
+% ICCCNT 2018 (Bangalore). Video-based shot detection --- distinct from unrelated wearable IMU cricket papers.
 @inproceedings{Semwal2018,
-    author    = {Semwal, Vijay Bhaskar and Chakraborty, Pavan and Nandi, G. C.},
-    title     = {Classification of cricket shots using wearable IMU sensor data},
-    booktitle = {Proc. Int. Conf. on Computational Intelligence and Data Science (ICCIDS)},
-    volume    = {132},
-    pages     = {1096--1104},
-    year      = {2018}
+    author    = {Semwal, Archit and Mishra, Durgesh and Raj, Vineet and Sharma, Jayanta and Mittal, Ankush},
+    title     = {Cricket Shot Detection from Videos},
+    booktitle = {Proc.\ 9th Int.\ Conf.\ on Computing, Communication and Networking Technologies (ICCCNT)},
+    address   = {Bangalore, India},
+    month     = jul,
+    year      = {2018},
+    pages     = {1--6},
+    doi       = {10.1109/ICCCNT.2018.8494081},
+    url       = {https://ieeexplore.ieee.org/document/8494081}
 }
 
+% IEEE SCSE 2020. Per-paper Crossref DOI was not indexed at bibliography freeze; use IEEE Xplore proceedings catalog and search by exact title.
 @inproceedings{Wickramaratne2020,
     author    = {Wickramaratne, Sandun Dasanayake and Wijeratna, Namal Dasanayake},
     title     = {Vision-based cricket batting stroke classification using skeleton features},
-    booktitle = {Proc. Int. Research Conf. on Smart Computing and Systems Engineering (SCSE)},
+    booktitle = {Proc.\ Int.\ Research Conf.\ on Smart Computing and Systems Engineering (SCSE)},
     pages     = {56--61},
-    year      = {2020}
+    year      = {2020},
+    url       = {https://ieeexplore.ieee.org/xpl/conhome/9179621/proceeding},
+    urldate   = {2026-05-04},
+    note      = {OpenPose skeleton features for stroke classification; coaching-facing biomechanics not addressed---contrast with CrickEye's front-on pose plus composite scoring.}
+}
+
+@incollection{Zuiderveld1994CLAHE,
+    author    = {Zuiderveld, Karel},
+    title     = {Contrast Limited Adaptive Histogram Equalization},
+    booktitle = {Graphics Gems IV},
+    editor    = {Heckbert, Paul S.},
+    publisher = {Academic Press Professional, Inc.},
+    address   = {San Diego, CA, USA},
+    pages     = {474--485},
+    year      = {1994},
+    url       = {https://www.worldcat.org/title/graphics-gems-iv/oclc/28723918},
+    urldate   = {2026-05-04},
+    note      = {Standard reference for CLAHE; locate full chapter text via library copy of \emph{Graphics Gems IV}.}
+}
+
+@inproceedings{Paszke2019PyTorch,
+    author    = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and others},
+    title     = {{PyTorch}: An imperative style, high-performance deep learning library},
+    booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+    volume    = {32},
+    year      = {2019},
+    url       = {https://arxiv.org/abs/1912.01703},
+    urldate   = {2026-05-04}
+}
+
+@article{Harris2020NumPy,
+    author  = {Harris, Charles R. and Millman, K. Jarrod and van der Walt, St{\'e}fan J. and others},
+    title   = {Array programming with {NumPy}},
+    journal = {Nature},
+    volume  = {585},
+    number  = {7825},
+    pages   = {357--362},
+    year    = {2020},
+    doi     = {10.1038/s41586-020-2649-2},
+    url     = {https://www.nature.com/articles/s41586-020-2649-2}
+}
+
+@online{OpenCV2024,
+    author  = {{OpenCV contributors}},
+    title   = {Open source computer vision library ({OpenCV})},
+    year    = {2024},
+    url     = {https://opencv.org},
+    urldate = {2026-05-04}
+}
+
+@online{FastAPI2024,
+    author  = {Ram{\'i}rez, Sebasti{\'a}n},
+    title   = {{FastAPI}},
+    year    = {2024},
+    url     = {https://fastapi.tiangolo.com},
+    urldate = {2026-05-04}
+}
+
+@online{Supabase2024,
+    author  = {{Supabase Inc.}},
+    title   = {Supabase documentation},
+    year    = {2024},
+    url     = {https://supabase.com/docs},
+    urldate = {2026-05-04}
+}
+
+@online{RFC6455,
+    author  = {Fette, Ian and Melnikov, Alexey},
+    title   = {The {WebSocket} Protocol},
+    year    = {2011},
+    url     = {https://datatracker.ietf.org/doc/html/rfc6455},
+    urldate = {2026-05-04},
+    note    = {IETF RFC 6455.}
+}
+
+@online{FFmpeg2024,
+    author  = {{FFmpeg team}},
+    title   = {{FFmpeg} multimedia framework},
+    year    = {2024},
+    url     = {https://ffmpeg.org},
+    urldate = {2026-05-04}
 }

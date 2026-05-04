@@ -1,0 +1,64 @@
+% CrickEye system architecture — vector diagram (TikZ). Included from Chapter-3.
+\begingroup
+\footnotesize\sffamily
+\definecolor{ceInk}{HTML}{1a1a1a}
+\definecolor{ceLine}{HTML}{4a5568}
+\definecolor{cePanel}{HTML}{f4f6f8}
+\definecolor{ceEdge}{HTML}{cbd5e0}
+\definecolor{ceAccent}{HTML}{0f766e}
+\definecolor{ceMuted}{HTML}{64748b}
+\begin{tikzpicture}[
+  >=Latex,
+  line cap=round,
+  line join=round,
+  every node/.style={text=ceInk, align=center},
+  box/.style={
+    draw=ceEdge,
+    fill=cePanel,
+    rounded corners=2.5pt,
+    inner sep=7pt,
+    minimum width=3.05cm,
+    line width=0.55pt,
+  },
+  sub/.style={font=\scriptsize, text=ceMuted},
+  arr/.style={->, line width=0.65pt, draw=ceLine},
+  lbl/.style={font=\scriptsize, text=ceMuted, midway, fill=white, inner sep=1.5pt},
+]
+
+\node[box, minimum width=6.55cm] (browser) {
+  {\bfseries\small Client — coaching dashboard}\\[2pt]
+  {\scriptsize\color{ceMuted} Vanilla JS UI \;|\; WebSocket + HTTP}
+};
+
+\node[box, minimum width=6.55cm, below=1.05cm of browser] (api) {
+  {\bfseries\small FastAPI backend} \texttt{(backend/main.py)}\\[2pt]
+  {\scriptsize\color{ceMuted} Uploads \;|\; progress stream \;|\; static assets \;|\; Supabase via \texttt{server.js}}
+};
+
+\node[box, minimum width=3.12cm, below left=1.0cm and 0cm of api.south west, anchor=north west] (core) {
+  {\bfseries\small Analysis core}\\[2pt]
+  \texttt{analyse\_session.py}\\[2pt]
+  {\scriptsize\color{ceMuted} Pass~1 \;|\; Swin3D-T \;|\; metrics \;|\; Pass~2 prep}
+};
+
+\node[box, minimum width=3.12cm, below right=1.0cm and 0cm of api.south east, anchor=north east] (ball) {
+  {\bfseries\small Ball analytics}\\[2pt]
+  \texttt{ball\_analytics.py}\\[2pt]
+  {\scriptsize\color{ceMuted} Optional \;|\; speed \;|\; bounce \;|\; lengths}
+};
+
+\path ($(core.south)!0.5!(ball.south)$) ++(0,-0.95) coordinate (storeAnchor);
+\node[box, minimum width=6.55cm, anchor=north] at (storeAnchor) (store) {
+  {\bfseries\small Persistence}\\[2pt]
+  {\scriptsize\color{ceMuted} Local: JSON \;|\; CSV \;|\; annotated MP4 \qquad Cloud: Supabase (sessions, RLS)}
+};
+
+\draw[arr] (browser) -- node[lbl, right=1pt] {WS / REST} (api);
+\draw[arr] (api.south) -- ++(0,-0.32) -| node[lbl, pos=0.19] {thread} (core.north);
+\draw[arr] (api.south) -- ++(0,-0.32) -| (ball.north);
+\draw[arr, dashed, draw=ceAccent!75!black, line width=0.55pt] (core.east) -- node[sub, above=0.5pt, sloped] {post-pass} (ball.west);
+\draw[arr] (core.south) -- +(0,-0.5) -| ([xshift=-0.95cm]store.north);
+\draw[arr] (ball.south) -- +(0,-0.5) -| ([xshift=0.95cm]store.north);
+
+\end{tikzpicture}
+\endgroup

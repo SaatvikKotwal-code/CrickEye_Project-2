@@ -2,26 +2,19 @@
 numpy
 pandas
 
-# Computer Vision
+# Computer vision and pipeline
 opencv-python
-
-# Deep Learning / YOLO
 ultralytics
 lap>=0.5.12
 torch
 torchvision
-
-# Backend (choose based on your code)
-flask
-fastapi
-uvicorn[standard]
-
-# Utilities
 imageio-ffmpeg
 matplotlib
 scikit-learn
 tqdm
-python-dotenv
 
-# File handling / JSON
+# API server/runtime
+fastapi
+uvicorn[standard]
+python-dotenv
 python-multipart

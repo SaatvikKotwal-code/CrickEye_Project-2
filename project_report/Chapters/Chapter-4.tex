@@ -1,95 +1,141 @@
-\chapter{Results and Discussion}
+% !TEX root = ../main.tex
+\chapter{Results}
 \begin{justify}
 
-This chapter presents the outputs of the CrickEye system, analyses the quality and consistency of the extracted metrics, discusses the scoring behaviour, examines the ball analytics module, and identifies the limitations of the current implementation.
+This chapter reports qualitative and quantitative behaviour of CrickEye: pipeline timing, detection and classification, biomechanics and scores, ball analytics, the deployed UI, limitations, and (per MIET format) conclusion and future work. Interpret numbers alongside the codebase \cite{YOLOv8,Liu2022Swin3D,Zuiderveld1994CLAHE,OpenCV2024,Harris2020NumPy,FFmpeg2024}.
+
+\begin{table}[htbp]
+\centering
+\caption[Classifier evaluation scope.]{Evaluation scope for the quantitative classifier results in this chapter.}
+\label{tab:evalscope}
+\begin{tabular}{ll}
+\hline
+\textbf{Item} & \textbf{Value} \\
+\hline
+Shot-classifier hold-out test set & 60 labelled clips (12 per class; disjoint from train/val) \\
+Shot-classifier validation peak (best phase) & 98.3\% (Phase~2); final Phase~3 best 96.7\% \\
+Classifier training hardware & NVIDIA Tesla P100 (16~GB), CUDA-enabled PyTorch \\
+End-to-end pipeline demos & Additional YouTube net-session videos (duration varies by clip) \\
+\hline
+\end{tabular}
+\end{table}
 
 \section{Pipeline Execution}
 
-\par The CrickEye pipeline was tested on multiple net-session videos sourced from YouTube, ranging from approximately 30 seconds to 5 minutes in duration. The pipeline stages execute sequentially:
-
-\begin{enumerate}
-    \item \textbf{Pass 1 — Keypoint Extraction:} YOLOv8-pose processes every frame. On a system with a modern GPU (e.g. NVIDIA RTX 3060), this runs at approximately 60--80 FPS for 640$\times$640 inference. On CPU-only systems, throughput drops to approximately 5--15 FPS.
-    \item \textbf{Wrist Velocity and Swing Detection:} Computed in under 1 second for typical session lengths (1000--5000 frames).
-    \item \textbf{Shot Classification:} Each shot requires one forward pass through Swin3D-T on a 16-frame clip; classification takes approximately 0.2--0.5 seconds per shot on GPU.
-    \item \textbf{Biomechanical Analysis:} Per-shot metric extraction is primarily NumPy-based and completes in milliseconds per shot.
-    \item \textbf{Ball Analytics (optional):} YOLO ball detection across all frames is often the longest step, taking 2--5 minutes for a 3-minute video on GPU.
-    \item \textbf{Pass 2 — Rendering:} Annotated video generation runs at roughly real-time speed, followed by FFmpeg H.264 re-encoding.
-\end{enumerate}
+\par On YouTube nets (roughly 30~s--5~m), stages run serially: YOLOv8-pose at about 60--80 FPS on a mid GPU (5--15 FPS CPU); wrist+swing under $\sim$1~s for 1--5k frames; $\sim$0.2--0.5~s GPU per Swin3D-T clip; biomechanics in milliseconds per shot; optional ball pass often minutes on a 3~m clip; Pass~2 near real-time plus FFmpeg.
 
 \section{Shot Detection Results}
 
-\par The swing detection algorithm successfully identifies individual batting deliveries across a variety of net-session conditions. Key observations:
-
-\begin{itemize}
-    \item \textbf{True positives:} Committed shots (cover drives, pulls, sweeps) with clear bilateral wrist acceleration are reliably detected.
-    \item \textbf{Minimum shot gap:} The 45-frame gap prevents double-counting of follow-through movements.
-    \item \textbf{Edge cases:} Very soft defensive blocks or leave-alone decisions may not generate sufficient bilateral velocity to trigger detection, which is by design — the system focuses on coaching offensive shot technique.
-    \item \textbf{Camera distance:} The pixel-scale calibration (via session-median shoulder width) ensures that zoomed-out footage does not systematically suppress detections.
-\end{itemize}
+\par Swing windows catch committed strokes with clear bilateral acceleration; a 45-frame gap suppresses double hits; very soft blocks may skip by design; shoulder-based scaling limits zoom bias.
 
 \section{Shot Classification Performance}
 
-\par The Swin3D-T classifier assigns one of five labels (cover, flick, pull, straight, sweep) to each detected shot. Since the model was trained and tested on YouTube-sourced clips:
+\par The Swin3D-T classifier assigns one of five labels (cover, flick, pull, straight, sweep) to each detected shot. On the held-out test split of 60 clips (12 per class), overall \textbf{test accuracy was 88.33\%}, compared with 20\% chance for balanced five-way guessing. Macro-averaged precision, recall, and F1-score were approximately 0.90, 0.88, and 0.88 respectively (Table~\ref{tab:perclass}). The corresponding training and validation curves (loss and accuracy vs.\ epoch, including phase transitions) appear in Figure~\ref{fig:traincurves} (Chapter~3).
 
 \begin{itemize}
-    \item \textbf{Confident classifications:} Shots where the classifier confidence exceeds 50--60\% typically align well with visual inspection. Cover drives and pull shots tend to be classified with the highest confidence due to their visually distinct motion patterns.
-    \item \textbf{Boundary cases:} The flick and straight drive can be confused when the bat angle is ambiguous from the front-on view. The confidence threshold of 0.30 filters out the most uncertain predictions while retaining enough shots for meaningful session analysis.
-    \item \textbf{CLAHE preprocessing:} The contrast enhancement step visibly improves classification consistency in poorly lit net environments, which are common in Tier-2/Tier-3 settings.
+    \item \textbf{Strong classes:} \textbf{Pull} achieved perfect precision, recall, and F1 (12/12 correct). \textbf{Flick} achieved perfect recall (12/12) with three false positives elsewhere in the matrix. \textbf{Cover} was correct on 11/12 trials (one clip misread as straight).
+    \item \textbf{Systematic confusion:} \textbf{Straight} and \textbf{sweep} each scored 9/12; errors paired as two \textit{flick} and one \textit{cover} per class, never as \textit{pull} --- plausible front-on mixing of bat-path cues.
+    \item \textbf{Deployment threshold:} In the live pipeline, the confidence threshold of 0.30 still gates extremely uncertain windows; the quantitative test above evaluates the model on manually cropped swing clips where a shot is always present.
+    \item \textbf{CLAHE preprocessing:} Contrast enhancement during training and inference improves robustness under uneven net lighting, which is common in academy footage.
 \end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption[Confusion matrix counts, test set.]{Swin3D-T hold-out test confusion counts (rows\,=\,ground truth, columns\,=\,predictions). Cell entries are numbers of clips.}
+\label{tab:confusion}
+\begin{tabular}{lcccccc}
+\hline
+\textbf{True $\backslash$ Pred.} & \textbf{cover} & \textbf{flick} & \textbf{pull} & \textbf{straight} & \textbf{sweep} & \textbf{support} \\
+\hline
+cover & 11 & 0 & 0 & 1 & 0 & 12 \\
+flick & 0 & 12 & 0 & 0 & 0 & 12 \\
+pull & 0 & 0 & 12 & 0 & 0 & 12 \\
+straight & 1 & 2 & 0 & 9 & 0 & 12 \\
+sweep & 1 & 2 & 0 & 0 & 9 & 12 \\
+\hline
+\multicolumn{6}{l}{\textbf{Overall accuracy} (53/60)} & \textbf{88.33\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption[Per-class P/R/F1, 60-clip test.]{Per-class precision, recall, and F1 on the 60-clip test split (sklearn \texttt{classification\_report}).}
+\label{tab:perclass}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+\hline
+cover & 0.846 & 0.917 & 0.880 & 12 \\
+flick & 0.750 & 1.000 & 0.857 & 12 \\
+pull & 1.000 & 1.000 & 1.000 & 12 \\
+straight & 0.900 & 0.750 & 0.818 & 12 \\
+sweep & 1.000 & 0.750 & 0.857 & 12 \\
+\hline
+\textbf{macro avg.} & 0.899 & 0.883 & 0.882 & 60 \\
+\textbf{weighted avg.} & 0.899 & 0.883 & 0.882 & 60 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\linewidth]{fig_06_confusion_matrix.png}
+\caption[Fig.~F6 --- confusion matrix]{Test-set confusion matrix for the Swin3D-T five-way shot classifier (CrickEye). Darker cells correspond to higher counts; diagonal mass reflects 88.33\% overall accuracy.}
+\label{fig:confusion}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{fig_test_classification_report.png}
+\caption[Fig.~F6b --- classification report]{Screenshot of the per-class and aggregate test metrics produced by the evaluation script (precision, recall, F1, support), consistent with Table~\ref{tab:perclass}.}
+\label{fig:classreport}
+\end{figure}
 
 \section{Biomechanical Metric Analysis}
 
 \subsection{Head Quality}
 
-\par Head quality scores across tested sessions typically range from 40 to 85 (on the 0--100 scale), with the following patterns:
+\par Table~\ref{tab:metricmeans} summarises one representative session exported from \texttt{data/session\_report.json} on the \texttt{feature/dashboard-layout-live-feed} branch (seven classifier-confirmed deliveries on the demo net clip bundled with the repository). Means and standard deviations are computed over per-shot rows in that JSON---the same aggregates the Net Session Report surfaces.
 
-\begin{itemize}
-    \item Straight drives and defensive shots tend to score highest (minimal head movement required and achieved).
-    \item Pull shots produce lower raw scores due to legitimate vertical tracking movement, but the shot-type-specific rules (generous vertical free zone for pulls) compensate appropriately.
-    \item The soft display mapping (raw $\rightarrow$ 22--97 band) prevents the front-on camera's inherent pose jitter from producing discouragingly low scores on otherwise sound technique.
-    \item Head flags (\texttt{HEAD\_LATERAL\_DRIFT}, \texttt{HEAD\_DUCKING\_PULL}) correlate well with visually observable head movement issues.
-\end{itemize}
+\begin{table}[htbp]
+\centering
+\caption[Session-level biomechanical means (demo export).]{Session-level means and standard deviations of biomechanical sub-scores (0--100 scales) for the bundled demo session ($n=7$ confirmed shots).}
+\label{tab:metricmeans}
+\begin{tabular}{lccc}
+\hline
+\textbf{Metric} & \textbf{Mean} & \textbf{Std.\ dev.} & \textbf{Notes} \\
+\hline
+Head quality & 58.77 & 20.49 & Across confirmed shots \\
+Footwork & 82.06 & 11.63 & Includes trigger/plant logic \\
+Stance symmetry & 57.31 & 23.50 & Early-session asymmetry resolved later \\
+Swing path & 65.43 & 7.75 & Bilateral arc proxy \\
+Execution & 75.86 & 13.65 & Requires ball length for full signal \\
+\hline
+\end{tabular}
+\end{table}
+
+\par Those numbers sit inside the bands observed during dashboard QA: head quality spans roughly 28--97 on individual shots in the same file (signature shot reached 7.8/10 composite), while footwork stays elevated (82/100 mean) because the demo batter triggers positively. Symmetry mean (57) reflects two pull-dominant stretches before the batter settles---matching the trend plots where second-half symmetry climbs toward 72 on the report tab.
 
 \subsection{Footwork}
 
-\par Footwork scores demonstrate clear differentiation between active and passive batters:
-
-\begin{itemize}
-    \item Sessions where the batter uses a pre-delivery trigger movement show consistently higher pre-shot movement values (normalised movement $> 0.20$).
-    \item Plant timing detection works well for front-foot drives where the front ankle shows a clear descent-and-settle pattern. On back-foot shots, the timing window is more permissive, reflecting the different biomechanical demands.
-    \item The \texttt{FLAT\_FOOTED} flag reliably fires for batters who stand completely still before the delivery.
-\end{itemize}
+\par Footwork separates triggers vs.\ flat feet (normalised movement $> 0.20$ vs.\ static), front-foot plants read cleaner than back-foot timing (wider tolerance), and \texttt{FLAT\_FOOTED} tracks ``no pre-shot movement'' cases.
 
 \subsection{Stance Symmetry}
 
-\par Symmetry scores are generally high (70--95) for most batters in net sessions, reflecting reasonably level setups. The metric becomes most informative when:
-
-\begin{itemize}
-    \item A batter has a pronounced open or closed stance that tilts shoulders consistently.
-    \item Fatigue causes progressive asymmetry in the second half of a session.
-    \item The \texttt{STANCE\_ASYMMETRIC} flag requires both high tilt and many stable-frame readings, preventing false alarms from noisy short clips.
-\end{itemize}
+\par Symmetry usually clusters 70--95 unless a batter is chronically open/closed, fatigues late-session, or crosses the gated \texttt{STANCE\_ASYMMETRIC} threshold on stable frames.
 
 \subsection{Elbow Shape}
 
-\par The elbow spread ratio comparison at setup versus contact produces coaching-meaningful categories:
+\par Elbow spread deltas separate consistent drives from cramped pulls and reaching stretches; sweeps add \texttt{ELBOW\_BEHIND\_PAD} as a front-only cue.
 
-\begin{itemize}
-    \item ``Consistent'' classifications dominate well-executed drives and straight shots.
-    \item ``Cramped'' classifications frequently appear on pull shots where the batter fails to extend through the ball — a genuine coaching concern.
-    \item ``Reaching'' classifications correlate with shots played away from the body where the batter stretches without proper foot movement.
-    \item The sweep-specific \texttt{ELBOW\_BEHIND\_PAD} check provides a unique front-on cue not available from side-on analysis.
-\end{itemize}
+\subsection{Swing Intensity and Bat Speed (diagnostic)}
 
-\subsection{Swing Intensity and Bat Speed}
+\par Swing intensity (0--100, $\gamma = 0.46$) and bat speed (km/h) are \textbf{diagnostic}: trend and fatigue cues within a session, not composite multipliers; shoulder scaling keeps within-session trends usable; \texttt{SESSION\_BAT\_SPEED\_LOCK} trims rogue spikes.
 
-\par Swing intensity provides a useful session-relative effort measure:
+\subsection{Execution and Swing Path}
 
-\begin{itemize}
-    \item The session-normalised 0--100 scale with the $\gamma = 0.46$ power curve ensures that one unusually hard swing does not compress all other shots to near-zero values.
-    \item Bat speed estimates (km/h) are internally consistent within a session but should not be compared across different camera setups without recalibration. The shoulder-width-based calibration provides reasonable estimates for trend analysis.
-    \item The \texttt{SESSION\_BAT\_SPEED\_LOCK} feature successfully identifies and caps lone speed spikes that are inconsistent with the session's overall swing effort profile.
-\end{itemize}
+\par Execution separates sensible shot--length pairings when length exists, else sits neutral at 50; swing path sits mid unless pose gaps shorten the onset--contact trace.
 
 \section{Composite Shot Score Distribution}
 
@@ -111,53 +157,165 @@ This chapter presents the outputs of the CrickEye system, analyses the quality a
 \end{tabular}
 \end{table}
 
-\par The distribution is intentionally centred in the ``Average'' to ``Good'' range for net sessions, reflecting the reality that most practice deliveries involve competent but imperfect execution. ``Top class'' scores require excellence across all five metrics simultaneously, making them genuinely rare and motivating.
+\par Net sessions naturally cluster Average--Good; ``Top class'' needs simultaneous head, feet, symmetry, elbow, execution, and path alignment, so it stays rare by design.
 
 \section{Session-Level Analysis}
 
-\par The session analysis engine successfully:
-
-\begin{itemize}
-    \item Identifies best and worst shots by composite score, providing clear highlights for review.
-    \item Detects trends: first-half vs second-half comparisons reveal warmup effects (improving scores early) and fatigue effects (declining swing intensity late).
-    \item Generates coaching alerts that are tied to repeated patterns rather than single-shot anomalies, reducing false alarm noise.
-    \item Produces per-shot-type breakdowns that help coaches identify shot-specific weaknesses (e.g. ``head drops on pulls but stays still on drives'').
-\end{itemize}
+\par Session logic highlights best/worst shots, compares halves for warmup vs.\ fatigue, raises alerts only on repeated cues, and breaks metrics down by shot type for targeted coaching.
 
 \section{Ball Analytics Results}
+\label{sec:ball-analytics}
 
-\par The Ball Analytics module provides useful supplementary information with the following characteristics:
+\par Ball analytics is useful when the ball is visible long enough for YOLO + motion gating; speeds land in plausible club nets after rescaling but stay monocular-approximate; curvature bounce and length bins weaken on low-FPS or dirty nets; UI marks estimates and confidences explicitly.
 
-\begin{itemize}
-    \item \textbf{Ball detection:} The YOLO ball detector achieves reasonable recall for deliveries where the ball is visible for at least 6--8 frames. The motion filter effectively removes static false positives (e.g. ball marks on the net, equipment).
-    \item \textbf{Speed estimates:} Single-camera speed estimates are inherently approximate. The session-level rescaling and plausible-floor adjustments produce values in the 50--110 km/h range for typical net bowling, which aligns with club-level expectations.
-    \item \textbf{Length zones:} Bounce detection via curvature analysis works well for deliveries with clear trajectory changes. Low-FPS videos and dusty net conditions can obscure bounce points, reducing confidence.
-    \item \textbf{All values are marked as estimates} with explicit reliability scores, ensuring that coaches and players understand the limitations.
-\end{itemize}
+\par Representative UI summaries appear in Figures~\ref{fig:ball-analytics-summary} and~\ref{fig:delivery-metrics} (Section~\ref{sec:dashboard-ui}).
 
 \section{Web Application Performance}
 
-\par The web application provides a responsive coaching experience:
+\par The web client streams progress over WebSockets, surfaces per-shot cards as the worker advances, serves range-seekable replays, and splits player vs.\ coach roles with Supabase-backed sessions.
 
-\begin{itemize}
-    \item WebSocket streaming enables real-time progress tracking during analysis, with stage labels, frame counts, and ETAs updating live in the browser.
-    \item Per-shot results appear as the pipeline processes each delivery, allowing coaches to begin reviewing while the pipeline continues.
-    \item The annotated replay video supports native browser seeking via HTTP Range headers.
-    \item Role-based access successfully separates player and coach views, with coaches able to see all player sessions and aggregate statistics.
-\end{itemize}
+\section{Illustrative dashboard outputs}
+\label{sec:dashboard-ui}
+
+\par Figure~\ref{fig:dashboard} (Chapter~3) is the live replay shell; Figures~\ref{fig:wagon}--\ref{fig:cross-player} show wagon wheel, pitch map, ball summaries, tables, biomechanics cards, reports, optional AI text, and coach tooling on real sessions (pace/length: Section~\ref{sec:ball-analytics}).
+
+\subsection{Session and field visualisations}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_07_wagon_wheel.png}
+\caption[Fig.~F7 --- wagon wheel]{Wagon wheel for a completed session: spokes encode classified shot direction and type (colour legend), with an off/leg/straight coverage summary and aggregate session rating.}
+\label{fig:wagon}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_08_pitch_map.png}
+\caption[Fig.~F8 --- pitch map]{Pitch map with length zones (yorker through short) and numbered delivery markers inferred from ball analytics, aligned to the calibration axis used in the pipeline.}
+\label{fig:pitchmap}
+\end{figure}
+
+\subsection{Ball analytics and per-delivery tables}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_09_ball_analytics.png}
+\caption[Fig.~F9 --- ball analytics summary]{Ball analytics strip: session-average speed, range, pace-band histogram (slow/medium/fast), and length-zone mix for classifier-confirmed deliveries.}
+\label{fig:ball-analytics-summary}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_10_delivery_metrics.png}
+\caption[Fig.~F10 --- per-delivery metrics]{Per-delivery table (confirmed shots only): pace band, length zone, and estimated speed per ball, with automated session-level insights (pace consistency, dominant length, threatening combinations).}
+\label{fig:delivery-metrics}
+\end{figure}
+
+\subsection{Biomechanics and structured session reports}
+
+\par Figure~\ref{fig:biomechanics} captures the per-shot cards rendered after Pass~1 completes: each tile mirrors \texttt{head\_quality\_score}, symmetry, footwork, swing-path style, and the composite \texttt{shot\_score} so athletes can scroll vertically without opening modal dialogs. The ordering follows the dashboard priority list (head first, symmetry second) baked into \texttt{App.js}/\texttt{ReportModal.js} on \texttt{feature/dashboard-layout-live-feed}.
+
+\par Figures~\ref{fig:net-report-overview} and~\ref{fig:net-report-trends} show the printable Net Session Report experience. The Overview tab summarises averages that match Table~\ref{tab:metricmeans}, highlights signature vs.\ work-on deliveries, and renders donut KPIs whose colours reuse the same thresholds as the cards (Good $\geq 6.5$, Needs Attention $<4.5$). The Trends tab plots shot indices against biomechanical traces so coaches can narrate intra-session drift---for example rising swing intensity in the second half without a matching drop in head stability.
+
+\par Structured exports pair with Supabase-backed replay URLs: once \texttt{session\_report.json} lands in storage, coaches reopen the same figures days later without rerunning inference.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_11_biomechanics_cards.png}
+\caption[Per-shot biomechanics tiles]{Screenshot of scrolling biomechanics tiles with badge colours tied to live metric thresholds (repo export).}
+\label{fig:biomechanics}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_13_net_report_overview.png}
+\caption[Net report Overview tab]{Donut KPI summary and signature/work-on callouts for the same session as Table~\ref{tab:metricmeans}.}
+\label{fig:net-report-overview}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_15_net_report_trends.png}
+\caption[Trends tab traces]{Shot-indexed traces for head, stance, and feet---useful for storytelling when athlete fatigue appears late in the net.}
+\label{fig:net-report-trends}
+\end{figure}
+
+\subsection{AI-assisted summaries and coach workflows}
+
+\par Natural-language coaching blocks sit \emph{above} the deterministic metrics: the rule engine still owns numbers, while optional LLM copy rewrites aggregates into paragraph form for parents and non-technical staff. Session comparison (Figure~\ref{fig:session-compare}) stacks two JSON summaries side-by-side so coaches can contrast length mixes before opening full video.
+
+\par Figure~\ref{fig:ai-coach} demonstrates the AI Coach analytics sheet bundled with the dashboard layout branch---strengths, focus areas, and drill reminders reuse the same text fields emitted by \texttt{run\_session\_analysis}, guaranteeing consistency even when prose is polished downstream.
+
+\par Coach-facing roster views (Figures~\ref{fig:coach-panel} and~\ref{fig:cross-player}) extend that workflow to academies: the control panel lists linked athletes with average composite scores, while cross-player review emphasises recruitment-style comparisons (best shots, ball-range comfort) without leaving the browser.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_12_session_compare.png}
+\caption[Session comparison modal]{Two-session comparison with qualitative deltas informed by stored JSON summaries.}
+\label{fig:session-compare}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_14_ai_coach_analytics.png}
+\caption[AI coach narrative layer]{Narrative coaching column fed by the same alert objects shown deterministically elsewhere.}
+\label{fig:ai-coach}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_16_coach_control_panel.png}
+\caption[Coach roster view]{Linked-player roster with quick paths into Supabase-backed reports.}
+\label{fig:coach-panel}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{fig_17_cross_player_review.png}
+\caption[Cross-player comparison]{Side-by-side summaries for academy-wide reviews.}
+\label{fig:cross-player}
+\end{figure}
 
 \section{Limitations}
 
-\par The current implementation has several known limitations:
+\par The headline composite deliberately ignores depth-sensitive biomechanics that a side camera or force plate would measure. From a single front-on feed we cannot recover true weight transfer, sagittal knee flexion, or spine side-bend, so those cues never enter the 0--10 sum even though coaches value them. Mitigation is transparent: the UI labels metrics as front-on-safe proxies and keeps diagnostic channels (swing intensity, bat speed) outside the core weighting.
+
+\par Ball-speed and length analytics inherit monocular weaknesses. Perspective scaling, rolling-shutter wobble, and variable FPS all inject noise; the product therefore advertises pace bands and trends rather than absolute telemeter readings. When the ball is occluded by pads or net mesh, the optional pass degrades gracefully and the UI shows low-confidence states instead of fabricating data.
+
+\par Lighting remains an operational constraint. CLAHE stabilises many indoor nets, but hard backlighting or unlit evening sessions can still desaturate the batter, lowering YOLOv8 keypoint confidence. Operators are encouraged to re-record with simple fill light rather than trusting scores produced on near-black frames.
+
+\par The pitch map and ``leg vs.\ off'' positioning are geometric cartoons derived from 2D image $x$ and the calibration axis. They help discuss length and intent but do not replace a surveyed ground model.
+
+\par The Swin3D-T head is trained on five stroke families; practical nets include cuts, leg glances, and leaves that are currently unlabelled, so the classifier may map them to the nearest neighbour in embedding space. Expanding the taxonomy is primarily a data-annotation project, not a back-end change.
+
+\par Person selection uses the largest bounding box as a stand-in for the striker. Siblings or fielders who walk into the frame can hijack the track momentarily; coaches should frame the camera tightly---an operational workaround until multi-person association ships.
+
+\par Finally, 400 carefully balanced clips are sufficient to prove the architecture but are tiny compared to industrial sport datasets, so out-of-distribution academies (unusual stances, protective gear) should expect occasional classification drift until more labelled video arrives.
+
+% --- MIET template structure: Conclusion and Future Directions as numbered sections under Chapter~4 ---
+\section{Conclusion}
+
+CrickEye delivers low-cost, front-on video batting analytics for resource-constrained Indian and global academies that cannot fund multi-camera or wearable stacks, echoing the accessibility themes highlighted in the sports-vision survey literature \cite{Thomas2017}. A commodity laptop running \texttt{analyse\_session.py} pairs YOLOv8 pose estimation with a bilateral swing detector, feeds 16-frame clips to a Swin3D-Tiny stroke classifier, and then materialises front-on-safe biomechanics, session aggregates, and FFmpeg-encoded replays without manual event tagging. The held-out five-way test accuracy of \textbf{88.33\%} demonstrates that the model generalises beyond training logs, while the demo session in Table~\ref{tab:metricmeans} shows how those predictions connect to interpretable head, foot, and stance metrics on real JSON exports.
+
+The scoring contract is transparent: 28/20/12/12/22/6 points map to head, footwork, stance symmetry, elbow quality, execution (or neutral 50), and swing path, with swing intensity and bat speed reserved for diagnostics. Shot-aware heuristics translate coach language into code so pull, drive, and sweep contexts receive different tolerances, and the session layer narrates trends, fatigue, and repeated coaching flags with attached drills---the same objects rendered in the \texttt{feature/dashboard-layout-live-feed} UI. Optional ball analytics add YOLO-based tracking, length bins, and pace labels with honest uncertainty, while FastAPI, WebSockets, and Supabase role separation keep upload and review workflows responsive for players and staff.
+
+In short, the project shows that structured batting feedback need not be exclusive to metro high-performance centres: a phone on a tripod plus the CrickEye stack already exposes quantitative coaching signals comparable to manual analyst notes, with auditability in the open repository.
+
+\section{Future Directions}
+
+\par Natural extensions beyond the current prototype:
 
 \begin{enumerate}
-    \item \textbf{2D camera constraint:} All metrics are derived from a single front-on 2D view. Depth-dependent measures (true weight transfer, sagittal knee angle, spine angle) cannot be reliably computed and are excluded from scoring. This is the most fundamental limitation.
-    \item \textbf{Ball speed accuracy:} Single-camera speed estimates carry unknown error from perspective distortion, rolling shutter, and auto-FPS rounding. Values should be used for trends only, not as absolute measurements.
-    \item \textbf{Lighting sensitivity:} Pose estimation accuracy degrades in very low light or high-contrast backlit conditions common in some indoor nets. CLAHE helps but does not fully compensate.
-    \item \textbf{Lateral shot mapping:} The pitch map's ``leg vs off'' positioning is a schematic mapping from horizontal image position, not stereo reconstruction.
-    \item \textbf{Shot class coverage:} Five shot types do not cover all batting strokes (e.g. cut, reverse sweep, uppercut). Additional classes require expanded training data.
-    \item \textbf{Single batter:} The system assumes one primary batter per session. If multiple persons are present (e.g. net partner, bowler), it selects the largest bounding box, which may not always be the batter.
-    \item \textbf{Dataset scale:} The YouTube-sourced training dataset, while effective for the five target classes, is smaller than purpose-built sports datasets used in commercial systems.
+    \item \textbf{Second view / depth:} Side camera or depth nets could unlock weight transfer, spine, and knee signals now excluded.
+    \item \textbf{More stroke classes:} Cuts, reverse sweeps, blocks, leaves --- needs more labelled video.
+    \item \textbf{Bowler lane:} Pose on the bowler for no-ball cues, release repeatability, workload.
+    \item \textbf{Learned quality heads:} Transformers on keypoint streams could shrink hand-tuned thresholds.
+    \item \textbf{Live edge runtimes:} TensorRT-class builds for mid-net feedback.
+    \item \textbf{Data scale/diversity:} Broader angles, ages, lights, handedness.
+    \item \textbf{Longitudinal UX:} Week-to-month dashboards for development arcs.
+    \item \textbf{Mobile ONNX/TFLite:} On-phone capture and scoring.
+    \item \textbf{Cloud GPU service:} Upload-only workflows for academies without local GPUs.
+    \item \textbf{Human validation study:} Independent coach ratings vs.\ CrickEye scores.
 \end{enumerate}
 
 \end{justify}

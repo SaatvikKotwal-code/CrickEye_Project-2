@@ -1,24 +1,37 @@
-\title{MIET Project Template}
-\author{Dr. Navin M. Upadhyay}
-\date{August 2024}
+% !LW recipe=pdflatex → biber → pdflatex ×2
+% Do not use % !TEX program = pdflatex here: the green Build button would run pdflatex only,
+% skip biber, and fail this project (biblatex). This line selects the full recipe by name.
+\title{CrickEye}
+\author{Sukriti Chadha}
+\date{\today}
 
 \documentclass[12pt]{report}
 \usepackage[utf8]{inputenc}
 
+% Overleaf free tier: compile timeout is a server limit, not a LaTeX bug. Uncomment draft
+% graphics while editing (faster), or shrink PNGs. Turn draft off for the final PDF.
+% \PassOptionsToPackage{draft}{graphicx}
+
 %additional packages
 \usepackage{amsmath}
-\usepackage{lipsum}
+% Uniform spacing around display math (Methodology equations 3.1--3.10 and later).
+\setlength{\abovedisplayskip}{10pt}
+\setlength{\belowdisplayskip}{10pt}
+\setlength{\abovedisplayshortskip}{6pt}
+\setlength{\belowdisplayshortskip}{6pt}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{longtable}
-\graphicspath{{figures/}}
+\usepackage{xcolor}
+% Logos and report figures live under ./Images/ (see Chapters for \texttt{fig\_*.png} placeholders).
+\graphicspath{{./Images/}}
 \usepackage[a4paper,width=160mm,top=25mm,bottom=25mm]{geometry}
 \usepackage{titlesec}
 \linespread{1.2}
 \usepackage{tikz}
-\usepackage{amsfonts,array,multirow,graphicx,amsmath,amsthm,tabularx,setspace,amssymb,multirow}
-\usetikzlibrary{circuits, arrows}
+\usepackage{amsfonts,array,multirow,amsmath,amsthm,tabularx,setspace,amssymb,multirow}
+\usetikzlibrary{circuits, arrows, arrows.meta, positioning, calc, backgrounds, fit}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \usepackage{amsfonts}
@@ -29,20 +42,38 @@
 \usepackage{stackengine}
 \usepackage{booktabs}
 \usepackage{ragged2e}
-\usepackage{biblatex}
-%\usepackage[backend=biber,style=alphabetic,sorting=ynt]{biblatex}
+\usepackage{microtype}
+\emergencystretch=2.5em
+% numeric + sorting=none keeps [1],[2],... in the same order as first citation in the text.
+\usepackage[backend=biber,style=numeric,sorting=none,sortcites=true,maxbibnames=99]{biblatex}
 \addbibresource{references.bib}
 % hyperlinks
 \usepackage{hyperref} 
-\hypersetup{ colorlinks, citecolor=blue, filecolor=black, linkcolor=black, urlcolor=blue } 
+% All link colours black (in-text citations, URLs in bibliography, cross-refs).
+\hypersetup{colorlinks=true,citecolor=black,linkcolor=black,urlcolor=black,filecolor=black,menucolor=black}
 
-\def\mytitle{CrickEye: A Low-Cost Computer Vision Based Cricket Coaching System for Tier-2 and Tier-3 Academies in India}
-\def\myname{\textbf{Name of Student1 [Roll No]\\ \vspace{0.1cm} Name of Student2 [Roll No]\\ \vspace{0.1cm} Name of Student3 [Roll No]\\\vspace{0.1cm} Name of Student4 [Roll No] }\\}
+\def\mytitle{CrickEye}
+\def\myname{\textbf{Sukriti Chadha}\\[0.2cm]{\normalsize Roll No.\ \myrollno}\\}
 \def\degree{Bachelor of Technology}
 \def\mydegree{Computer Science \& Engineering}
-\def\mysupervisor{Dr. XXXXXXX \\ Assistant Professor, CSE}
-\def\myrollno{2021A1RXX}
+% Supervisor: replace with final approved wording if the department requires a different title line.
+\def\mysupervisor{Mr.~Karan Khajuria \\ Assistant Professor, CSE}
+\def\myrollno{2022A6R048}
+\def\myprojref{MIET/CSE/PR/\textit{(fill project serial)}/2024--25}
 \def\mydep{Department of Computer Sciences and Engineering}
+
+% Dashed boxes in the PDF mark figures you should export and drop in as \texttt{Images/fig\_*.png} (see user checklist).
+\newcommand{\figplaceholder}[2]{%
+  \begin{tikzpicture}
+    \node[draw=black!55, dashed, line width=0.75pt, rounded corners=2pt,
+          inner sep=12pt, text width=0.88\linewidth, align=center,
+          minimum height=4.0cm, fill=black!4, font=\small\sffamily] {%
+      \textbf{Figure placeholder}\\[0.35em]
+      #1\\[0.55em]
+      \textcolor{black!55}{\footnotesize Replace with file: \texttt{#2}}%
+    };
+  \end{tikzpicture}%
+}
 % addbibresource already declared above
 \begin{document}
 
@@ -54,6 +85,7 @@
 \input{FrontMatter/examiner}
 \addcontentsline{toc}{chapter}{Certificate of Approval of Examiners}
 \input{FrontMatter/Acknowledgement}
+% MIET sample PDF spells this heading ``Acknowlegement'' in the Contents --- match for examiner checklist.
 \addcontentsline{toc}{chapter}{Acknowlegement}
 \input{FrontMatter/declaration}
 \addcontentsline{toc}{chapter}{Declaration}
@@ -65,7 +97,7 @@
 \listoftables
 \addcontentsline{toc}{chapter}{List of Tables}
 \input{FrontMatter/abbreviations}
-\addcontentsline{toc}{chapter}{Abbreviations}
+% Figure asset checklist: optional --- \input{FrontMatter/Figure_checklist} here if your guide wants it (not in the MIET sample PDF).
 %Chapters
 \clearpage
  \pagenumbering{arabic}
@@ -73,8 +105,6 @@
 \include{./Chapters/Chapter-2}
 \include{./Chapters/Chapter-3}
 \include{./Chapters/Chapter-4}
-\input{Chapters/Chapter-5}
-\addcontentsline{toc}{chapter}{Future Work}
+% MIET template: Conclusion and Future Directions are \section{}s under Chapter~4 (Results), not a separate chapter.
 \input{Chapters/References}
-\addcontentsline{toc}{chapter}{References}
 \end{document}

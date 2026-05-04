@@ -1,53 +1,59 @@
+% !TEX root = ../main.tex
 \chapter{Literature Review}
 \begin{justify}
 
-This chapter reviews the existing body of work across four areas that underpin the CrickEye system: general computer vision in sports analytics, human pose estimation, video-based action recognition, and cricket-specific computational analysis. The review identifies the gaps that CrickEye addresses.
+This chapter surveys computer vision in sports, pose estimation, video action recognition, and cricket-specific work, and states the gaps CrickEye fills.
 
 \section{Computer Vision in Sports Analytics}
 
-\par The application of computer vision to sports has grown rapidly over the past decade, driven by advances in deep learning and the availability of high-quality video data. Thomas et al.\ (2017) provided an early survey of vision-based systems across multiple sports, noting that most production-grade solutions required multi-camera setups, controlled lighting, and substantial computational resources \cite{Thomas2017}. Subsequent work has explored single-camera alternatives, but these remain less common in deployed coaching tools.
+\par Vision for sports has matured with deep learning and large video corpora. Thomas et al.\ (2017) survey production systems that still leaned on multi-camera rigs, controlled lighting, and heavy compute \cite{Thomas2017}; single-camera coaching deployments remain rarer.
 
-\par In the domain of racket sports, Bayesian and convolutional approaches have been applied to tennis stroke classification (Kovalchik and Reid, 2018) and badminton shuttlecock tracking (Huang et al., 2019), demonstrating the feasibility of real-time analysis from monocular video \cite{Kovalchik2018, Huang2019}. However, cricket poses unique challenges: the batter's motion is explosive and brief (typically 20--40 frames for a single shot), the front-on camera angle introduces significant depth ambiguity, and the ball is small, fast, and often occluded by the net structure.
+\par Monocular racket-sport work includes tennis stroke modelling (Kovalchik and Reid, 2018) and badminton shuttle tracking (Huang et al., 2019) \cite{Kovalchik2018,Huang2019}. Cricket adds short explosive strokes (often 20--40 frames), strong depth ambiguity from a front-on net view, and a small ball often hidden by the net.
 
-\par Commercial systems such as Hawk-Eye (Hawk-Eye Innovations, 2001) and PitchVision provide broadcast-grade ball tracking and player analytics, but these rely on multiple synchronised high-speed cameras and proprietary hardware costing hundreds of thousands of dollars — well beyond the budget of a typical Tier-2 academy \cite{HawkEye2001}.
+\par Broadcast stacks (e.g.\ Hawk-Eye, 2001) use many synchronised cameras and proprietary hardware --- far beyond a typical Tier-2 academy budget \cite{HawkEye2001}.
 
 \section{Human Pose Estimation}
 
-\par Human pose estimation has been revolutionised by deep learning approaches that predict body joint locations from single RGB images. OpenPose (Cao et al., 2017) introduced real-time multi-person 2D pose estimation using Part Affinity Fields \cite{Cao2017}. MediaPipe Pose (Lugaresi et al., 2019) offered a lightweight alternative optimised for mobile devices \cite{MediaPipe2019}. More recently, the YOLO family has been extended to pose estimation: YOLOv8-Pose (Jocher et al., 2023) performs simultaneous object detection and keypoint regression in a single forward pass, providing 17 COCO-format keypoints per detected person with minimal latency \cite{YOLOv8}.
+\par Deep learning now drives 2D pose from RGB: OpenPose (Cao et al., 2017) \cite{Cao2017}, MediaPipe (Lugaresi et al., 2019) \cite{MediaPipe2019}, and YOLOv8-Pose (Jocher et al., 2023), which jointly detects people and regresses 17 COCO joints in one pass \cite{YOLOv8,Lin2014MicrosoftCOCO}.
 
-\par CrickEye adopts YOLOv8-Pose because it offers a strong balance of speed and accuracy, outputs both bounding boxes and keypoints (enabling largest-person selection), and integrates seamlessly with the Ultralytics ecosystem that is also used for ball detection. The COCO keypoint format — nose, eyes, ears, shoulders, elbows, wrists, hips, knees, ankles — provides all the landmarks needed for the biomechanical metrics described in this project.
+\par CrickEye uses YOLOv8-Pose for speed, COCO-17 coverage, largest-bbox person selection, and shared Ultralytics tooling with ball detection.
 
-\par A key limitation of all 2D pose estimators is the loss of depth information. Metrics that depend on the Z-axis (e.g. true weight transfer, spine angle relative to the ground, knee flexion in the sagittal plane) are unreliable from a single front-on camera. CrickEye explicitly acknowledges this limitation and restricts its scoring pipeline to metrics that can be reliably measured in the image plane: lateral and vertical head displacement, shoulder and hip tilt, elbow horizontal spread, ankle Y-position changes, and wrist displacement velocity.
+\par Any single front-on view loses reliable depth; Z-dependent quantities (true weight transfer, sagittal knee angle, spine tilt to ground) are weak. The headline composite therefore uses in-plane cues plus optional execution from length; swing intensity and bat speed stay diagnostic, not core weights.
 
 \section{Video-Based Action Recognition}
 
-\par Action recognition from video has evolved from hand-crafted spatio-temporal features (Wang and Schmid, 2013) through 3D convolutional networks like C3D (Tran et al., 2015) and I3D (Carreira and Zisserman, 2017) to modern transformer architectures \cite{Wang2013, Tran2015, Carreira2017}.
+\par Video action recognition moved from dense trajectories (Wang and Schmid, 2013) through 3D CNNs (Tran et al., 2015; Carreira and Zisserman, 2017) toward models that treat space--time volumes as first-class inputs \cite{Wang2013, Tran2015, Carreira2017}.
 
-\par The Video Swin Transformer (Liu et al., 2022) extended the Swin Transformer to the temporal dimension, replacing convolutions with shifted-window self-attention across space and time. The Swin3D-Tiny (Swin3D-T) variant provides a compact yet powerful backbone for short video classification tasks, achieving competitive performance on Kinetics-400 with significantly fewer parameters than large ViT-based models \cite{Liu2022Swin3D}.
+\par Transformer variants now dominate many benchmarks. TimeSformer replaces 3D convolutions with joint space--time self-attention divided across axes \cite{Bertasius2021}. Multiscale Vision Transformers (MViT) build hierarchical pyramids without convolutional stems, trading depth for efficiency on long clips \cite{Fan2021MViT}. These lines differ in inductive bias from Video Swin, which applies shifted windows in a 3D lattice \cite{Liu2022Swin3D}, but all three sit in the same design space as CrickEye’s Swin3D-T head: spatio-temporal context from RGB only, no depth.
 
-\par CrickEye uses Swin3D-T as its shot classifier because cricket shots are short temporal events (typically 16--40 frames) that require understanding both spatial posture and temporal motion patterns. The model receives a 16-frame clip (sampled with zone-aware indexing to emphasise the swing phase) at 224$\times$224 resolution, preprocessed with CLAHE contrast enhancement and channel-wise normalisation. The classifier head is a single linear layer mapping the Swin3D-T backbone features to five shot classes.
+\par CrickEye classifies 16-frame clips (zone-aware sampling, 224$\times$224, CLAHE + normalisation) with a linear five-way head, a pragmatic choice for short net strokes where full attention over long histories would add latency on consumer GPUs.
 
-\par The training dataset was assembled from publicly available YouTube cricket videos. Clips were extracted, trimmed to individual shot events, and manually labelled into five classes: cover drive, flick, pull, straight drive, and sweep. This approach demonstrates that competitive sport-specific classifiers can be trained without access to expensive proprietary datasets.
+\par Training data are manually clipped and labelled from public YouTube nets into five classes, avoiding proprietary corpora; labelling is discussed with the dataset in Section~3.5.2.
 
 \section{Cricket-Specific Computational Analysis}
 
-\par Cricket has received comparatively less attention in the computer vision research literature than sports such as football, basketball, or tennis. Existing work can be categorised into three areas:
+\par Cricket vision work is thinner than for football or tennis. Three strands matter here:
 
 \subsection{Ball Tracking and Trajectory Analysis}
 
-\par Hawk-Eye (Hawk-Eye Innovations) remains the gold standard for ball tracking in cricket broadcasts, using six to eight synchronised cameras and triangulation to reconstruct 3D ball trajectories with millimetre accuracy. Academic alternatives have explored single-camera ball tracking using colour segmentation (Ren et al., 2009) and convolutional detectors (Reno et al., 2018), but these typically struggle with the small, fast-moving cricket ball in net-session footage \cite{Ren2009, Reno2018}.
+\par Broadcast Hawk-Eye uses many cameras and triangulation; latency budgets differ from an academy net where a single phone records one batter \cite{HawkEye2001}. Academic ball trackers typically assume stereo or calibrated broadcast geometry (Ren et al., 2009; Reno et al., 2018); nets violate those assumptions through netting occlusion, motion blur, and perspective distortion \cite{Ren2009, Reno2018}.
 
-\par CrickEye's Ball Analytics module uses a YOLO-based detector trained on cricket ball imagery, applies a motion filter to reject static false positives, and estimates delivery speed via single-camera axis calibration. Length zones (yorker, full, good length, short) are classified using bounce detection based on 2D path curvature analysis. The system explicitly marks all speed and length values as estimates with reliability scores, acknowledging the inherent limitations of monocular depth estimation.
+\par CrickEye therefore treats ball analytics as an optional post-pass: YOLO-based proposals plus motion gating, axis-based rescaling, curvature cues for bounce, and yorker--short bins---always surfaced with confidence text because monocular pace remains indicative rather than umpire-grade.
 
 \subsection{Batting Technique Analysis}
 
-\par Prior work on automated batting analysis includes Semwal et al.\ (2018), who used wearable IMU sensors to classify cricket shots, achieving high accuracy but requiring players to wear sensor-equipped gloves \cite{Semwal2018}. Wickramaratne and Wijeratna (2020) applied skeleton-based features from OpenPose to classify batting strokes, but their work focused on side-on camera angles and did not address biomechanical scoring \cite{Wickramaratne2020}.
+\par Video-based shot understanding in cricket is still sparse compared to football or basketball. Semwal et al.\ (2018) detect shot events from broadcast-style video using deep features, segmenting when a batter plays a stroke \cite{Semwal2018}; their contribution is event discovery rather than per-shot biomechanical grading or academy-ready tooling.
 
-\par CrickEye differentiates itself by: (a) requiring no wearable sensors — only a camera; (b) operating from the front-on angle common in net practice; (c) providing not just shot classification but a full suite of biomechanical metrics with coaching-oriented scoring and alerts; and (d) integrating classification and biomechanics into a single, deployable web application.
+\par Wickramaratne and Wijeratna (2020) move closer to coaching vocabulary by extracting OpenPose skeleton descriptors for stroke classification from batting footage \cite{Wickramaratne2020}. Their evaluation foregrounds side-on capture---still common in broadcast archives---and stops after assigning a stroke label: no head stability, footwork timing, or composite scoring maps appear in that pipeline.
+
+\par Wearable inertial systems remain an orthogonal branch (not cited here as ``video'' literature): gloves or straps can yield accurate swing traces but contradict many academy realities (equipment logistics, hygiene, child safeguarding). CrickEye deliberately avoids wearables: YOLOv8 pose plus Swin3D-T labels feed explicit session aggregates (\texttt{session\_summary}) and coaching alerts that mirror how coaches scan metrics on the live dashboard \cite{YOLOv8,Liu2022Swin3D}.
 
 \subsection{Coaching Support Systems}
 
-\par The concept of AI-assisted coaching has been explored in several sports. IBM's AI Highlights for tennis at Wimbledon (2019) uses computer vision to identify key moments for review, while systems like HomeCourt (for basketball) provide real-time shot tracking from a smartphone. In cricket, commercial apps such as Batting Lab and CricHQ offer manual video tagging and basic statistics, but none provide the automated, pose-estimation-driven biomechanical analysis that CrickEye delivers.
+\par Commercial cricket apps often catalogue clips manually or quote speeds without tying vision outputs to repeated technique cues. Research prototypes likewise seldom expose APIs for uploads, WebSocket progress, coach/player separation, and printable reports in one stack.
+
+\par CrickEye’s separation---analysis worker vs.\ FastAPI/WebSocket shell vs.\ Supabase roles---matches how Tier-2 centres operate in practice: one analyst laptop handles ingestion while athletes review phones.
+
 
 \section{Research Gap}
 
@@ -61,6 +67,6 @@ This chapter reviews the existing body of work across four areas that underpin t
     \item \textbf{Dataset from public sources:} Few cricket-specific classifiers document their training methodology using freely available YouTube footage, limiting reproducibility.
 \end{enumerate}
 
-\par CrickEye is designed to fill each of these gaps, providing a complete, low-cost, coaching-oriented batting analysis system for the Indian academy ecosystem.
+\par CrickEye is positioned to close these gaps for resource-constrained academies.
 
 \end{justify}

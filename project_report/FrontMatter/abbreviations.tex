@@ -1,24 +1,29 @@
-\newpage
-    \begin{center}
-    
-        \vspace*{0.1cm}
-        \Large
-        {List Of Abbreviations}\\
-        \vspace{0.5cm}
-        
-    \end{center}
+% No \newpage here: title and table stay on one page after List of Tables when space allows.
+\vspace*{0.15cm}
+\begin{center}
+    \Large\bfseries List of Abbreviations
+\end{center}
+\vspace{0.35\baselineskip}
 
-\begin{tabular}{ l l }
+\begin{justify}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.12}
+\small
+\noindent
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.22\textwidth}@{\hspace{0.6em}}>{\raggedright\arraybackslash}X@{}}
  AI & Artificial Intelligence \\
  API & Application Programming Interface \\
  BCCI & Board of Control for Cricket in India \\
  CLAHE & Contrast Limited Adaptive Histogram Equalisation \\
  CNN & Convolutional Neural Network \\
  COCO & Common Objects in Context \\
+ C3D & 3D Convolutional Network (Tran et al.) \\
+ I3D & Inflated 3D ConvNet (two-stream I3D) \\
  CSE & Computer Science and Engineering \\
  CSV & Comma-Separated Values \\
  CV & Computer Vision \\
  DL & Deep Learning \\
+ FastAPI & FastAPI (Python web framework for the backend API) \\
  FPS & Frames Per Second \\
  GPU & Graphics Processing Unit \\
  H.264 & Advanced Video Coding Standard \\
@@ -43,7 +48,8 @@
  UUID & Universally Unique Identifier \\
  WS & WebSocket \\
  YOLO & You Only Look Once \\
+\end{tabularx}
+\end{justify}
 
-\end{tabular}
-
-
+\phantomsection
+\addcontentsline{toc}{chapter}{List of Abbreviations}

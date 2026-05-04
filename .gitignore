@@ -3,29 +3,42 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Models (DO NOT upload)
-*.pt
-*.pth
-
-# Videos & media
+# Generated media/output files
 *.mp4
 *.avi
 *.mov
-
-# Uploads (generated during runtime)
 uploads/
+assets/analysed_*.mp4
+assets/analysed_out.mp4
+assets/best_bat.pt
 
-# Logs / temp
+# Temporary/report build artifacts
 *.log
+_pptx_extract/
+scripts/ppt_figures/
+scripts/build_major_project_ppt.py
+project_report/**/*.aux
+project_report/**/*.bbl
+project_report/**/*.bcf
+project_report/**/*.blg
+project_report/**/*.lof
+project_report/**/*.lot
+project_report/**/*.out
+project_report/**/*.run.xml
+project_report/**/*.toc
 
-# OS files
+# Keep submission focused (do not commit generated presentation/docs exports)
+*.pptx
+*.pdf
+
+# IDE / OS files
+.vscode/
 .DS_Store
 Thumbs.db
 
-# Environment files
+# Environment and local config
 .env
-
-# Local Supabase browser config (copy from config.example.js)
+backend/.env
 config.js
 
 # Jupyter (if any)
