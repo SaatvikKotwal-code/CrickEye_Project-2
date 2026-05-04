@@ -10,7 +10,6 @@ __pycache__/
 uploads/
 assets/analysed_*.mp4
 assets/analysed_out.mp4
-assets/best_bat.pt
 
 # Temporary/report build artifacts
 *.log
