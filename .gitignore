@@ -16,6 +16,7 @@ assets/analysed_out.mp4
 _pptx_extract/
 scripts/ppt_figures/
 scripts/build_major_project_ppt.py
+project_report/
 project_report/**/*.aux
 project_report/**/*.bbl
 project_report/**/*.bcf
