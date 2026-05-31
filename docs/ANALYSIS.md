@@ -1,10 +1,67 @@
 # CrickEye — Analysis pipeline & metrics
 
-**Source of truth in code:** `analyse_session.py` (repo root).
+**Source of truth in code:**
+
+| Module | Role |
+|--------|------|
+| `analyse_session.py` (repo root) | Pose pass, shot detection, biomechanics, session summary, JSON/CSV/video output |
+| `ball_analytics.py` (repo root) | Optional YOLO ball track — length zones, pace, delivery rows merged into shots |
+| `components/ReportModal.js` | Shared report + live **Session Score** (PlayCard) HTML |
+| `components/PlayCard.js` | Live dashboard panel beside the video |
 
 **This file’s location:** `docs/ANALYSIS.md`
 
-For project setup and repo overview, see `readme.md` at the repository root.
+For clone/setup and how to run locally, see `readme.md` at the repository root.
+
+---
+
+## Repository layout (live-feed dashboard branch)
+
+Core folders in the submission repo (`CrickEye_Project`):
+
+```
+analyse_session.py, ball_analytics.py, pipeline_cache_version.py
+App.js, index.html, style.css, config.example.js
+assets/          # YOLO pose + shot classifier weights (see assets/REQUIRED_FILES.txt)
+backend/         # FastAPI (main.py) + Node API (routes/, services/, sql/)
+components/      # PlayCard, ReportModal, wagonWheel, PitchMap, ballAnalytics, lengthInsights
+data/            # session_report.json and saved session payloads
+docs/            # this file
+tests/           # Python unit tests
+types/           # shared TS types (if present)
+uploads/         # runtime uploads (gitignored)
+```
+
+**Not in the lean repo:** `project_report/` (LaTeX), generated `*.pdf` / `*.pptx`, local `config.js`.
+
+### Runtime stack
+
+1. **FastAPI** — `uvicorn backend.main:app --port 8000` serves `index.html`, static `components/`, WebSocket analysis (`/ws`), upload/process endpoints.
+2. **Node API** — `cd backend && npm start` (default port **8080**) for Supabase session CRUD, LLM insights route, coach dashboard APIs.
+3. **Browser app** — `App.js` drives the player dashboard: live video, pitch map, wagon wheel, ball analytics cards, and the **Session Score** PlayCard.
+
+### Player dashboard (live feed)
+
+`index.html` layout (`#playerAnalysisOnly`):
+
+| UI block | Scripts / data |
+|----------|----------------|
+| **Live feed** (video + timeline + HUD) | `App.js`, WebSocket stages from `run_pipeline_ws_sync()` |
+| **Session Score** (right of video) | `PlayCard.js` → `ReportModal.buildLivePlayCardHtml()` after playback ends (~2.5s compile bar) |
+| **Pitch map** | `PitchMap.js` + `ball_analytics.deliveries` length zones |
+| **Wagon wheel** | `wagonWheel.js` + shot labels / zone counts from session JSON |
+| **Ball analytics row** | `ballAnalytics.js`, `lengthInsights.js` |
+
+PlayCard section buttons open `#playCardDetailModal` via `ReportModal.buildPlayCardSectionHtml()`:
+
+| Button | Section key | Content |
+|--------|-------------|---------|
+| AI Insights | `ai` | LLM + rule-based coaching (`backend/routes/llmInsights.js` when configured) |
+| Ball length analysis | `length` | `lengthInsights.js` tables from ball deliveries |
+| Deliveries | `deliveries` | Per-shot table (head, stance, feet, swing arc, shot execution, ball info, flags) |
+| Scoring zones | `zones` | **Scoring arc trends** only (shot-by-shot line graphs + optional 1st vs 2nd half momentum). Wagon-wheel coverage pills were removed from this modal. |
+
+Full **Net Session Report** modal (coach/history) reuses the same `ReportModal` builders with a larger layout.
 
 ---
 
@@ -12,22 +69,36 @@ For project setup and repo overview, see `readme.md` at the repository root.
 
 ### Per-shot
 
-- **Shot:** `label`, `conf`, `probs`, `timestamp`, `peak_frame`, `start_frame`, `end_frame`, `onset_score`
+- **Shot:** `label`, `conf`, `probs`, `timestamp`, `peak_frame`, `start_frame`, `end_frame`, `onset_score`, `display_num`
 - **Head:** `head_quality_score`, `head_lateral_ratio`, `head_vertical_ratio`, `head_frames_used`, `head_flag`, `head_confidence`, `head_quality_label`
 - **Stance:** `symmetry_score`, `avg_shoulder_tilt`, `avg_hip_tilt`, `stance_flag`, `symmetry_label`
-- **Swing / speed:** `swing_raw_p90`, `swing_intensity`, `swing_intensity_label`, `peak_swing_speed`, `speed_is_capped` (optional **`BAT_SPEED_SESSION_LOCK`** on `flags` if peak was capped to match the session)
-- **Elbows:** `elbow_collapse`, `elbow_delta`, `setup_elbow_ratio`, `contact_elbow_ratio`, `elbow_behind_pad`, `elbow_flag`
-- **Footwork:** `feet_active`, `pre_shot_movement`, `plant_timing`, `footwork_score`, `footwork_flag`, `footwork_label`
+- **Swing path:** `swing_path_score`, `swing_path_note`, `swing_path_label` (wrist-path directness; in composite)
+- **Swing / speed (diagnostic):** `swing_raw_p90`, `swing_intensity`, `swing_intensity_label`, `peak_swing_speed`, `speed_is_capped` — **not** in `/10` composite; optional **`BAT_SPEED_SESSION_LOCK`** on `flags` after session alignment
+- **Elbows:** `elbow_collapse`, `elbow_delta`, `elbow_score`, `setup_elbow_ratio`, `contact_elbow_ratio`, `elbow_behind_pad`, `elbow_flag`
+- **Footwork:** `feet_active`, `pre_shot_movement`, `plant_timing`, `footwork_score`, `footwork_flag`, `footwork_label`, optional `ball_line_score` after ball merge
+- **Ball merge (when `ball_analytics` enabled):** `length_zone`, `execution_score`, `execution_label`, `execution_confidence`, `ball_track_matched`, `execution_length_note`, `ball_delivery_snapshot`
 - **Overall:** `shot_score`, `shot_quality`, `shot_quality_label`, `flags`, `flags_plain`, `data_quality`, `data_quality_note`
 
 ### Session-level (`run_session_analysis`)
 
 - `best_shot`, `worst_shot`, `coaching_alerts`, `shots_with_flags`
-- `session_summary`: counts, averages, `feet_active_rate`, `fatigue_detected`, `trend`, `flags_summary`, `by_shot_type`
+- `session_summary`: counts, averages, `feet_active_rate`, `fatigue_detected`, `trend` (includes `swing_path_score`, `execution_score` halves), `flags_summary`, `by_shot_type`
+- Top-level JSON may include `ball_analytics` (`deliveries`, `frame_overlays`, `video_trajectories`)
 
 ### Shot score weights (composite /10)
 
-**Head 35%**, **footwork 25%**, **stance symmetry 15%**, **elbow 15%**, **swing intensity 10%**. Bat speed (km/h) is **not** in the composite; swing intensity is session-normalized.
+Weights are **points out of 100** in `analyse_session.py` (`SCORE_W_*`), shown as **/10**:
+
+| Component | Points | Share |
+|-----------|--------|-------|
+| Head | 28 | 28% |
+| Footwork | 20 | 20% |
+| Stance symmetry | 12 | 12% |
+| Elbow shape | 12 | 12% |
+| Shot execution (length × shot type) | 22 | 22% |
+| Swing path quality | 6 | 6% |
+
+**Not in composite:** swing intensity, peak bat speed (km/h). Execution defaults to **50/100** until `apply_ball_aware_shot_scoring()` runs; disable ball pass with `BALL_ANALYTICS_ENABLED=0`.
 
 ---
 
@@ -37,16 +108,17 @@ For project setup and repo overview, see `readme.md` at the repository root.
 
 ## The complete pipeline (big picture)
 
-1. **Video in** — Your net clip is read frame by frame.
-2. **Pose pass** — A pose model finds body “dots” each frame (shoulders, hips, wrists, ankles, nose, etc.).
-3. **Wrist motion** — From those dots, the computer measures how fast the **left and right wrists** move in the **2D video image** (sideways and up/down only), then blends them into one **“bilateral”** speed per frame.
-4. **Find swings** — It looks for stretches where that speed stays high long enough to count as a real swing (not a random twitch).
-5. **Split into shots** — Each swing becomes its own short **clip** of frames around the moment the hands really go.
-6. **Shot type** — A separate **video classifier** looks at those frames and guesses the stroke (cover, pull, flick, etc.) and how sure it is (**confidence**).
-7. **Biomechanics per shot** — For each shot it measures head, stance, elbows, feet, swing effort, and builds a **0–10 shot score** plus **flags** (things to fix).
-8. **Session pass** — After all shots, it **rescales swing effort** so “how hard you swung” is compared **within that session only**, then (unless disabled via env) **optionally aligns** any lone **peak bat speed** outlier to that session + swing intensity, then **recalculates** the final 0–10 using the final swing intensity.
-9. **Session summary** — Averages, trends (first half vs second half), best/worst shot, **coaching alerts**, and counts of each flag type (including **BAT_SPEED_SESSION_LOCK** when that step adjusted a delivery).
-10. **Outputs** — JSON report, optional annotated video, CSV, and (in the app) WebSocket updates.
+1. **Video in** — Net clip read frame by frame (`extract_all_keypoints`).
+2. **Pose pass** — YOLO pose (`assets/yolov8n-pose.pt`) → shoulders, hips, wrists, ankles, nose, etc.
+3. **Camera scale** — Median shoulder width in the session → `pixel_scale` so thresholds work on zoomed-out nets.
+4. **Wrist motion** — Left/right wrist speed in the **2D image**, blended to **bilateral** speed per frame.
+5. **Find swings** — High-speed windows → shot onsets (padding → `start_frame` / `end_frame`).
+6. **Shot type** — Classifier (`assets/crickeye_best.pth`) → `label`, `conf`, `probs`.
+7. **Biomechanics per shot** — `extract_biomechanics()`: head, stance, elbows, footwork, **swing path**, preliminary `/10` (execution neutral at 50 until ball merge).
+8. **Ball analytics (optional)** — `ball_analytics.run_ball_analytics()` tracks the ball (`assets/best_ball.pt`); `apply_ball_aware_shot_scoring()` sets **execution_score**, `length_zone`, and may adjust footwork vs line of ball.
+9. **Session pass** — `run_session_analysis()`: session-normalised **swing intensity** (diagnostic), optional **`SESSION_BAT_SPEED_LOCK`** on outlier km/h, **`finalize_shot_player_copy()`** recomputes `/10` from stored sub-scores (no swing intensity in composite).
+10. **Session summary** — Averages, 1st vs 2nd half **trend**, best/worst shot, **coaching alerts**, `flags_summary`, `by_shot_type`.
+11. **Outputs** — `data/session_report.json`, annotated `assets/analysed_out.mp4`, CSV, WebSocket progress to the dashboard; Node may persist to Supabase.
 
 ---
 
@@ -100,22 +172,35 @@ For project setup and repo overview, see `readme.md` at the repository root.
 | **Feet active** (true/false) | Quick badge: did the feet do *anything* useful before the swing? | True if normalised pre-shot movement passes a **threshold**. |
 | **Footwork flag** (`FLAT_FOOTED`, `LATE_PLANT`) | Plain coaching hooks: quiet feet or foot landing too late. | **FLAT_FOOTED**: little movement and no good plant story. **LATE_PLANT**: plant clearly **after** the allowed window vs contact. |
 
-### Swing effort and “bat speed”
+### Swing path (in composite)
 
 | Metric | Coaching relevance | Simple calculation |
 |--------|-------------------|-------------------|
-| **Swing raw P90** (`swing_raw_p90`) | Internal: how “big” the wrist motion spike was in **pixels**, before rescaling. | In the swing clip, take **bilateral wrist speed** each frame, smooth with a **short rolling average**, then take about the **90th percentile** of that smooth signal (ignores one-frame glitches). |
-| **Peak swing speed** (km/h) | **Trend and motivation** — not a radar gun, but “are we generating more hand speed in this setup?” | That same motion size is turned into **km/h** using **shoulder width in the image** as a ruler, **fps**, and a fixed **wrist→bat-tip multiplier**, with a **max cap**. |
-| **Speed capped** | Tells you the number hit the **ceiling** (so don’t over-read the exact km/h). | True if result is near the **sanity cap**. |
-| **Swing intensity** (0–100) | **Fair comparison within this net**: who swung harder *relative to their own session*. | After **all** shots are done, the **biggest** raw swing in the session = 100; every other shot is scaled to that. **This** feeds the **final** shot score for the swing slice (after `finalize_shot_player_copy`). |
-| **Swing intensity (preliminary)** | Used only **before** the session-wide rescale; superseded for the final score. | Temporary scale using a **fixed** guess of what a “big” raw motion is (~50 px/frame). |
+| **Swing path score** (0–100) | **Swing arc** in the UI — smooth, direct wrist path into contact. | `compute_swing_path_quality()`: wrist mid-path from backlift to contact; **directness** (net displacement ÷ path length), **smoothness** (low jitter), modest **downswing** check; normalised by shoulder width. **6%** of `/10`. |
+
+### Swing effort and “bat speed” (diagnostic — not in /10)
+
+| Metric | Coaching relevance | Simple calculation |
+|--------|-------------------|-------------------|
+| **Swing raw P90** (`swing_raw_p90`) | Internal: wrist motion spike size in **pixels**. | Smoothed bilateral speed in clip → ~90th percentile. |
+| **Peak swing speed** (km/h) | **Trend only** — same camera setup; not a radar gun. | px/frame → km/h via shoulder ruler, fps, wrist→tip multiplier; may cap. |
+| **Speed capped** | Exact km/h may be clipped. | Near sanity cap. |
+| **Swing intensity** (0–100) | Session-relative effort; charts and alerts (`LOW_BAT_SPEED`, `FATIGUE`). | After all shots: max raw swing in session = 100; others scaled. **Does not** change `/10` after `recompute_composite_shot_score()`. |
+
+### Ball-aware execution (in composite when ball track runs)
+
+| Metric | Coaching relevance | Simple calculation |
+|--------|-------------------|-------------------|
+| **Length zone** | Yorker / full / good / short / etc. from ball YOLO. | `ball_analytics` delivery `length.label` matched to shot order by `peak_frame`. |
+| **Execution score** (0–100) | **Shot execution** in UI — stroke vs length. | `_execution_pair_score(length_zone, shot_label)` with down-weighting if track uncertain (`bounce_uncertain`, low confidence). **22%** of `/10`. |
+| **Ball line score** | Optional footwork blend when track + striker line known. | Compares foot drift direction vs ball position at peak frame. |
 
 ### Overall shot quality
 
 | Metric | Coaching relevance | Simple calculation |
 |--------|-------------------|-------------------|
-| **Shot score** (/10) | Single **execution grade** for that ball — good for ranking deliveries in a session. | Weighted mix (out of 100 internal points, shown as /10): **head 35%**, **footwork 25%**, **stance symmetry 15%**, **elbow shape 15%**, **swing intensity 10%**. **Special case**: cramped elbow on a **pull** costs extra elbow points. After all shots, **swing intensity is recomputed** session-normalised and the **/10 is updated**. |
-| **Shot quality** / **labels** | Words players understand: Good, Average, Poor, etc. | **Bands** on the /10 score and on each 0–100 sub-score (separate label scales in code). |
+| **Shot score** (/10) | Single **execution grade** for that ball. | **28 + 20 + 12 + 12 + 22 + 6** point mix (see table above). Pull + cramped elbow costs extra elbow points. Recomputed in `finalize_shot_player_copy()` after ball merge and session bat-speed lock. |
+| **Shot quality** / **labels** | Good, Average, Poor, Top class, etc. | Bands on `/10` and per-metric 0–100 labels. |
 
 ### Flags and data quality
 
@@ -138,7 +223,7 @@ For project setup and repo overview, see `readme.md` at the repository root.
 | **Best / worst shot** | Highlights **signature** and **work-on** moments. | By **shot score** among confirmed shots. |
 | **Averages** (head, stance, footwork, swing intensity, bat speed km/h, shot score) | **Session themes**: “today everything was a bit cramped” or “head stable but feet quiet.” | **Mean** over confirmed shots where the value exists. |
 | **Feet active rate** | “Were you generally moving your feet before the ball?” | Fraction of confirmed shots with **feet_active**. |
-| **Trend (1st vs 2nd half)** | **Fatigue, focus, or warmup** — numbers drifting through the net. | Split confirmed shots in half by order; average **swing intensity, head, stance, footwork** in each half. |
+| **Trend (1st vs 2nd half)** | **Fatigue, focus, or warmup** — numbers drifting through the net. | Split confirmed shots in half by order; average **swing intensity, head, stance, footwork, swing_path, execution** in each half (used in PlayCard “Scoring zones” trends). |
 | **Fatigue detected** | Flag when **swing effort** drops a lot in the second half (same trend idea). | Second-half average swing intensity **< 75%** of first-half. |
 | **Flags summary** | “How often did each problem show up?” — prioritise themes. | **Counts** each flag type across the session. |
 | **By shot type** | “On drives vs pulls, what breaks?” | Per label: counts, mean confidence, means/std for **swing, head, stance, footwork, score**, plus **elbow** and **head** breakdowns. |
@@ -149,7 +234,7 @@ For project setup and repo overview, see `readme.md` at the repository root.
 
 ## One sentence to remember
 
-**The pipeline turns your video into body points, finds each swing, names the shot type, then scores how still the head was, how level the setup was, how the arms and feet behaved, and how hard you swung compared with the rest of *that* session — and wraps repeated problems into coaching alerts.**
+**The pipeline turns your video into body points, finds each swing, names the shot type, optionally tracks the ball for length-aware execution, then scores head, feet, stance, elbows, swing path, and shot-vs-length execution into a /10 grade — with swing intensity and km/h kept as session diagnostics — and surfaces repeated issues as coaching alerts on the live dashboard and in saved reports.**
 
 ---
 
@@ -233,7 +318,7 @@ It finds frames where the wrists aren’t moving fast (so you’re not mid-swing
 **What it calculates:**  
 Whether your **arms stayed a similar width** from setup to contact, or **pulled in** (cramped) vs **stretched out** (reaching) — using **elbow spread in the image** vs **shoulder width**. Sweep gets an extra check: **elbow behind the pad**.
 
-**Coaching importance:** **High** for **contact quality** and **direction**; coaches often pair this with head and feet. It’s **15%** of the total shot score in your pipeline — important but not weighted above head/footwork.
+**Coaching importance:** **High** for **contact quality** and **direction**; **12%** of the `/10` composite (below head, footwork, and execution).
 
 **How it’s calculated (layman):**  
 It measures **how far apart your elbows are** in the video (horizontally), **before** the swing and **around** the hit, compared to **shoulder width**. **Shrinking** a lot → **cramped**; **growing** a lot → **reaching**; **roughly stable** → **consistent**; in between → **marginal**. On **pull**, cramped is flagged more harshly in scoring. On **sweep**, it checks if the **lead elbow** sits **behind** the **front knee** in the image (front-on cue for **bat rolling closed**).
@@ -257,7 +342,7 @@ It measures **how far apart your elbows are** in the video (horizontally), **bef
 **What it calculates:**  
 **How big the hand motion was on this swing compared to the hardest swing in the same session** — a **relative effort** score, not “true mph.”
 
-**Coaching importance:** **Medium** as a teaching topic (“commit / tempo / don’t guide”); in your model it’s **10%** of the shot score. **Session fatigue** and **intent** show up here.
+**Coaching importance:** **Medium** for intent and fatigue; **not part of the /10 composite** in v7+. **Session fatigue** and **intent** show up in trends and alerts (`LOW_BAT_SPEED`, `FATIGUE`).
 
 **How it’s calculated (layman):**  
 From **wrist speed** in the clip (blended left/right), it takes a **smoothed** trace and a **high-but-stable** value (90th percentile style). After **all** shots in the net are done, the **biggest** of those becomes **100**; every other shot is scaled to that. So it answers: **“Did you swing this one as hard as your best one today?”**
@@ -287,12 +372,36 @@ An **estimated bat-speed-style number** from the **same wrist motion** used for 
 ## 7. Overall shot score (/10) + quality words
 
 **What it calculates:**  
-One **overall grade** for that delivery from **head (35%) + footwork (25%) + stance (15%) + elbows (15%) + swing intensity (10%)**, then **recalculated** after session swing scaling.
+One **overall grade** from **head 28% + footwork 20% + stance 12% + elbows 12% + execution (length×shot) 22% + swing path 6%**, recomputed in `finalize_shot_player_copy()` after ball merge.
 
-**Coaching importance:** **High** for **ranking balls** and **progress**; **medium** for **technical diagnosis** (you still read the **pieces** above to know *what* to coach).
+**Coaching importance:** **High** for **ranking balls** and **progress**; **medium** for **technical diagnosis** (read sub-metrics and flags to know *what* to coach).
 
 **How it’s calculated (layman):**  
-Each area contributes points out of 100 internally; total ÷ 10 → **/10**. Words like **Good**, **Average**, **Poor** are **bands** on that total.
+Each area contributes points out of 100 internally; total ÷ 10 → **/10**. Words like **Good**, **Average**, **Poor**, **Top class** are **bands** on that total.
+
+---
+
+## 7b. Swing path quality (0–100) — in composite
+
+**What it calculates:**  
+Whether the **wrist path** from backlift toward contact is **direct and smooth** (front-on proxy; no bat-segment model).
+
+**Coaching importance:** **Medium–high** for repeatable shape; **6%** of `/10`.
+
+**How it’s calculated (layman):**  
+Track wrist midpoint through the downswing; reward a path that goes **mostly straight** to contact with **steady** motion and a sensible **downward** finish. Shown as **Swing arc** in the deliveries table and PlayCard donut.
+
+---
+
+## 7c. Shot execution vs length (0–100) — in composite when ball analytics on
+
+**What it calculates:**  
+Whether the **named shot type** was a sensible choice for the **detected length** (e.g. drive on a full ball).
+
+**Coaching importance:** **High** when ball track is reliable; neutral **50** when ball analytics is off or unmatched.
+
+**How it’s calculated (layman):**  
+Lookup table `_execution_pair_score(length_zone, shot_label)`; blended toward 50 when bounce/track confidence is low. **22%** of `/10`. Dashboard label: **Shot execution**.
 
 **No flag** specific to “shot score” — flags still come from **head / stance / elbow / footwork** as above.
 
