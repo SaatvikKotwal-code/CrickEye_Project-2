@@ -42,12 +42,6 @@ Optional LLM settings can remain disabled for standard project execution.
 
 ## Excluded from Final Submission
 
-These are intentionally ignored to keep the repository clean and reproducible:
-- Presentation files (`*.pptx`)
-- PDF exports (`*.pdf`)
-- PPT helper script and extraction artifacts
-- Runtime-generated videos and upload folder outputs
-- LaTeX build artifacts (`*.aux`, `*.bbl`, `*.bcf`, `*.blg`, etc.)
 - Local secret/config files (`backend/.env`, `config.js`)
 
 ## Notes on Large Files
