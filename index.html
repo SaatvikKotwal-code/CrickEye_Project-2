@@ -132,6 +132,19 @@
   </div>
 
   <!-- Session-to-session comparison -->
+  <!-- Live dashboard: section detail popups (AI / length / deliveries / zones) -->
+  <div id="playCardDetailModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="playCardDetailTitle" hidden>
+    <div class="ce-modal-backdrop" data-close-modal="playCardDetailModal"></div>
+    <div class="ce-modal-dialog ce-modal-dialog--playcard-detail">
+      <button type="button" class="ce-modal-close" data-close-modal="playCardDetailModal" aria-label="Close">&times;</button>
+      <h2 id="playCardDetailTitle" class="ce-modal-title">Details</h2>
+      <div id="playCardDetailBody" class="playcard-detail-body"></div>
+      <div class="ce-modal-actions">
+        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="playCardDetailModal">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div id="sessionCompareModal" class="ce-modal ce-modal--compare" role="dialog" aria-modal="true" aria-labelledby="sessionCompareTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="sessionCompareModal"></div>
     <div class="ce-modal-dialog ce-modal-dialog--compare">
@@ -209,63 +222,83 @@
   <!-- ───────────────── MAIN STACK (video → wagon wheel) ───────────────── -->
   <main class="main-grid player-dashboard-main">
 
-    <!-- ══════════ LIVE FEED — full width ══════════ -->
-    <section class="panel panel--live-feed live-feed-container">
+    <!-- ══════════ LIVE FEED + PLAYCARD — side by side ══════════ -->
+    <div class="live-feed-row">
 
-      <div class="panel-header">
-        <div class="panel-label-group">
-          <span class="live-dot"></span>
-          <span class="panel-label">Live Feed</span>
-        </div>
-        <div class="panel-controls">
-          <span class="ctrl-btn" id="btnSpeed">1×</span>
-          <span class="ctrl-btn" id="btnLoop">↺ Loop</span>
-
-          <button class="btn-report" id="btnReport" disabled>
-            <svg class="btn-report-icon" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 2.5A1.5 1.5 0 013.5 1h5L11 4v7.5A1.5 1.5 0 019.5 13h-6A1.5 1.5 0 012 11.5v-9z" stroke="white" stroke-width="1.2" fill="none"/>
-              <path d="M8 1v3.5H11" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
-              <path d="M4.5 7.5h5M4.5 9.5h3" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
-            </svg>
-            Generate Report
-          </button>
-
-        </div>
-      </div>
-
-      <div class="video-wrapper">
-        <video id="mainVideo" class="main-video" playsinline></video>
-        <canvas id="ballOverlayCanvas" class="ball-overlay-canvas" aria-hidden="true"></canvas>
-        <div class="video-hud">
-          <div class="hud-corner hud-tl">
-            <span class="rec-dot"></span> LIVE
+      <!-- LEFT: Video sub-panel -->
+      <section class="panel live-feed-panel" aria-label="Live video feed">
+        <div class="panel-header">
+          <div class="panel-label-group">
+            <span class="live-dot"></span>
+            <span class="panel-label">Live Feed</span>
           </div>
-          <div class="hud-corner hud-tr" id="hudTime">00:00</div>
-          <div class="hud-corner hud-bl">SHOT: <span id="hudShot">—</span></div>
-          <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
+          <div class="panel-controls">
+            <span class="ctrl-btn" id="btnSpeed">1×</span>
+            <span class="ctrl-btn" id="btnLoop">↺ Loop</span>
+          </div>
         </div>
-      </div>
 
-      <!-- Shot timeline -->
-      <div class="timeline-section">
-        <div class="timeline-label">Shot Timeline</div>
-        <div class="timeline-track" id="timelineTrack"></div>
-        <div class="timeline-bar">
-          <div class="timeline-progress" id="timelineProgress"></div>
+        <div class="video-wrapper">
+          <video id="mainVideo" class="main-video" playsinline></video>
+          <canvas id="ballOverlayCanvas" class="ball-overlay-canvas" aria-hidden="true"></canvas>
+          <div class="video-hud">
+            <div class="hud-corner hud-tl">
+              <span class="rec-dot"></span> LIVE
+            </div>
+            <div class="hud-corner hud-tr" id="hudTime">00:00</div>
+            <div class="hud-corner hud-bl">SHOT: <span id="hudShot">—</span></div>
+            <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
+          </div>
         </div>
-      </div>
 
-      <!-- Current shot display -->
-      <div class="current-shot-display">
-        <div class="shot-badge" id="currentShotBadge">
-          <span class="shot-number">SHOT <span id="shotIndex">—</span></span>
-          <span class="shot-name" id="shotName">AWAITING</span>
-          <span class="shot-time" id="shotTime">—</span>
+        <!-- Shot timeline -->
+        <div class="timeline-section">
+          <div class="timeline-label">Shot Timeline</div>
+          <div class="timeline-track" id="timelineTrack"></div>
+          <div class="timeline-bar">
+            <div class="timeline-progress" id="timelineProgress"></div>
+          </div>
         </div>
-        <div class="shot-color-bar" id="shotColorBar"></div>
-      </div>
 
-    </section>
+        <!-- Current shot display -->
+        <div class="current-shot-display">
+          <div class="shot-badge" id="currentShotBadge">
+            <span class="shot-number">SHOT <span id="shotIndex">—</span></span>
+            <span class="shot-name" id="shotName">AWAITING</span>
+            <span class="shot-time" id="shotTime">—</span>
+          </div>
+          <div class="shot-color-bar" id="shotColorBar"></div>
+        </div>
+      </section>
+
+      <!-- RIGHT: PlayCard / Score panel -->
+      <aside class="playcard-panel" aria-label="Session score panel">
+        <!-- Panel header — always visible, outside the scrollable card -->
+        <div class="playcard-panel-header">
+          <div class="playcard-panel-title-group">
+            <span class="playcard-panel-title">Session Score</span>
+          </div>
+        </div>
+
+        <!-- Card body: placeholder and score view share the same slot -->
+        <div id="playCardMount" class="playcard playcard--inactive">
+          <div id="playCardCompileBar" class="playcard-compile-bar" hidden aria-hidden="true">
+            <div class="playcard-compile-bar-track">
+              <div class="playcard-compile-bar-fill" id="playCardCompileBarFill"></div>
+            </div>
+          </div>
+          <div class="playcard-body">
+            <div id="playCardPlaceholder" class="playcard-placeholder">
+              <div class="playcard-placeholder-icon">📊</div>
+              <p class="playcard-placeholder-title">Awaiting Analysis</p>
+              <p class="playcard-placeholder-text">Watch the full video — your session score, shot highlights, and coaching breakdown appear here when playback finishes.</p>
+            </div>
+            <div id="playCardInner" class="playcard-inner" hidden></div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
 
     <!-- ══════════ PITCH MAP (L) + WAGON WHEEL (R) — two columns; Ball Analytics cards stay below ══════════ -->
     <div class="analytics-split-row">
@@ -470,6 +503,7 @@
   <script src="components/ballAnalytics.js"></script>
   <script src="components/lengthInsights.js"></script>
   <script src="components/ReportModal.js"></script>
+  <script src="components/PlayCard.js"></script>
   <!-- UMD build required for classic <script>; bare @2 points at CJS and breaks in the browser -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="app.js"></script>

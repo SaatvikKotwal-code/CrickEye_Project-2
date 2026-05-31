@@ -1683,16 +1683,8 @@ const ReportModal = (() => {
     });
   }
 
-  // ── Public API ───────────────────────────────────────────
-  function open(appState, analysis) {
-    if (document.getElementById('rpOverlay')) return; // already open
-    if (!analysis) {
-      alert('No session analysis available yet. Run the pipeline first.');
-      return;
-    }
-
-    injectStyles();
-
+  /** Shared payload for modal + live dashboard PlayCard (no DOM). */
+  function prepareReportData(appState, analysis) {
     const fallbackVideoFromPlayer =
       appState.originalVideoUrl ||
       appState.video_url ||
@@ -1724,7 +1716,7 @@ const ReportModal = (() => {
           })()
         : '');
 
-    const data = {
+    return {
       shots: appState.shotLog || [],
       analysis,
       stance: appState.completePayload?.handedness || 'RHB',
@@ -1735,6 +1727,583 @@ const ReportModal = (() => {
       sessionDateLabel: appState.sessionDateLabel || '',
       sessionStatus: appState.sessionStatus || '',
     };
+  }
+
+  const METRIC_INFO_PLAYCARD = [
+    { key: 'head', label: 'Head Position', color: '#14B8A6', title: 'Head position', sublabel: 'Axis-aware head quality for your shot mix', tip: 'Axis-aware head quality (0–100): lateral drift is penalised; vertical movement uses shot-type rules so pull/sweep are not misread.' },
+    { key: 'stance', label: 'Batting Stance', color: '#9333EA', title: 'Batting stance', sublabel: 'Pre-shot shoulder and hip symmetry', tip: 'Pre-shot shoulder and hip line tilt vs horizontal (0–100). Level shoulders before release.' },
+    { key: 'foot', label: 'Foot Movement', color: '#22C55E', title: 'Foot movement', sublabel: 'Pre-shot feet and plant timing vs contact', tip: 'Pre-shot foot activity and front-foot plant timing relative to contact (0–100).' },
+    { key: 'swing', label: 'Swing Arc', color: '#F97316', title: 'Swing arc', sublabel: 'Average hand path quality into contact', tip: 'Smooth hand path into the ball (0–100), from both wrists on your video.' },
+    { key: 'exec', label: 'Shot Execution', color: '#EF4444', title: 'Shot execution', sublabel: 'Did your stroke match the ball length? (0–100)', tip: 'Did you play the right shot for that ball length (0–100)? Coach matrix per length × shot type.' },
+  ];
+
+  function metricQualityLabel(pct) {
+    const v = Math.min(100, Math.max(0, Number(pct) || 0));
+    if (v >= 70) return { text: 'Good', color: '#10B981' };
+    if (v >= 45) return { text: 'Average', color: '#EAB308' };
+    return { text: 'Needs Attention', color: '#EF4444' };
+  }
+
+  function buildPlayCardMetricDetailHtml(value, color, label, sublabel) {
+    const pct = Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+    const R = 44;
+    const cx = 56;
+    const cy = 56;
+    const circ = 2 * Math.PI * R;
+    const offset = circ * (1 - pct / 100);
+    const { text: quality, color: qc } = metricQualityLabel(pct);
+    return `
+      <div class="pc-metric-detail-card">
+        <div class="pc-metric-detail-ring">
+          <svg width="112" height="112" viewBox="0 0 112 112" aria-hidden="true">
+            <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(0,0,0,0.07)" stroke-width="9"/>
+            <circle cx="${cx}" cy="${cy}" r="${R}" fill="none"
+              stroke="${color}" stroke-width="9" stroke-linecap="round"
+              stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+              transform="rotate(-90 ${cx} ${cy})"
+              class="rp-pie-arc pc-metric-detail-arc" data-offset="${offset}"/>
+            <text x="${cx}" y="${cy - 6}" text-anchor="middle"
+              style="font-family:Manrope,sans-serif;font-size:20px;font-weight:800;fill:${color}">${pct}</text>
+            <text x="${cx}" y="${cy + 10}" text-anchor="middle"
+              style="font-family:Inter,sans-serif;font-size:9px;fill:#94A3B8">out of 100</text>
+          </svg>
+        </div>
+        <div class="pc-metric-detail-label">${escapeHtml(label)}</div>
+        <div class="pc-metric-detail-quality" style="color:${qc}">${escapeHtml(quality)}</div>
+        <div class="pc-metric-detail-sublabel">${escapeHtml(sublabel)}</div>
+      </div>`;
+  }
+
+  function scoreColor100(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '#94A3B8';
+    const v = Number(n);
+    if (v >= 80) return '#10B981';
+    if (v >= 50) return '#F97316';
+    return '#EF4444';
+  }
+
+  function scoreColor10(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '#94A3B8';
+    const v = Number(n);
+    if (v >= 8) return '#10B981';
+    if (v >= 5) return '#F97316';
+    return '#EF4444';
+  }
+
+  function buildPlayCardDonutSvg(summary, avgScore10) {
+    const head = Math.max(0, Math.min(100, Math.round(summary.avgHead || 0)));
+    const stance = Math.max(0, Math.min(100, Math.round(summary.avgStability || 0)));
+    const foot = Math.max(0, Math.min(100, Math.round(summary.avgFootwork || 0)));
+    const swing = Math.max(0, Math.min(100, Math.round(summary.avgSwingPath || 0)));
+    const exec = Math.max(0, Math.min(100, Math.round(summary.avgExecution || 0)));
+    const scores = [
+      { v: head, c: '#14B8A6', label: 'Head Position' },
+      { v: stance, c: '#9333EA', label: 'Batting Stance' },
+      { v: foot, c: '#22C55E', label: 'Foot Movement' },
+      { v: swing, c: '#F97316', label: 'Swing Arc' },
+      { v: exec, c: '#EF4444', label: 'Shot Execution' },
+    ];
+    const sumW = scores.reduce((a, s) => a + Math.max(1, s.v), 0);
+    const cx = 72;
+    const cy = 72;
+    const R = 52;
+    const rIn = 34;
+    const gapRad = 0.06;
+    let a0 = -Math.PI / 2;
+    const paths = [];
+    scores.forEach((s) => {
+      const sweep = (Math.max(1, s.v) / sumW) * (2 * Math.PI - gapRad * scores.length);
+      const a1 = a0 + sweep;
+      const large = sweep > Math.PI ? 1 : 0;
+      const x0o = cx + R * Math.cos(a0);
+      const y0o = cy + R * Math.sin(a0);
+      const x1o = cx + R * Math.cos(a1);
+      const y1o = cy + R * Math.sin(a1);
+      const x0i = cx + rIn * Math.cos(a0);
+      const y0i = cy + rIn * Math.sin(a0);
+      const x1i = cx + rIn * Math.cos(a1);
+      const y1i = cy + rIn * Math.sin(a1);
+      const d = `M ${x0o.toFixed(2)} ${y0o.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${x1o.toFixed(2)} ${y1o.toFixed(2)} L ${x1i.toFixed(2)} ${y1i.toFixed(2)} A ${rIn} ${rIn} 0 ${large} 0 ${x0i.toFixed(2)} ${y0i.toFixed(2)} Z`;
+      paths.push(
+        `<path class="pc-donut-seg" d="${d}" fill="${s.c}" stroke="#fff" stroke-width="2" data-pc-metric="${escapeHtml(s.label)}" data-pc-score="${s.v}" style="cursor:pointer"/>`,
+      );
+      a0 = a1 + gapRad;
+    });
+    const overall = Math.round((Number(avgScore10) || 0) * 10);
+    return `
+      <div class="pc-donut-wrap">
+        <svg width="144" height="144" viewBox="0 0 144 144" class="pc-donut-svg" aria-hidden="true">
+          ${paths.join('')}
+        </svg>
+        <div class="pc-donut-center">
+          <span class="pc-donut-overall">${overall}</span>
+          <span class="pc-donut-sub">/ 100</span>
+        </div>
+        <div id="pcDonutTooltip" class="pc-donut-tooltip" hidden></div>
+      </div>
+      <div class="pc-metric-legend">
+        ${METRIC_INFO_PLAYCARD.map((m) => {
+          const score = { head, stance, foot, swing, exec }[m.key] ?? 0;
+          return `
+          <div class="pc-metric-legend-item" data-pc-metric-key="${m.key}">
+            <div class="pc-metric-legend-row">
+              <span class="pc-metric-dot" style="background:${m.color}"></span>
+              <span class="pc-metric-name">${escapeHtml(m.label)}</span>
+              <button type="button" class="pc-metric-info"
+                data-pc-metric-key="${m.key}"
+                aria-expanded="false"
+                aria-controls="pc-metric-detail-${m.key}"
+                title="${escapeHtml(m.tip)}"
+                aria-label="Show ${escapeHtml(m.title)} score">ℹ️</button>
+            </div>
+            <div class="pc-metric-detail" id="pc-metric-detail-${m.key}" role="region" aria-hidden="true">
+              <div class="pc-metric-detail-inner">
+                ${buildPlayCardMetricDetailHtml(score, m.color, m.title, m.sublabel)}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  function buildPlayCardDeliveriesRows(confirmedShots, ballByShot) {
+    return confirmedShots.map((s) => {
+      const ballDel = ballByShot.get(Number(s.shot_num));
+      const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
+      const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
+      const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
+      const pathSc = s.swing_path_score != null ? Math.round(s.swing_path_score) : null;
+      const exSc = s.execution_score != null ? Math.round(s.execution_score) : null;
+      const exec = s.shot_score != null ? Number(s.shot_score) : 0;
+      const fmt100 = (n) => (n == null ? '—' : `<span style="color:${scoreColor100(n)}">${n}</span>`);
+      return `
+        <tr>
+          <td class="pc-del-num">${s.shot_num}</td>
+          <td class="pc-del-shot">${escapeHtml((SHOT_LABELS[s.label] || s.label || '—').toUpperCase())}</td>
+          <td style="color:${scoreColor10(exec)}">${exec.toFixed(1)}</td>
+          <td>${fmt100(head)}</td>
+          <td>${fmt100(stab)}</td>
+          <td>${fmt100(fw)}</td>
+          <td>${fmt100(pathSc)}</td>
+          <td>${fmt100(exSc)}</td>
+          <td class="pc-del-ball">${formatBallContextCell(ballDel)}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  /** Derive all PlayCard / section HTML inputs from prepared report `data`. */
+  function derivePlayCardModel(data) {
+    const { shots, analysis } = data;
+    const ballAnalytics = data.ballAnalytics ?? null;
+    const llmInsights =
+      data.llmInsights ??
+      analysis?.llm_insights ??
+      buildUiFallbackInsights(analysis);
+    const zoneCounts = data.zoneCounts || { offside: 0, straight: 0, legside: 0 };
+    const ballByShot = indexBallDeliveriesByShot(ballAnalytics);
+    const summary = getAnalysisSummary(analysis);
+    const best = analysis.best_shot || {};
+    const worst = analysis.worst_shot || {};
+    const alerts = analysis.coaching_alerts || [];
+    const confirmedShots = shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+    const totalShots = confirmedShots.length;
+    const avgScore = summary.avgShotScore != null
+      ? Number(summary.avgShotScore).toFixed(1)
+      : (totalShots ? (confirmedShots.reduce((a, s) => a + (s.shot_score || 0), 0) / totalShots).toFixed(1) : '0');
+    const bcol = SHOT_COLORS[best.label] || '#10B981';
+    const wcol = SHOT_COLORS[worst.label] || '#EF4444';
+
+    const lengthTabHtml =
+      typeof CrickEyeLengthInsights !== 'undefined'
+        ? CrickEyeLengthInsights.buildLengthSectionHtml({
+          ballAnalytics,
+          confirmedShots,
+          heading: '',
+          compact: false,
+        })
+        : '<p class="pc-empty">Length insights require lengthInsights.js.</p>';
+
+    const aiHtml = buildOverviewAiInsightsHtml(llmInsights, alerts, confirmedShots, ballAnalytics);
+
+    const trendShots = confirmedShots.map((s) => ({
+      shot_num: s.shot_num,
+      speed: parseFloat((s.peak_swing_speed || 0).toFixed(1)),
+      head_quality_score: s.head_quality_score != null ? Math.round(s.head_quality_score) : 0,
+      symmetry_score: s.symmetry_score != null ? Math.round(s.symmetry_score) : 0,
+      footwork_score: s.footwork_score != null ? Math.round(s.footwork_score) : 0,
+      swing_intensity: s.swing_intensity != null ? Math.round(s.swing_intensity) : 0,
+      swing_path_score: s.swing_path_score != null ? Math.round(s.swing_path_score) : 0,
+      execution_score: s.execution_score != null ? Math.round(s.execution_score) : 0,
+      score: s.shot_score || 0,
+    }));
+
+    const trendsBlock = `
+      <div class="pc-zones-trends">
+        <div class="pc-subhead">Scoring arc trends</div>
+        <p class="pc-muted">How each metric moved shot-by-shot through your session.</p>
+        ${buildLineGraph(trendShots, 'head_quality_score', '#14B8A6', 'Head position (0–100)', 100)}
+        ${buildLineGraph(trendShots, 'symmetry_score', '#9333EA', 'Batting stance (0–100)', 100)}
+        ${buildLineGraph(trendShots, 'footwork_score', '#22C55E', 'Foot movement (0–100)', 100)}
+        ${buildLineGraph(trendShots, 'swing_path_score', '#F97316', 'Swing arc (0–100)', 100)}
+        ${buildLineGraph(trendShots, 'execution_score', '#EF4444', 'Shot execution (0–100)', 100)}
+        ${buildLineGraph(trendShots, 'score', '#06B6D4', 'Overall score (/10)', 10)}
+        ${summary.shotsConfirmed >= 6 ? `
+          <div class="rp-trend-summary">
+            <div class="rp-trend-summary-title">Session momentum (1st vs 2nd half)</div>
+            <div class="rp-trend-summary-body">
+              Head: ${Math.round(summary.trend.first_half_head_quality_score || 0)} → ${Math.round(summary.trend.second_half_head_quality_score || 0)}<br/>
+              Stance: ${Math.round(summary.trend.first_half_symmetry_score || 0)} → ${Math.round(summary.trend.second_half_symmetry_score || 0)}<br/>
+              Feet: ${Math.round(summary.trend.first_half_footwork_score || 0)} → ${Math.round(summary.trend.second_half_footwork_score || 0)}<br/>
+              Swing arc: ${Math.round(summary.trend.first_half_swing_path_score || 0)} → ${Math.round(summary.trend.second_half_swing_path_score || 0)}<br/>
+              Execution: ${Math.round(summary.trend.first_half_execution_score || 0)} → ${Math.round(summary.trend.second_half_execution_score || 0)}
+            </div>
+            ${summary.fatigue ? '<div class="rp-trend-summary-note">Swing intensity or bat speed dipped in the second half — check fatigue.</div>' : ''}
+          </div>` : ''}
+      </div>`;
+
+    const ztot = (zoneCounts.offside || 0) + (zoneCounts.straight || 0) + (zoneCounts.legside || 0) || 1;
+    const legPct = Math.round((100 * (zoneCounts.legside || 0)) / ztot);
+    const offPct = Math.round((100 * (zoneCounts.offside || 0)) / ztot);
+    const strPct = Math.round((100 * (zoneCounts.straight || 0)) / ztot);
+
+    const typeCounts = {};
+    confirmedShots.forEach((s) => {
+      const k = s.label || 'unknown';
+      typeCounts[k] = (typeCounts[k] || 0) + 1;
+    });
+    const shotRows = Object.keys(typeCounts).length
+      ? Object.entries(typeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([t, c]) => `<tr><td style="color:${SHOT_COLORS[t] || '#334155'};font-weight:700">${escapeHtml(SHOT_LABELS[t] || t)}</td><td>${c}</td></tr>`)
+        .join('')
+      : '<tr><td>—</td><td>—</td></tr>';
+
+    const deliveriesRows = buildPlayCardDeliveriesRows(confirmedShots, ballByShot);
+
+    return {
+      data,
+      summary,
+      best,
+      worst,
+      bcol,
+      wcol,
+      confirmedShots,
+      totalShots,
+      avgScore,
+      lengthTabHtml,
+      aiHtml,
+      trendsBlock,
+      legPct,
+      offPct,
+      strPct,
+      shotRows,
+      deliveriesRows,
+    };
+  }
+
+  function buildPlayCardSectionHtml(data, section) {
+    const { shots, analysis } = data;
+    const ballAnalytics = data.ballAnalytics ?? null;
+    const llmInsights =
+      data.llmInsights ??
+      analysis?.llm_insights ??
+      buildUiFallbackInsights(analysis);
+    const ballByShot = indexBallDeliveriesByShot(ballAnalytics);
+    const confirmedShots = shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+    const alerts = analysis.coaching_alerts || [];
+
+    const m = derivePlayCardModel(data);
+
+    if (section === 'ai') {
+      // Full Net Session Report AI Coach section
+      return `
+        <div class="rp-section-title">AI Coach Insights</div>
+        ${m.aiHtml}`;
+    }
+    if (section === 'length') {
+      return `<div class="pc-modal-section">${m.lengthTabHtml}</div>`;
+    }
+    if (section === 'deliveries') {
+      // ── Exact replica of the Net Session Report "All Deliveries" table ──
+      const tableRows = confirmedShots.map((s) => {
+        const ballDel = ballByShot.get(Number(s.shot_num));
+        const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
+        const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
+        const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
+        const pathSc = s.swing_path_score != null ? Math.round(s.swing_path_score) : null;
+        const exSc = s.execution_score != null ? Math.round(s.execution_score) : null;
+
+        // Coaching flags
+        const flagRows = [];
+        const seenFlags = new Set();
+        const pushFlag = (row) => {
+          if (!row) return;
+          const key = String(row.label || '').trim().toLowerCase();
+          if (!key || seenFlags.has(key)) return;
+          seenFlags.add(key);
+          flagRows.push(row);
+        };
+        for (const f of s.flags || []) {
+          const base = String(f).split(':')[0];
+          const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: '#64748B', desc: '' };
+          pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
+        }
+        if (s.footwork_flag) {
+          const ff = String(s.footwork_flag);
+          const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: '#64748B', desc: '' };
+          pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
+        }
+        const chips = flagRows.length
+          ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:${r.color}18;color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
+          : '<span class="rp-shots-chip" style="background:rgba(16,185,129,0.12);color:#059669;font-weight:700">Clean delivery</span>';
+        const flagDetails = flagRows.length
+          ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
+          : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
+
+        // AI cue for this delivery
+        const llmShotNote = resolveShotTypeNoteForDelivery(llmInsights, s.shot_type || s.label || '');
+        const deliveryShotKey = resolveLlmShotKey(s.shot_type || s.label || '');
+        const llmStrengthRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.strength || '').trim() : '';
+        const llmFocusRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.focus || '').trim() : '';
+        const llmStrengthRaw = textMentionsOtherShot(llmStrengthRaw0, deliveryShotKey) ? '' : llmStrengthRaw0;
+        const llmFocusRaw = textMentionsOtherShot(llmFocusRaw0, deliveryShotKey) ? '' : llmFocusRaw0;
+        const metricNotes = llmInsights?.metric_notes && typeof llmInsights.metric_notes === 'object'
+          ? llmInsights.metric_notes : null;
+        const cueMetricKey = resolveMetricKeyFromScores(head, stab, fw, pathSc, exSc);
+        const aiMetricHint = metricNotes
+          ? (
+              (cueMetricKey === 'head' && metricNotes.head) ? metricNotes.head :
+              (cueMetricKey === 'footwork' && metricNotes.footwork) ? metricNotes.footwork :
+              (cueMetricKey === 'stance' && metricNotes.stance) ? metricNotes.stance :
+              (cueMetricKey === 'swing_path' && metricNotes.swing_path) ? metricNotes.swing_path :
+              (cueMetricKey === 'swing' && metricNotes.swing) ? metricNotes.swing :
+              (cueMetricKey === 'execution' && metricNotes.shot_vs_length) ? metricNotes.shot_vs_length :
+              metricNotes.shot_vs_length || metricNotes.execution || ''
+            )
+          : '';
+        const llmStrength = llmStrengthRaw || llmInsights?.strengths?.[0] || 'Good base; keep repeating this setup under pressure.';
+        const llmFocus = llmFocusRaw || llmInsights?.improvements?.[0] || clarifyCoachCue(cueMetricKey, aiMetricHint);
+        const aiCue = clarifyCoachCue(cueMetricKey, aiMetricHint);
+        const llmDetailRows = [];
+        llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0EA5E9">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
+        llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#F59E0B">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
+        llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0F766E">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
+        const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
+
+        const exec = s.shot_score != null ? Number(s.shot_score) : 0;
+        const execCol = exec >= 7 ? '#10B981' : exec >= 5 ? '#06B6D4' : exec >= 3 ? '#EAB308' : '#EF4444';
+
+        return `
+          <tr>
+            <td class="rp-col-num">${s.shot_num}</td>
+            <td class="rp-col-shot">${(SHOT_LABELS[s.label] || s.label || '—').toUpperCase()}</td>
+            <td class="rp-col-exec" style="color:${execCol}">${exec.toFixed(1)}/10</td>
+            <td>${formatDeliveryMetric100(head, s.head_quality_label)}</td>
+            <td>${formatDeliveryMetric100(stab, s.symmetry_label)}</td>
+            <td>${formatDeliveryMetric100(fw, s.footwork_label)}</td>
+            <td>${formatDeliveryMetric100(pathSc, s.swing_path_label)}</td>
+            <td>${formatDeliveryMetric100(exSc, s.execution_label)}</td>
+            <td class="rp-col-ball-contact">${formatBallContextCell(ballDel)}</td>
+            <td class="rp-col-flags">
+              <div class="rp-flag-stack">${chips}</div>
+              <details class="rp-shots-detail"><summary>▶ AI coach detail</summary>
+                ${combinedDetails}
+              </details>
+            </td>
+          </tr>`;
+      }).join('');
+
+      return `
+        <div class="rp-section-title">All Deliveries</div>
+        <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
+          Coaching-first table. Per-delivery cues, work-on flags, and footwork tags are grouped here. Confidence/probability stays hidden from player-facing review.
+        </p>
+        <div class="rp-shots-table-wrap">
+          <table class="rp-shots-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Delivery</th>
+                <th>Execution <span class="rp-th-hint">/10</span></th>
+                <th>Head position <span class="rp-th-hint">/100</span></th>
+                <th>Batting stance <span class="rp-th-hint">/100</span></th>
+                <th>Foot movement <span class="rp-th-hint">/100</span></th>
+                <th>Swing arc <span class="rp-th-hint">/100</span></th>
+                <th>Shot execution <span class="rp-th-hint">/100</span></th>
+                <th>Ball info <span class="rp-th-hint">(length + pace)</span></th>
+                <th>Coaching flags &amp; cues</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows || '<tr><td colspan="10" style="padding:24px;color:#94A3B8;text-align:center">No deliveries.</td></tr>'}</tbody>
+          </table>
+        </div>`;
+    }
+    if (section === 'zones') {
+      return `
+        <div class="pc-modal-section">
+          ${m.trendsBlock}
+        </div>`;
+    }
+    return '<p class="pc-empty">Unknown section.</p>';
+  }
+
+  function buildLivePlayCardHtml(data) {
+    const m = derivePlayCardModel(data);
+    const { summary, best, worst, totalShots, avgScore } = m;
+    const bestLabel = escapeHtml((SHOT_LABELS[best.label] || best.label || '—').toUpperCase());
+    const worstLabel = escapeHtml((SHOT_LABELS[worst.label] || worst.label || '—').toUpperCase());
+    const bestMeta = `Score: ${best.shot_score != null ? best.shot_score : '—'}/10 · ${escapeHtml(best.shot_quality || '—')} · ${escapeHtml(best.timestamp || '—')}`;
+    const worstMeta = `Score: ${worst.shot_score != null ? worst.shot_score : '—'}/10 · ${escapeHtml(worst.shot_quality || '—')} · ${escapeHtml(worst.timestamp || '—')}`;
+
+    return `
+      <div class="pc-inner">
+        <div class="pc-score-surface">
+          <div class="pc-head-row">
+            <span class="pc-badge">${escapeHtml(data.stance || 'RHB')}</span>
+            <span class="pc-head-meta">${summary.shotsConfirmed || totalShots} shots · Avg ${avgScore}/10</span>
+          </div>
+          <div class="pc-donut-row">
+            ${buildPlayCardDonutSvg(summary, avgScore)}
+          </div>
+          <div class="pc-hl-section">
+            <div class="pc-hl-section-title">Shot Highlights</div>
+            <div class="pc-highlights-grid">
+              <div class="pc-hl-card pc-hl-card--best">
+                <span class="pc-hl-ico" aria-hidden="true">🔥</span>
+                <div class="pc-hl-card-body">
+                  <div class="pc-hl-tag">Signature Shot</div>
+                  <div class="pc-hl-title pc-hl-title--best">#${best.shot_num || '—'} ${bestLabel}</div>
+                  <div class="pc-hl-sub">${bestMeta}</div>
+                </div>
+              </div>
+              <div class="pc-hl-card pc-hl-card--work">
+                <span class="pc-hl-ico" aria-hidden="true">⚠️</span>
+                <div class="pc-hl-card-body">
+                  <div class="pc-hl-tag">Work-On Shot</div>
+                  <div class="pc-hl-title pc-hl-title--work">#${worst.shot_num || '—'} ${worstLabel}</div>
+                  <div class="pc-hl-sub">${worstMeta}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-scroll-extra">
+        <div class="pc-acc">
+          <button type="button" class="pc-acc-btn" data-pc-open="ai">
+            <span class="pc-acc-ico" aria-hidden="true">🧠</span><span class="pc-acc-label">AI Insights</span>
+          </button>
+          <button type="button" class="pc-acc-btn" data-pc-open="length">
+            <span class="pc-acc-ico" aria-hidden="true">📏</span><span class="pc-acc-label">Ball length analysis</span>
+          </button>
+          <button type="button" class="pc-acc-btn" data-pc-open="deliveries">
+            <span class="pc-acc-ico" aria-hidden="true">📋</span><span class="pc-acc-label">Deliveries</span>
+          </button>
+          <button type="button" class="pc-acc-btn" data-pc-open="zones">
+            <span class="pc-acc-ico" aria-hidden="true">🎯</span><span class="pc-acc-label">Scoring zones</span>
+          </button>
+        </div>
+        </div>
+      </div>`;
+  }
+
+  function bindPlayCardInteractions(root, getReportData, openSectionModal) {
+    const tip = root.querySelector('#pcDonutTooltip');
+    root.querySelectorAll('.pc-donut-seg').forEach((path) => {
+      path.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const label = path.getAttribute('data-pc-metric') || '';
+        const score = path.getAttribute('data-pc-score') || '';
+        if (!tip) return;
+        tip.textContent = `${label}: ${score}/100`;
+        tip.hidden = false;
+        const wrap = root.querySelector('.pc-donut-wrap');
+        const r = wrap?.getBoundingClientRect();
+        if (r && wrap) {
+          const cx = e.clientX - r.left;
+          const cy = e.clientY - r.top;
+          tip.style.left = `${Math.min(Math.max(8, cx - 40), (wrap.clientWidth || 144) - 100)}px`;
+          tip.style.top = `${Math.min(Math.max(8, cy - 36), (wrap.clientHeight || 144) - 8)}px`;
+        }
+      });
+    });
+    root.addEventListener('click', (e) => {
+      if (tip && !e.target.closest('.pc-donut-seg')) tip.hidden = true;
+    });
+
+    function closeAllMetricDetails() {
+      root.querySelectorAll('.pc-metric-detail.is-open').forEach((panel) => {
+        panel.classList.remove('is-open');
+        panel.setAttribute('aria-hidden', 'true');
+      });
+      root.querySelectorAll('.pc-metric-info').forEach((b) => {
+        b.setAttribute('aria-expanded', 'false');
+        b.classList.remove('is-active');
+      });
+    }
+
+    function animateMetricDetailArc(panel) {
+      const arc = panel?.querySelector('.pc-metric-detail-arc');
+      if (!arc) return;
+      const target = parseFloat(arc.getAttribute('data-offset'));
+      if (!Number.isFinite(target)) return;
+      arc.style.strokeDashoffset = String(2 * Math.PI * 44);
+      requestAnimationFrame(() => {
+        arc.style.strokeDashoffset = String(target);
+      });
+    }
+
+    root.querySelectorAll('.pc-metric-info').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-pc-metric-key');
+        const item = btn.closest('.pc-metric-legend-item');
+        const panel = item?.querySelector('.pc-metric-detail');
+        if (!key || !panel) return;
+
+        const wasOpen = panel.classList.contains('is-open');
+        closeAllMetricDetails();
+        if (!wasOpen) {
+          panel.setAttribute('aria-hidden', 'false');
+          requestAnimationFrame(() => {
+            panel.classList.add('is-open');
+            btn.setAttribute('aria-expanded', 'true');
+            btn.classList.add('is-active');
+            animateMetricDetailArc(panel);
+          });
+        }
+      });
+    });
+
+    root.querySelectorAll('.pc-acc-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-pc-open');
+        if (!key || typeof openSectionModal !== 'function' || typeof getReportData !== 'function') return;
+        const titles = {
+          ai: 'AI Insights',
+          length: 'Ball length analysis',
+          deliveries: 'Deliveries',
+          zones: 'Scoring zones',
+        };
+        const d = getReportData();
+        if (!d) return;
+        const html = buildPlayCardSectionHtml(d, key);
+        openSectionModal(titles[key] || 'Details', html);
+      });
+    });
+  }
+
+  // ── Public API ───────────────────────────────────────────
+  function open(appState, analysis) {
+    if (document.getElementById('rpOverlay')) return; // already open
+    if (!analysis) {
+      alert('No session analysis available yet. Run the pipeline first.');
+      return;
+    }
+
+    injectStyles();
+
+    const data = prepareReportData(appState, analysis);
 
     const wrapper = document.createElement('div');
     wrapper.innerHTML = buildModal(data);
@@ -1762,5 +2331,13 @@ const ReportModal = (() => {
 
   function onEsc(e) { if (e.key === 'Escape') close(); }
 
-  return { open, close };
+  return {
+    open,
+    close,
+    prepareReportData,
+    buildLivePlayCardHtml,
+    buildPlayCardSectionHtml,
+    bindPlayCardInteractions,
+    ensureStyles: injectStyles,
+  };
 })();

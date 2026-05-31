@@ -74,7 +74,6 @@ const distStrPct       = document.getElementById('dist-str-pct');
 const distOffCnt       = document.getElementById('dist-off-cnt');
 const distLegCnt       = document.getElementById('dist-leg-cnt');
 const distStrCnt       = document.getElementById('dist-str-cnt');
-const btnReport        = document.getElementById('btnReport');
 const sessionsList     = document.getElementById('sessionsList');
 const headerProfileBtn = document.getElementById('headerProfileBtn');
 const headerProfileAvatar = document.getElementById('headerProfileAvatar');
@@ -95,6 +94,7 @@ const resetEverythingLead = document.getElementById('resetEverythingLead');
 const resetEverythingOrigin = document.getElementById('resetEverythingOrigin');
 const resetEverythingLogoutBtn = document.getElementById('resetEverythingLogoutBtn');
 const sessionCompareModal = document.getElementById('sessionCompareModal');
+const playCardDetailModal = document.getElementById('playCardDetailModal');
 const compareSessionA = document.getElementById('compareSessionA');
 const compareSessionB = document.getElementById('compareSessionB');
 const sessionCompareBody = document.getElementById('sessionCompareBody');
@@ -1143,6 +1143,78 @@ function sessionVideoFilename(url) {
   } catch {
     return url;
   }
+}
+
+const VIDEOS_STORAGE_BUCKET = 'videos';
+
+/** Supabase public/signed URL → object path inside bucket `videos`. */
+function storagePathFromVideoUrl(videoUrl) {
+  if (!videoUrl) return null;
+  try {
+    const u = new URL(videoUrl);
+    const path = u.pathname;
+    const markers = [
+      '/storage/v1/object/public/videos/',
+      '/storage/v1/object/sign/videos/',
+      '/storage/v1/object/authenticated/videos/',
+    ];
+    for (const marker of markers) {
+      const idx = path.indexOf(marker);
+      if (idx >= 0) return decodeURIComponent(path.slice(idx + marker.length));
+    }
+    const loose = path.match(/\/videos\/(.+)$/);
+    return loose ? decodeURIComponent(loose[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildVideoStoragePath(userId, file, fileHash) {
+  const extMatch = (file?.name || '').match(/(\.[^.]+)$/i);
+  const ext = extMatch ? extMatch[1].toLowerCase() : '.mp4';
+  if (fileHash) return `${userId}/${fileHash}${ext}`;
+  const safeName = (file?.name || 'video.mp4').replace(/[/\\]/g, '_');
+  return `${userId}/${Date.now()}-${safeName}`;
+}
+
+async function deleteVideosFromStorageByPaths(paths) {
+  if (!supabaseClient || !paths?.length) return;
+  const unique = [...new Set(paths.filter(Boolean))];
+  if (!unique.length) return;
+  const { error } = await supabaseClient.storage.from(VIDEOS_STORAGE_BUCKET).remove(unique);
+  if (error) {
+    console.warn('[CrickEye] storage delete:', error.message);
+  }
+}
+
+async function deleteVideoFromStorage(videoUrl) {
+  const path = storagePathFromVideoUrl(videoUrl);
+  if (!path) return;
+  await deleteVideosFromStorageByPaths([path]);
+}
+
+/** Remove every object under `{userId}/` in the videos bucket (frees quota). */
+async function deleteAllUserVideosFromStorage(userId) {
+  if (!supabaseClient || !userId) return;
+  const paths = [];
+  let offset = 0;
+  const pageSize = 100;
+  for (;;) {
+    const { data, error } = await supabaseClient.storage
+      .from(VIDEOS_STORAGE_BUCKET)
+      .list(userId, { limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } });
+    if (error) {
+      console.warn('[CrickEye] storage list:', error.message);
+      break;
+    }
+    const page = data || [];
+    page.forEach((obj) => {
+      if (obj?.name) paths.push(`${userId}/${obj.name}`);
+    });
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  await deleteVideosFromStorageByPaths(paths);
 }
 
 function statusBadgeClass(status) {
@@ -3117,6 +3189,7 @@ function wireModalDismissals() {
     if (e.key !== 'Escape') return;
     closeModal(profileModal);
     closeModal(sessionDetailModal);
+    closeModal(playCardDetailModal);
     closeModal(sessionCompareModal);
     closeModal(resetEverythingModal);
   });
@@ -3180,6 +3253,8 @@ async function fetchUserSessions() {
 async function deleteSessionById(sessionId) {
   if (!supabaseClient || !state.currentUser || !sessionId) return;
   const uid = state.currentUser.id;
+  const row = state.sessionsCache.find((s) => String(s?.id) === String(sessionId));
+  if (row?.video_url) await deleteVideoFromStorage(row.video_url);
   const { error } = await supabaseClient
     .from('sessions')
     .delete()
@@ -3207,6 +3282,7 @@ async function deleteAllSessionsForCurrentUser() {
   );
   if (!ok) return;
   const uid = state.currentUser.id;
+  await deleteAllUserVideosFromStorage(uid);
   const { error } = await supabaseClient.from('sessions').delete().eq('user_id', uid);
   if (error) {
     console.error('[CrickEye] delete all sessions error:', error.message);
@@ -3224,8 +3300,8 @@ function fillResetEverythingModal({ hadSessions }) {
   if (resetEverythingLead) {
     resetEverythingLead.textContent =
       hadSessions > 0
-        ? `Removed ${hadSessions} saved session row(s) from the cloud. Replay cache is cleared for your account.`
-        : 'No session rows were stored for this account (nothing to delete in the database).';
+        ? `Removed ${hadSessions} saved session row(s) and uploaded videos from cloud storage. Replay cache is cleared for your account.`
+        : 'No session rows were stored for this account. Cloud videos under your account folder were still removed if any were found.';
   }
   if (resetEverythingOrigin) {
     resetEverythingOrigin.textContent =
@@ -3250,6 +3326,7 @@ async function resetEverythingForCurrentUser() {
   if (!ok) return;
   const uid = state.currentUser.id;
   const hadSessions = state.sessionsCache.length;
+  await deleteAllUserVideosFromStorage(uid);
   const { error } = await supabaseClient.from('sessions').delete().eq('user_id', uid);
   if (error) {
     console.error('[CrickEye] reset everything (delete sessions) error:', error.message);
@@ -3439,10 +3516,10 @@ async function createSupabaseSessionForLiveAnalysis(file, fileHash = null) {
   if (!supabaseClient) throw new Error('Supabase is not configured in frontend.');
   if (!state.currentUser) throw new Error('Please login first.');
 
-  const filePath = `${state.currentUser.id}/${Date.now()}-${file.name}`;
+  const filePath = buildVideoStoragePath(state.currentUser.id, file, fileHash);
   const { error: uploadError } = await supabaseClient.storage
     .from('videos')
-    .upload(filePath, file, { upsert: false });
+    .upload(filePath, file, { upsert: true, contentType: file.type || undefined });
   if (uploadError) {
     let msg = uploadError.message || 'Storage upload failed';
     if (/bucket not found/i.test(msg)) {
@@ -3608,7 +3685,19 @@ async function saveLiveAnalysisResult(msg) {
   }
   // If report is open while LLM arrives, refresh it so badge/content switches from placeholder/fallback to latest.
   try {
-    if (document.getElementById('rpOverlay') && state.sessionAnalysis && typeof ReportModal !== 'undefined') {
+    const mainVideo = document.getElementById('mainVideo');
+    const videoFinished = mainVideo && mainVideo.ended;
+    if (typeof PlayCard !== 'undefined' && PlayCard.isActive && PlayCard.isActive()) {
+      PlayCard.refresh(state);
+    } else if (videoFinished && state.sessionAnalysis && typeof PlayCard !== 'undefined' && PlayCard.revealAfterDelay) {
+      if (PlayCard.isCompiling && PlayCard.isCompiling()) {
+        PlayCard.refresh(state);
+      } else if (!PlayCard.isActive || !PlayCard.isActive()) {
+        PlayCard.revealAfterDelay(state);
+      } else {
+        PlayCard.refresh(state);
+      }
+    } else if (document.getElementById('rpOverlay') && state.sessionAnalysis && typeof ReportModal !== 'undefined') {
       ReportModal.close();
       ReportModal.open(state, state.sessionAnalysis);
     }
@@ -3763,7 +3852,7 @@ function onComplete(msg, opts = {}) {
       drawAllSpokesWithoutPlayback();
     }, { once: true });
   }, videoDelayMs);
-  document.getElementById('btnReport')?.removeAttribute('disabled');
+  // Session score panel auto-reveals on video 'ended' (see init()).
   if (!skipPersist) saveLiveAnalysisResult(msg);
 }
 
@@ -4374,10 +4463,15 @@ function init() {
   injectOverlayStyles();
   video.addEventListener('timeupdate', onVideoTimeUpdate);
   video.addEventListener('click', ()=>{ if(video.paused) video.play(); else video.pause(); });
+  // Reveal session results after a short compile delay when the analysed video finishes.
+  video.addEventListener('ended', () => {
+    if (typeof PlayCard !== 'undefined' && PlayCard.revealAfterDelay) {
+      PlayCard.revealAfterDelay(state);
+    }
+  });
   btnClearWheel?.addEventListener('click', clearWheelAndReset);
   btnSpeed?.addEventListener('click', cycleSpeed);
   btnLoop?.addEventListener('click', toggleLoop);
-  btnReport?.addEventListener('click', () => ReportModal.open(state, state.sessionAnalysis));
   connectWebSocket();
   setInterval(updateSessionTimer, 1000);
   setTimeout(animateStatRings, 600);

@@ -38,6 +38,16 @@ create index if not exists sessions_user_file_hash_idx
 create index if not exists sessions_user_created_at_idx
   on public.sessions (user_id, created_at desc);
 
+-- ── Data API grants (Supabase PostgREST / supabase-js) ─────────────────────
+-- Explicit grants for profiles + sessions. Safe on existing projects; required
+-- for new public tables after Supabase's Oct 2026 rollout.
+
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.profiles to service_role;
+
+grant select, insert, update, delete on public.sessions to authenticated;
+grant select, insert, update, delete on public.sessions to service_role;
+
 -- ── Row Level Security: sessions ───────────────────────────────────────────
 -- Without these policies, inserts/updates from the browser fail with:
 --   "new row violates row-level security policy"
@@ -145,11 +155,36 @@ create policy "profiles_update_coach"
 drop policy if exists "videos_insert_authenticated" on storage.objects;
 drop policy if exists "videos_select_authenticated" on storage.objects;
 drop policy if exists "videos_select_public" on storage.objects;
+drop policy if exists "videos_delete_own" on storage.objects;
+drop policy if exists "videos_update_own" on storage.objects;
 
 create policy "videos_insert_authenticated"
   on storage.objects for insert
   to authenticated
-  with check (bucket_id = 'videos');
+  with check (
+    bucket_id = 'videos'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+create policy "videos_update_own"
+  on storage.objects for update
+  to authenticated
+  using (
+    bucket_id = 'videos'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  )
+  with check (
+    bucket_id = 'videos'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+create policy "videos_delete_own"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'videos'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
 
 create policy "videos_select_authenticated"
   on storage.objects for select
