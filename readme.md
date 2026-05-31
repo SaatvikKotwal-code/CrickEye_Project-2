@@ -100,15 +100,8 @@ py -3 -m unittest tests.test_ball_analytics.TestIntegrationBallPipeline -v
 
 - Full runnable source code (frontend + backend + analysis pipeline)
 - Model-weight support via `assets/` (you must ensure required weights are present before push)
-- Project report LaTeX source in `project_report/`
 - Documentation for setup and analysis behavior
 
-## What Is Intentionally Excluded
-
-- PPT/PDF deliverables and helper scripts used only for presentation generation
-- Runtime-generated output videos and temporary upload files
-- Local environment secrets (`.env`, `config.js`)
-- LaTeX build artifacts (`.aux`, `.bbl`, `.log`, etc.)
 
 ## Notes for Evaluators
 
