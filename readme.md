@@ -1,5 +1,9 @@
 # CrickEye Project (Final Submission)
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Cloudflare_Tunnel-orange?style=for-the-badge&logo=cloudflare)](https://installation-radiation-boss-active.trycloudflare.com)
+
+> 🚀 **Live Demo URL:** [https://installation-radiation-boss-active.trycloudflare.com](https://installation-radiation-boss-active.trycloudflare.com)
+
 CrickEye is a cricket batting analytics platform that combines:
 - Pose-based biomechanics analysis
 - Shot classification and scoring
