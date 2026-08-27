@@ -19,6 +19,7 @@ runs/
 
 # Temporary/report build artifacts
 *.log
+cloudflared.exe
 _pptx_extract/
 scripts/ppt_figures/
 scripts/build_major_project_ppt.py
