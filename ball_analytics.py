@@ -1101,6 +1101,20 @@ def run_ball_analytics(
     tracks: Dict[int, List[Tuple[int, float, float, float, float, float]]] = defaultdict(list)
 
     try:
+        import torch
+        has_torch = True
+    except ImportError:
+        has_torch = False
+
+    dev_pref = _senv("CRICKEYE_DEVICE", "").strip().lower()
+    if dev_pref == "cpu":
+        yolo_device = "cpu"
+    elif dev_pref in ("cuda", "gpu"):
+        yolo_device = 0 if (has_torch and torch.cuda.is_available()) else "cpu"
+    else:
+        yolo_device = 0 if (has_torch and torch.cuda.is_available()) else "cpu"
+
+    try:
         if yolo_mode == "track":
             results = model.track(
                 source=str(video_path),
@@ -1110,10 +1124,11 @@ def run_ball_analytics(
                 imgsz=track_imgsz,
                 persist=True,
                 verbose=False,
+                device=yolo_device,
             )
             if not _quiet_console():
                 print(
-                    f"[ball_analytics] YOLO mode=track conf={internal_conf} imgsz={track_imgsz} "
+                    f"[ball_analytics] YOLO mode=track conf={internal_conf} imgsz={track_imgsz} device={yolo_device} "
                     f"(set BALL_YOLO_MODE=predict to match standalone predict() scripts)"
                 )
         else:
@@ -1124,11 +1139,12 @@ def run_ball_analytics(
                 iou=predict_iou,
                 imgsz=predict_imgsz,
                 verbose=False,
+                device=yolo_device,
             )
             if not _quiet_console():
                 print(
                     f"[ball_analytics] YOLO mode=predict conf={predict_conf} iou={predict_iou} "
-                    f"imgsz={predict_imgsz} (same family as model.predict(save=True) workflows)"
+                    f"imgsz={predict_imgsz} device={yolo_device} (same family as model.predict(save=True) workflows)"
                 )
 
         progress_every = max(1, _ienv("BALL_TRACK_PROGRESS_EVERY", 25))
@@ -1138,6 +1154,8 @@ def run_ball_analytics(
             # Stream order matches sequential decode (same indexing as Pass 2 / all_frames_rgb).
             fi = int(ri)
             max_ri = fi
+            if has_torch and torch.cuda.is_available() and fi % 100 == 0:
+                torch.cuda.empty_cache()
             if total_video_frames > 0 and fi > 0 and fi % progress_every == 0:
                 elapsed = time.time() - t_track0
                 pct = fi / total_video_frames * 100.0
@@ -1206,6 +1224,9 @@ def run_ball_analytics(
         logger.exception("ball YOLO failed")
         out["error"] = str(e)
         return out
+    finally:
+        if has_torch and torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     track_segments: List[Dict[str, Any]] = []
     for tid, frames in tracks.items():

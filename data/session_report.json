@@ -1,198 +1,148 @@
 {
-  "total_frames": 527,
+  "total_frames": 441,
   "fps": 30.0,
   "session_handedness": "RHB",
-  "stance_conf": 0.57,
+  "stance_conf": 0.83,
   "speed_unit": "km/h",
   "camera_calibration": {
     "mode": "shoulder_median_scale",
     "description": "pixel_scale = session_median_shoulder_px / ref_shoulder_px; used for biomechanics (bat speed, foot plant, swing intensity baseline). Swing detection / shot clip boundaries use swing_pixel_scale (fixed 1.0) so the video shot classifier always sees the same framing as the legacy detector.",
     "ref_shoulder_px": 85.0,
-    "session_shoulder_px": 48.17863062589669,
-    "pixel_scale": 0.5668074191281963,
+    "session_shoulder_px": 60.619171128246386,
+    "pixel_scale": 0.7131667191558398,
     "swing_pixel_scale": 1.0
   },
   "analysis": {
     "session_handedness": "RHB",
-    "stance_conf": 0.57,
-    "shots_total": 7,
-    "shots_confirmed": 7,
+    "stance_conf": 0.83,
+    "shots_total": 6,
+    "shots_confirmed": 6,
     "best_shot": {
       "shot_num": 6,
-      "label": "straight",
-      "shot_score": 7.8,
+      "label": "sweep",
+      "shot_score": 7.9,
       "shot_quality": "Good",
-      "timestamp": "00:13.33"
+      "timestamp": "00:14.00"
     },
     "worst_shot": {
-      "shot_num": 4,
-      "label": "straight",
-      "shot_score": 5.8,
-      "shot_quality": "Average",
-      "timestamp": "00:09.00"
+      "shot_num": 3,
+      "label": "flick",
+      "shot_score": 6.5,
+      "shot_quality": "Good",
+      "timestamp": "00:06.00"
     },
     "session_summary": {
-      "shots_confirmed": 7,
-      "shots_total_detected": 7,
-      "avg_bat_speed_kmh": 57.2,
-      "avg_head_quality_score": 58.77,
-      "avg_symmetry_score": 57.31,
-      "avg_footwork_score": 82.06,
-      "avg_swing_intensity": 49.71,
-      "avg_swing_path_score": 65.43,
-      "avg_execution_score": 75.86,
-      "avg_shot_score": 6.51,
+      "shots_confirmed": 6,
+      "shots_total_detected": 6,
+      "avg_bat_speed_kmh": 51.6,
+      "avg_head_quality_score": 87.83,
+      "avg_symmetry_score": 48.72,
+      "avg_footwork_score": 76.88,
+      "avg_swing_intensity": 76.68,
+      "avg_swing_path_score": 59.67,
+      "avg_execution_score": 65.87,
+      "avg_shot_score": 7.28,
       "feet_active_rate": 1.0,
       "fatigue_detected": false,
       "swing_path_fatigue": false,
       "trend": {
-        "first_half_swing_intensity": 41.33,
-        "second_half_swing_intensity": 56.0,
-        "first_half_swing_path_score": 62.1,
-        "second_half_swing_path_score": 67.92,
-        "first_half_execution_score": 81.0,
-        "second_half_execution_score": 72.0,
-        "first_half_head_quality_score": 69.37,
-        "second_half_head_quality_score": 50.83,
-        "first_half_symmetry_score": 37.77,
-        "second_half_symmetry_score": 71.97,
-        "first_half_footwork_score": 82.03,
-        "second_half_footwork_score": 82.08
+        "first_half_swing_intensity": 85.13,
+        "second_half_swing_intensity": 68.23,
+        "first_half_swing_path_score": 52.7,
+        "second_half_swing_path_score": 66.63,
+        "first_half_execution_score": 73.37,
+        "second_half_execution_score": 58.37,
+        "first_half_head_quality_score": 78.67,
+        "second_half_head_quality_score": 97.0,
+        "first_half_symmetry_score": 48.93,
+        "second_half_symmetry_score": 48.5,
+        "first_half_footwork_score": 81.3,
+        "second_half_footwork_score": 72.47
       },
       "flags_summary": {
-        "HEAD_LATERAL_DRIFT_count": 5,
+        "HEAD_LATERAL_DRIFT_count": 1,
         "HEAD_VERTICAL_DRIFT_count": 0,
-        "HEAD_DUCKING_PULL_count": 0,
-        "STANCE_ASYMMETRIC_count": 2,
-        "ELBOW_COLLAPSE_count": 2,
-        "ELBOW_REACHING_count": 4,
-        "ELBOW_BEHIND_PAD_count": 0,
+        "HEAD_DUCKING_PULL_count": 1,
+        "STANCE_ASYMMETRIC_count": 3,
+        "ELBOW_COLLAPSE_count": 1,
+        "ELBOW_REACHING_count": 1,
+        "ELBOW_BEHIND_PAD_count": 1,
         "FLAT_FOOTED_count": 0,
-        "LATE_PLANT_count": 2,
-        "FOOTWORK_LINE_MISMATCH_count": 3,
+        "LATE_PLANT_count": 3,
+        "FOOTWORK_LINE_MISMATCH_count": 1,
         "BAT_SPEED_SESSION_LOCK_count": 0
       },
       "by_shot_type": {
         "pull": {
           "count": 2,
-          "avg_conf": 0.55,
+          "avg_conf": 0.7,
           "swing_intensity": {
-            "mean": 70.75,
-            "std": 29.25,
+            "mean": 62.8,
+            "std": 1.6,
             "n": 2
           },
           "swing_path_score": {
-            "mean": 61.4,
-            "std": 10.6,
+            "mean": 67.25,
+            "std": 10.85,
             "n": 2
           },
           "execution_score": {
-            "mean": 76.0,
-            "std": 0.0,
+            "mean": 48.1,
+            "std": 1.0,
             "n": 2
           },
           "head_quality_score": {
-            "mean": 62.6,
-            "std": 34.4,
+            "mean": 97.0,
+            "std": 0.0,
             "n": 2
           },
           "symmetry_score": {
-            "mean": 42.65,
-            "std": 21.25,
+            "mean": 50.9,
+            "std": 30.9,
             "n": 2
           },
           "footwork_score": {
-            "mean": 92.2,
-            "std": 1.7,
+            "mean": 86.15,
+            "std": 4.85,
             "n": 2
           },
           "shot_score": {
-            "mean": 6.85,
-            "std": 0.15,
+            "mean": 7.3,
+            "std": 0.2,
             "n": 2
           },
           "elbow_breakdown": {
             "consistent": 1,
-            "cramped": 1,
-            "reaching": 0,
+            "cramped": 0,
+            "reaching": 1,
             "marginal": 0
           },
           "head_flag_breakdown": {
-            "HEAD_LATERAL_DRIFT": 1,
+            "HEAD_LATERAL_DRIFT": 0,
             "HEAD_VERTICAL_DRIFT": 0,
-            "HEAD_DUCKING_PULL": 0
+            "HEAD_DUCKING_PULL": 1
           }
         },
         "straight": {
-          "count": 3,
-          "avg_conf": 0.56,
-          "swing_intensity": {
-            "mean": 42.27,
-            "std": 4.5,
-            "n": 3
-          },
-          "swing_path_score": {
-            "mean": 67.13,
-            "std": 5.77,
-            "n": 3
-          },
-          "execution_score": {
-            "mean": 80.33,
-            "std": 18.73,
-            "n": 3
-          },
-          "head_quality_score": {
-            "mean": 58.43,
-            "std": 12.62,
-            "n": 3
-          },
-          "symmetry_score": {
-            "mean": 73.77,
-            "std": 3.07,
-            "n": 3
-          },
-          "footwork_score": {
-            "mean": 77.87,
-            "std": 11.38,
-            "n": 3
-          },
-          "shot_score": {
-            "mean": 6.67,
-            "std": 0.84,
-            "n": 3
-          },
-          "elbow_breakdown": {
-            "consistent": 0,
-            "cramped": 0,
-            "reaching": 3,
-            "marginal": 0
-          },
-          "head_flag_breakdown": {
-            "HEAD_LATERAL_DRIFT": 2,
-            "HEAD_VERTICAL_DRIFT": 0,
-            "HEAD_DUCKING_PULL": 0
-          }
-        },
-        "flick": {
           "count": 1,
-          "avg_conf": 0.35,
+          "avg_conf": 0.8,
           "swing_intensity": {
-            "mean": 37.2,
+            "mean": 100.0,
             "std": null,
             "n": 1
           },
           "swing_path_score": {
-            "mean": 61.9,
+            "mean": 42.4,
             "std": null,
             "n": 1
           },
           "execution_score": {
-            "mean": 76.0,
+            "mean": 80.0,
             "std": null,
             "n": 1
           },
           "head_quality_score": {
-            "mean": 60.1,
+            "mean": 88.9,
             "std": null,
             "n": 1
           },
@@ -202,12 +152,62 @@
             "n": 1
           },
           "footwork_score": {
-            "mean": 89.7,
+            "mean": 66.6,
             "std": null,
             "n": 1
           },
           "shot_score": {
-            "mean": 6.0,
+            "mean": 7.3,
+            "std": null,
+            "n": 1
+          },
+          "elbow_breakdown": {
+            "consistent": 1,
+            "cramped": 0,
+            "reaching": 0,
+            "marginal": 0
+          },
+          "head_flag_breakdown": {
+            "HEAD_LATERAL_DRIFT": 0,
+            "HEAD_VERTICAL_DRIFT": 0,
+            "HEAD_DUCKING_PULL": 0
+          }
+        },
+        "flick": {
+          "count": 1,
+          "avg_conf": 0.8,
+          "swing_intensity": {
+            "mean": 91.0,
+            "std": null,
+            "n": 1
+          },
+          "swing_path_score": {
+            "mean": 59.3,
+            "std": null,
+            "n": 1
+          },
+          "execution_score": {
+            "mean": 93.0,
+            "std": null,
+            "n": 1
+          },
+          "head_quality_score": {
+            "mean": 50.1,
+            "std": null,
+            "n": 1
+          },
+          "symmetry_score": {
+            "mean": 45.0,
+            "std": null,
+            "n": 1
+          },
+          "footwork_score": {
+            "mean": 96.0,
+            "std": null,
+            "n": 1
+          },
+          "shot_score": {
+            "mean": 6.5,
             "std": null,
             "n": 1
           },
@@ -225,50 +225,100 @@
         },
         "cover": {
           "count": 1,
-          "avg_conf": 0.35,
+          "avg_conf": 0.62,
           "swing_intensity": {
-            "mean": 42.5,
+            "mean": 75.9,
             "std": null,
             "n": 1
           },
           "swing_path_score": {
-            "mean": 71.9,
+            "mean": 73.8,
             "std": null,
             "n": 1
           },
           "execution_score": {
-            "mean": 62.0,
+            "mean": 52.0,
             "std": null,
             "n": 1
           },
           "head_quality_score": {
-            "mean": 50.8,
+            "mean": 97.0,
             "std": null,
             "n": 1
           },
           "symmetry_score": {
-            "mean": 74.6,
+            "mean": 69.7,
             "std": null,
             "n": 1
           },
           "footwork_score": {
-            "mean": 66.7,
+            "mean": 54.1,
             "std": null,
             "n": 1
           },
           "shot_score": {
-            "mean": 5.9,
+            "mean": 7.4,
             "std": null,
             "n": 1
           },
           "elbow_breakdown": {
-            "consistent": 0,
+            "consistent": 1,
             "cramped": 0,
-            "reaching": 1,
+            "reaching": 0,
             "marginal": 0
           },
           "head_flag_breakdown": {
-            "HEAD_LATERAL_DRIFT": 1,
+            "HEAD_LATERAL_DRIFT": 0,
+            "HEAD_VERTICAL_DRIFT": 0,
+            "HEAD_DUCKING_PULL": 0
+          }
+        },
+        "sweep": {
+          "count": 1,
+          "avg_conf": 0.9,
+          "swing_intensity": {
+            "mean": 67.6,
+            "std": null,
+            "n": 1
+          },
+          "swing_path_score": {
+            "mean": 48.0,
+            "std": null,
+            "n": 1
+          },
+          "execution_score": {
+            "mean": 74.0,
+            "std": null,
+            "n": 1
+          },
+          "head_quality_score": {
+            "mean": 97.0,
+            "std": null,
+            "n": 1
+          },
+          "symmetry_score": {
+            "mean": 55.8,
+            "std": null,
+            "n": 1
+          },
+          "footwork_score": {
+            "mean": 72.3,
+            "std": null,
+            "n": 1
+          },
+          "shot_score": {
+            "mean": 7.9,
+            "std": null,
+            "n": 1
+          },
+          "elbow_breakdown": {
+            "consistent": 1,
+            "cramped": 0,
+            "reaching": 0,
+            "marginal": 0
+          },
+          "head_flag_breakdown": {
+            "HEAD_LATERAL_DRIFT": 0,
             "HEAD_VERTICAL_DRIFT": 0,
             "HEAD_DUCKING_PULL": 0
           }
@@ -278,75 +328,46 @@
     "coaching_alerts": [
       {
         "severity": "HIGH",
-        "metric": "Ball watch",
-        "flag": "HEAD_LATERAL_DRIFT",
-        "shot_type": "straight",
-        "message": "Head sliding off line on 5 shots (often the straight). Lowest score: #7 (28/100).",
-        "player_cue": "Watch the seam onto the bat. Keep the head still \u2014 let the eyes track.",
-        "drill": "20 balls on a tee at off stump; restart if your head drifts sideways."
-      },
-      {
-        "severity": "MEDIUM",
-        "metric": "Bat path",
-        "flag": "ELBOW_COLLAPSE",
-        "shot_type": "pull",
-        "message": "Bat too tight to the body on 2 shots \u2014 often on the pull.",
-        "player_cue": "On the pull, give the ball space \u2014 extend through the ball, don't roll across.",
-        "drill": "15 pulls with a slightly heavier bat; full extension through contact."
-      },
-      {
-        "severity": "MEDIUM",
-        "metric": "Reach",
-        "flag": "ELBOW_REACHING",
+        "metric": "Stance",
+        "flag": "STANCE_ASYMMETRIC",
         "shot_type": "all",
-        "message": "Reaching or over-hitting on 4 shots.",
-        "player_cue": "Don't stretch; a slight bend in the arms keeps the face under control.",
-        "drill": "Slower feeds; hit straight back to the feeder with the full face \u2014 25 balls."
+        "message": "Uneven stance kept showing on 3 shots.",
+        "player_cue": "Level shoulders, even weight, head quiet in the middle before you move.",
+        "drill": "Eyes closed, settle, open \u2014 check shoulders in a mirror. Repeat 10 times."
       },
       {
         "severity": "HIGH",
         "metric": "Front foot",
         "flag": "LATE_PLANT",
         "shot_type": "cover/straight/flick",
-        "message": "Front foot still moving at contact on 2 shots.",
+        "message": "Front foot still moving at contact on 3 shots.",
         "player_cue": "Land the front foot, then swing \u2014 not both at the same time.",
         "drill": "Feeder says 'foot' then 'hit' with a clear gap between \u2014 20 balls."
-      },
-      {
-        "severity": "MEDIUM",
-        "metric": "Line of ball",
-        "flag": "FOOTWORK_LINE_MISMATCH",
-        "shot_type": "all",
-        "message": "Feet not moving to the line of the ball on 3 shots.",
-        "player_cue": "Step or lean toward where you see the ball in the net \u2014 head stays level.",
-        "drill": "Tee on three lines \u2014 hit 10 balls each stepping slightly toward each line."
       }
     ],
     "shots_with_flags": [
       {
         "shot_num": 1,
         "label": "pull",
-        "shot_score": 7.0,
+        "shot_score": 7.1,
         "flags_plain": [
-          "Stance uneven",
-          "Bat rolling across on the pull"
+          "Head dropping on the pull",
+          "Reaching for the ball"
         ]
       },
       {
         "shot_num": 2,
         "label": "straight",
-        "shot_score": 6.4,
+        "shot_score": 7.3,
         "flags_plain": [
-          "Head shifting sideways",
-          "Reaching for the ball",
-          "Front foot down late",
-          "Feet not moving to the line of the ball"
+          "Stance uneven",
+          "Front foot down late"
         ]
       },
       {
         "shot_num": 3,
         "label": "flick",
-        "shot_score": 6.0,
+        "shot_score": 6.5,
         "flags_plain": [
           "Head shifting sideways",
           "Stance uneven",
@@ -355,38 +376,27 @@
       },
       {
         "shot_num": 4,
-        "label": "straight",
-        "shot_score": 5.8,
+        "label": "cover",
+        "shot_score": 7.4,
         "flags_plain": [
-          "Head shifting sideways",
-          "Reaching for the ball",
           "Feet not moving to the line of the ball"
         ]
       },
       {
         "shot_num": 5,
-        "label": "cover",
-        "shot_score": 5.9,
+        "label": "pull",
+        "shot_score": 7.5,
         "flags_plain": [
-          "Head shifting sideways",
-          "Reaching for the ball",
-          "Feet not moving to the line of the ball"
+          "Stance uneven",
+          "Front foot down late"
         ]
       },
       {
         "shot_num": 6,
-        "label": "straight",
-        "shot_score": 7.8,
+        "label": "sweep",
+        "shot_score": 7.9,
         "flags_plain": [
-          "Reaching for the ball"
-        ]
-      },
-      {
-        "shot_num": 7,
-        "label": "pull",
-        "shot_score": 6.7,
-        "flags_plain": [
-          "Head shifting sideways",
+          "Sweep: bat turning in early",
           "Front foot down late"
         ]
       }
@@ -397,211 +407,207 @@
       "shot_num": 1,
       "display_num": 1,
       "label": "pull",
-      "confidence": 0.4085,
+      "confidence": 0.8343,
       "confirmed": true,
-      "timestamp": "00:01.13",
-      "peak_frame": 34,
-      "travel_px": 223.0,
-      "swing_intensity": 41.5,
-      "swing_intensity_session_relative": 41.5,
-      "swing_path_score": 50.8,
-      "swing_path_label": "A bit tight or short",
+      "timestamp": "00:00.43",
+      "peak_frame": 13,
+      "travel_px": 249.0,
+      "swing_intensity": 64.4,
+      "swing_intensity_session_relative": 64.4,
+      "swing_path_score": 56.4,
+      "swing_path_label": "OK path",
       "swing_path_note": "ok",
-      "execution_score": 76.0,
-      "execution_label": "Strong execution",
-      "execution_confidence": 1.0,
-      "length_zone": "good_length",
+      "execution_score": 47.1,
+      "execution_label": "Risky for this length",
+      "execution_confidence": 0.55,
+      "length_zone": "full_toss",
       "ball_line_score": 88.0,
-      "execution_length_note": "pull vs good length",
-      "peak_swing_speed": 51.1,
+      "execution_length_note": "pull vs full toss",
+      "peak_swing_speed": 37.3,
       "speed_is_capped": false,
       "head_quality_score": 97.0,
       "head_rule_applied": "pull",
       "head_multiplier_used": 2.5,
-      "head_lateral_ratio": 0.2486,
-      "head_vertical_ratio": 0.2928,
+      "head_lateral_ratio": 0.1437,
+      "head_vertical_ratio": 0.166,
       "head_frames_used": 14,
-      "head_flag": null,
-      "symmetry_score": 21.4,
-      "avg_shoulder_tilt": 16.4,
-      "avg_hip_tilt": 9.8,
-      "stance_flag": "STANCE_ASYMMETRIC",
-      "elbow_collapse": "cramped",
-      "elbow_delta": -0.799,
-      "setup_elbow_ratio": 0.814,
-      "contact_elbow_ratio": 0.163,
+      "head_flag": "HEAD_DUCKING_PULL",
+      "symmetry_score": 81.8,
+      "avg_shoulder_tilt": 4.02,
+      "avg_hip_tilt": 2.06,
+      "stance_flag": null,
+      "elbow_collapse": "reaching",
+      "elbow_delta": 0.888,
+      "setup_elbow_ratio": 0.762,
+      "contact_elbow_ratio": 1.44,
       "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_COLLAPSE_PULL",
-      "elbow_score": 11.0,
+      "elbow_flag": "ELBOW_REACHING",
+      "elbow_score": 36.0,
       "feet_active": true,
-      "pre_shot_movement": 25.1,
+      "pre_shot_movement": 20.2,
       "plant_timing": -3,
       "feet_timing_score": 90.0,
       "feet_timing_band": "on_time",
-      "footwork_score": 93.9,
+      "footwork_score": 81.3,
       "footwork_flag": null,
-      "shot_score": 7.0,
+      "shot_score": 7.1,
       "shot_quality": "Good",
       "flags": [
-        "STANCE_ASYMMETRIC",
-        "ELBOW_COLLAPSE_PULL"
+        "HEAD_DUCKING_PULL",
+        "ELBOW_REACHING"
       ],
       "head_quality_label": "Very still \u2014 eyes on the ball",
-      "symmetry_label": "Strongly off balance",
-      "swing_intensity_label": "Gentle swing",
-      "footwork_label": "Good foot timing \u2014 stable at contact",
+      "symmetry_label": "Near level",
+      "swing_intensity_label": "Good tempo",
+      "footwork_label": "Front foot used well",
       "shot_quality_label": "Good",
       "flags_plain": [
-        "Stance uneven",
-        "Bat rolling across on the pull"
+        "Head dropping on the pull",
+        "Reaching for the ball"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.0639,
-        "flick": 0.1634,
-        "pull": 0.4085,
-        "straight": 0.2954,
-        "sweep": 0.0688
+        "cover": 0.0066,
+        "flick": 0.0488,
+        "pull": 0.8343,
+        "straight": 0.0129,
+        "sweep": 0.0974
       }
     },
     {
       "shot_num": 2,
       "display_num": 2,
       "label": "straight",
-      "confidence": 0.7181,
+      "confidence": 0.8023,
       "confirmed": true,
-      "timestamp": "00:03.50",
-      "peak_frame": 105,
-      "travel_px": 279.6,
-      "swing_intensity": 45.3,
-      "swing_intensity_session_relative": 45.3,
-      "swing_path_score": 73.6,
-      "swing_path_label": "Solid swing shape",
+      "timestamp": "00:03.70",
+      "peak_frame": 111,
+      "travel_px": 604.2,
+      "swing_intensity": 100.0,
+      "swing_intensity_session_relative": 100.0,
+      "swing_path_score": 42.4,
+      "swing_path_label": "A bit tight or short",
       "swing_path_note": "ok",
-      "execution_score": 91.0,
-      "execution_label": "Excellent choice for length",
+      "execution_score": 80.0,
+      "execution_label": "Strong execution",
       "execution_confidence": 1.0,
-      "length_zone": "good_length",
-      "ball_line_score": 36.0,
-      "execution_length_note": "straight vs good length",
-      "peak_swing_speed": 47.2,
+      "length_zone": "yorker",
+      "ball_line_score": 88.0,
+      "execution_length_note": "straight vs yorker",
+      "peak_swing_speed": 94.0,
       "speed_is_capped": false,
-      "head_quality_score": 51.0,
+      "head_quality_score": 88.9,
       "head_rule_applied": "straight",
       "head_multiplier_used": 3.6,
-      "head_lateral_ratio": 0.7332,
-      "head_vertical_ratio": 0.2394,
-      "head_frames_used": 9,
-      "head_flag": "HEAD_LATERAL_DRIFT",
-      "symmetry_score": 71.9,
-      "avg_shoulder_tilt": 6.81,
-      "avg_hip_tilt": 2.55,
-      "stance_flag": null,
-      "elbow_collapse": "reaching",
-      "elbow_delta": 2.492,
-      "setup_elbow_ratio": 0.481,
-      "contact_elbow_ratio": 1.68,
+      "head_lateral_ratio": 0.1692,
+      "head_vertical_ratio": 0.2742,
+      "head_frames_used": 5,
+      "head_flag": null,
+      "symmetry_score": 20.0,
+      "avg_shoulder_tilt": 30.3,
+      "avg_hip_tilt": 13.49,
+      "stance_flag": "STANCE_ASYMMETRIC",
+      "elbow_collapse": "consistent",
+      "elbow_delta": -0.064,
+      "setup_elbow_ratio": 0.49,
+      "contact_elbow_ratio": 0.459,
       "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_REACHING",
-      "elbow_score": 36.0,
+      "elbow_flag": null,
+      "elbow_score": 100.0,
       "feet_active": true,
-      "pre_shot_movement": 18.7,
-      "plant_timing": 5,
-      "feet_timing_score": 65.0,
+      "pre_shot_movement": 399.9,
+      "plant_timing": 9,
+      "feet_timing_score": 25.0,
       "feet_timing_band": "late",
-      "footwork_score": 62.5,
+      "footwork_score": 66.6,
       "footwork_flag": "LATE_PLANT",
-      "shot_score": 6.4,
-      "shot_quality": "Average",
+      "shot_score": 7.3,
+      "shot_quality": "Good",
       "flags": [
-        "HEAD_LATERAL_DRIFT",
-        "ELBOW_REACHING",
-        "LATE_PLANT",
-        "FOOTWORK_LINE_MISMATCH"
+        "STANCE_ASYMMETRIC",
+        "LATE_PLANT"
       ],
-      "head_quality_label": "Some head movement",
-      "symmetry_label": "Slight open shape",
-      "swing_intensity_label": "Flowing swing",
+      "head_quality_label": "Stable \u2014 watching the ball",
+      "symmetry_label": "Strongly off balance",
+      "swing_intensity_label": "Strong, committed swing",
       "footwork_label": "Timing inconsistent \u2014 plant a touch earlier",
-      "shot_quality_label": "Average",
+      "shot_quality_label": "Good",
       "flags_plain": [
-        "Head shifting sideways",
-        "Reaching for the ball",
-        "Front foot down late",
-        "Feet not moving to the line of the ball"
+        "Stance uneven",
+        "Front foot down late"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.078,
-        "flick": 0.1411,
-        "pull": 0.0303,
-        "straight": 0.7181,
-        "sweep": 0.0325
+        "cover": 0.0743,
+        "flick": 0.1144,
+        "pull": 0.0059,
+        "straight": 0.8023,
+        "sweep": 0.0031
       }
     },
     {
       "shot_num": 3,
       "display_num": 3,
       "label": "flick",
-      "confidence": 0.3549,
+      "confidence": 0.7966,
       "confirmed": true,
-      "timestamp": "00:06.80",
-      "peak_frame": 204,
-      "travel_px": 167.3,
-      "swing_intensity": 37.2,
-      "swing_intensity_session_relative": 37.2,
-      "swing_path_score": 61.9,
+      "timestamp": "00:06.00",
+      "peak_frame": 180,
+      "travel_px": 460.7,
+      "swing_intensity": 91.0,
+      "swing_intensity_session_relative": 91.0,
+      "swing_path_score": 59.3,
       "swing_path_label": "OK path",
       "swing_path_note": "ok",
-      "execution_score": 76.0,
-      "execution_label": "Strong execution",
+      "execution_score": 93.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
-      "length_zone": "full",
+      "length_zone": "yorker",
       "ball_line_score": 88.0,
-      "execution_length_note": "flick vs full",
-      "peak_swing_speed": 27.8,
+      "execution_length_note": "flick vs yorker",
+      "peak_swing_speed": 66.6,
       "speed_is_capped": false,
-      "head_quality_score": 60.1,
+      "head_quality_score": 50.1,
       "head_rule_applied": "flick",
       "head_multiplier_used": 3.3,
-      "head_lateral_ratio": 0.4482,
-      "head_vertical_ratio": 0.4313,
-      "head_frames_used": 33,
+      "head_lateral_ratio": 0.8002,
+      "head_vertical_ratio": 0.2582,
+      "head_frames_used": 14,
       "head_flag": "HEAD_LATERAL_DRIFT",
-      "symmetry_score": 20.0,
-      "avg_shoulder_tilt": 20.73,
-      "avg_hip_tilt": 10.54,
+      "symmetry_score": 45.0,
+      "avg_shoulder_tilt": 14.02,
+      "avg_hip_tilt": 4.31,
       "stance_flag": "STANCE_ASYMMETRIC",
       "elbow_collapse": "cramped",
-      "elbow_delta": -0.741,
-      "setup_elbow_ratio": 1.843,
-      "contact_elbow_ratio": 0.477,
+      "elbow_delta": -0.732,
+      "setup_elbow_ratio": 2.156,
+      "contact_elbow_ratio": 0.579,
       "elbow_behind_pad": false,
       "elbow_flag": "ELBOW_COLLAPSE",
       "elbow_score": 21.0,
       "feet_active": true,
-      "pre_shot_movement": 127.0,
-      "plant_timing": -21,
-      "feet_timing_score": 80.0,
+      "pre_shot_movement": 99.4,
+      "plant_timing": -3,
+      "feet_timing_score": 95.0,
       "feet_timing_band": "early",
-      "footwork_score": 89.7,
+      "footwork_score": 96.0,
       "footwork_flag": null,
-      "shot_score": 6.0,
-      "shot_quality": "Average",
+      "shot_score": 6.5,
+      "shot_quality": "Good",
       "flags": [
         "HEAD_LATERAL_DRIFT",
         "STANCE_ASYMMETRIC",
         "ELBOW_COLLAPSE"
       ],
-      "head_quality_label": "Small head movement",
-      "symmetry_label": "Strongly off balance",
-      "swing_intensity_label": "Measured swing",
+      "head_quality_label": "Some head movement",
+      "symmetry_label": "Off balance",
+      "swing_intensity_label": "Strong, committed swing",
       "footwork_label": "Good foot timing \u2014 stable at contact",
-      "shot_quality_label": "Average",
+      "shot_quality_label": "Good",
       "flags_plain": [
         "Head shifting sideways",
         "Stance uneven",
@@ -611,313 +617,236 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.0743,
-        "flick": 0.3549,
-        "pull": 0.1728,
-        "straight": 0.128,
-        "sweep": 0.2701
+        "cover": 0.1062,
+        "flick": 0.7966,
+        "pull": 0.0268,
+        "straight": 0.0064,
+        "sweep": 0.064
       }
     },
     {
       "shot_num": 4,
       "display_num": 4,
-      "label": "straight",
-      "confidence": 0.4466,
+      "label": "cover",
+      "confidence": 0.6157,
       "confirmed": true,
-      "timestamp": "00:09.00",
-      "peak_frame": 270,
-      "travel_px": 319.2,
-      "swing_intensity": 45.6,
-      "swing_intensity_session_relative": 45.6,
-      "swing_path_score": 59.6,
-      "swing_path_label": "OK path",
+      "timestamp": "00:09.43",
+      "peak_frame": 283,
+      "travel_px": 311.0,
+      "swing_intensity": 75.9,
+      "swing_intensity_session_relative": 75.9,
+      "swing_path_score": 73.8,
+      "swing_path_label": "Solid swing shape",
       "swing_path_note": "ok",
-      "execution_score": 54.0,
+      "execution_score": 52.0,
       "execution_label": "OK / neutral",
       "execution_confidence": 1.0,
-      "length_zone": "short",
+      "length_zone": "yorker",
       "ball_line_score": 36.0,
-      "execution_length_note": "straight vs short",
-      "peak_swing_speed": 58.0,
+      "execution_length_note": "cover vs yorker",
+      "peak_swing_speed": 45.1,
       "speed_is_capped": false,
-      "head_quality_score": 48.1,
-      "head_rule_applied": "straight",
-      "head_multiplier_used": 3.6,
-      "head_lateral_ratio": 0.7174,
-      "head_vertical_ratio": 0.5211,
-      "head_frames_used": 24,
-      "head_flag": "HEAD_LATERAL_DRIFT",
-      "symmetry_score": 71.3,
-      "avg_shoulder_tilt": 3.67,
-      "avg_hip_tilt": 5.88,
+      "head_quality_score": 97.0,
+      "head_rule_applied": "cover",
+      "head_multiplier_used": 3.3,
+      "head_lateral_ratio": 0.1542,
+      "head_vertical_ratio": 0.3104,
+      "head_frames_used": 11,
+      "head_flag": null,
+      "symmetry_score": 69.7,
+      "avg_shoulder_tilt": 7.07,
+      "avg_hip_tilt": 3.03,
       "stance_flag": null,
-      "elbow_collapse": "reaching",
-      "elbow_delta": 2.91,
-      "setup_elbow_ratio": 0.387,
-      "contact_elbow_ratio": 1.511,
+      "elbow_collapse": "consistent",
+      "elbow_delta": 0.038,
+      "setup_elbow_ratio": 1.211,
+      "contact_elbow_ratio": 1.257,
       "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_REACHING",
-      "elbow_score": 36.0,
+      "elbow_flag": null,
+      "elbow_score": 100.0,
       "feet_active": true,
-      "pre_shot_movement": 49.6,
-      "plant_timing": -16,
-      "feet_timing_score": 80.0,
-      "feet_timing_band": "early",
-      "footwork_score": 81.4,
+      "pre_shot_movement": 11.1,
+      "plant_timing": 1,
+      "feet_timing_score": 75.0,
+      "feet_timing_band": "on_time",
+      "footwork_score": 54.1,
       "footwork_flag": null,
-      "shot_score": 5.8,
-      "shot_quality": "Average",
+      "shot_score": 7.4,
+      "shot_quality": "Good",
       "flags": [
-        "HEAD_LATERAL_DRIFT",
-        "ELBOW_REACHING",
         "FOOTWORK_LINE_MISMATCH"
       ],
-      "head_quality_label": "Some head movement",
+      "head_quality_label": "Very still \u2014 eyes on the ball",
       "symmetry_label": "Slight open shape",
-      "swing_intensity_label": "Flowing swing",
-      "footwork_label": "Front foot used well",
-      "shot_quality_label": "Average",
+      "swing_intensity_label": "Solid swing",
+      "footwork_label": "Front foot late \u2014 land before swing",
+      "shot_quality_label": "Good",
       "flags_plain": [
-        "Head shifting sideways",
-        "Reaching for the ball",
         "Feet not moving to the line of the ball"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1418,
-        "flick": 0.1356,
-        "pull": 0.2565,
-        "straight": 0.4466,
-        "sweep": 0.0195
+        "cover": 0.6157,
+        "flick": 0.0857,
+        "pull": 0.0759,
+        "straight": 0.208,
+        "sweep": 0.0146
       }
     },
     {
       "shot_num": 5,
       "display_num": 5,
-      "label": "cover",
-      "confidence": 0.3547,
+      "label": "pull",
+      "confidence": 0.5662,
       "confirmed": true,
       "timestamp": "00:11.10",
       "peak_frame": 333,
-      "travel_px": 242.0,
-      "swing_intensity": 42.5,
-      "swing_intensity_session_relative": 42.5,
-      "swing_path_score": 71.9,
-      "swing_path_label": "Solid swing shape",
+      "travel_px": 103.5,
+      "swing_intensity": 61.2,
+      "swing_intensity_session_relative": 61.2,
+      "swing_path_score": 78.1,
+      "swing_path_label": "Clean path",
       "swing_path_note": "ok",
-      "execution_score": 62.0,
-      "execution_label": "Sensible option",
-      "execution_confidence": 1.0,
-      "length_zone": "short",
-      "ball_line_score": 36.0,
-      "execution_length_note": "cover vs short",
-      "peak_swing_speed": 43.4,
-      "speed_is_capped": false,
-      "head_quality_score": 50.8,
-      "head_rule_applied": "cover",
-      "head_multiplier_used": 3.3,
-      "head_lateral_ratio": 0.4233,
-      "head_vertical_ratio": 1.126,
-      "head_frames_used": 11,
-      "head_flag": "HEAD_LATERAL_DRIFT",
-      "symmetry_score": 74.6,
-      "avg_shoulder_tilt": 4.25,
-      "avg_hip_tilt": 4.23,
-      "stance_flag": null,
-      "elbow_collapse": "reaching",
-      "elbow_delta": 2.85,
-      "setup_elbow_ratio": 0.266,
-      "contact_elbow_ratio": 1.025,
-      "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_REACHING",
-      "elbow_score": 36.0,
-      "feet_active": true,
-      "pre_shot_movement": 17.3,
-      "plant_timing": 1,
-      "feet_timing_score": 75.0,
-      "feet_timing_band": "on_time",
-      "footwork_score": 66.7,
-      "footwork_flag": null,
-      "shot_score": 5.9,
-      "shot_quality": "Average",
-      "flags": [
-        "HEAD_LATERAL_DRIFT",
-        "ELBOW_REACHING",
-        "FOOTWORK_LINE_MISMATCH"
-      ],
-      "head_quality_label": "Some head movement",
-      "symmetry_label": "Near level",
-      "swing_intensity_label": "Gentle swing",
-      "footwork_label": "Timing inconsistent \u2014 plant a touch earlier",
-      "shot_quality_label": "Average",
-      "flags_plain": [
-        "Head shifting sideways",
-        "Reaching for the ball",
-        "Feet not moving to the line of the ball"
-      ],
-      "data_quality": "good",
-      "data_quality_note": "Reliable read",
-      "head_confidence": "measured",
-      "probs": {
-        "cover": 0.3547,
-        "flick": 0.1567,
-        "pull": 0.1325,
-        "straight": 0.3298,
-        "sweep": 0.0263
-      }
-    },
-    {
-      "shot_num": 6,
-      "display_num": 6,
-      "label": "straight",
-      "confidence": 0.5174,
-      "confirmed": true,
-      "timestamp": "00:13.33",
-      "peak_frame": 400,
-      "travel_px": 163.9,
-      "swing_intensity": 35.9,
-      "swing_intensity_session_relative": 35.9,
-      "swing_path_score": 68.2,
-      "swing_path_label": "Solid swing shape",
-      "swing_path_note": "ok",
-      "execution_score": 96.0,
-      "execution_label": "Excellent choice for length",
-      "execution_confidence": 1.0,
+      "execution_score": 49.1,
+      "execution_label": "Risky for this length",
+      "execution_confidence": 0.32,
       "length_zone": "full",
-      "ball_line_score": 88.0,
-      "execution_length_note": "straight vs full",
-      "peak_swing_speed": 33.1,
+      "ball_line_score": null,
+      "execution_length_note": "pull vs full",
+      "peak_swing_speed": 30.7,
       "speed_is_capped": false,
-      "head_quality_score": 76.2,
-      "head_rule_applied": "straight",
-      "head_multiplier_used": 3.6,
-      "head_lateral_ratio": 0.1973,
-      "head_vertical_ratio": 0.4448,
-      "head_frames_used": 26,
-      "head_flag": null,
-      "symmetry_score": 78.1,
-      "avg_shoulder_tilt": 3.99,
-      "avg_hip_tilt": 3.3,
-      "stance_flag": null,
-      "elbow_collapse": "reaching",
-      "elbow_delta": 0.297,
-      "setup_elbow_ratio": 0.491,
-      "contact_elbow_ratio": 0.636,
-      "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_REACHING",
-      "elbow_score": 36.0,
-      "feet_active": true,
-      "pre_shot_movement": 19.3,
-      "plant_timing": -15,
-      "feet_timing_score": 80.0,
-      "feet_timing_band": "early",
-      "footwork_score": 89.7,
-      "footwork_flag": null,
-      "shot_score": 7.8,
-      "shot_quality": "Good",
-      "flags": [
-        "ELBOW_REACHING"
-      ],
-      "head_quality_label": "Head mostly quiet",
-      "symmetry_label": "Near level",
-      "swing_intensity_label": "Measured swing",
-      "footwork_label": "Good foot timing \u2014 stable at contact",
-      "shot_quality_label": "Good",
-      "flags_plain": [
-        "Reaching for the ball"
-      ],
-      "data_quality": "good",
-      "data_quality_note": "Reliable read",
-      "head_confidence": "measured",
-      "probs": {
-        "cover": 0.1628,
-        "flick": 0.1948,
-        "pull": 0.0843,
-        "straight": 0.5174,
-        "sweep": 0.0407
-      }
-    },
-    {
-      "shot_num": 7,
-      "display_num": 7,
-      "label": "pull",
-      "confidence": 0.7003,
-      "confirmed": true,
-      "timestamp": "00:15.77",
-      "peak_frame": 473,
-      "travel_px": 1452.1,
-      "swing_intensity": 100.0,
-      "swing_intensity_session_relative": 100.0,
-      "swing_path_score": 72.0,
-      "swing_path_label": "Solid swing shape",
-      "swing_path_note": "ok",
-      "execution_score": 76.0,
-      "execution_label": "Strong execution",
-      "execution_confidence": 0.499,
-      "length_zone": "good_length",
-      "ball_line_score": 88.0,
-      "execution_length_note": "pull vs good length",
-      "peak_swing_speed": 140.0,
-      "speed_is_capped": true,
-      "head_quality_score": 28.2,
+      "head_quality_score": 97.0,
       "head_rule_applied": "pull",
       "head_multiplier_used": 2.5,
-      "head_lateral_ratio": 2.9081,
-      "head_vertical_ratio": 4.1281,
-      "head_frames_used": 12,
-      "head_flag": "HEAD_LATERAL_DRIFT",
-      "symmetry_score": 63.9,
-      "avg_shoulder_tilt": 9.84,
-      "avg_hip_tilt": 2.19,
-      "stance_flag": null,
+      "head_lateral_ratio": 0.1654,
+      "head_vertical_ratio": 0.0433,
+      "head_frames_used": 8,
+      "head_flag": null,
+      "symmetry_score": 20.0,
+      "avg_shoulder_tilt": 17.76,
+      "avg_hip_tilt": 9.69,
+      "stance_flag": "STANCE_ASYMMETRIC",
       "elbow_collapse": "consistent",
-      "elbow_delta": 0.007,
-      "setup_elbow_ratio": 1.646,
-      "contact_elbow_ratio": 1.658,
+      "elbow_delta": -0.034,
+      "setup_elbow_ratio": 1.258,
+      "contact_elbow_ratio": 1.216,
       "elbow_behind_pad": false,
       "elbow_flag": null,
       "elbow_score": 100.0,
       "feet_active": true,
-      "pre_shot_movement": 22.3,
+      "pre_shot_movement": 57.3,
       "plant_timing": 5,
       "feet_timing_score": 82.0,
       "feet_timing_band": "late",
-      "footwork_score": 90.5,
+      "footwork_score": 91.0,
       "footwork_flag": "LATE_PLANT",
-      "shot_score": 6.7,
+      "shot_score": 7.5,
       "shot_quality": "Good",
       "flags": [
-        "HEAD_LATERAL_DRIFT",
+        "STANCE_ASYMMETRIC",
         "LATE_PLANT"
       ],
-      "head_quality_label": "Busy head around contact",
-      "symmetry_label": "Slight open shape",
-      "swing_intensity_label": "Strong, committed swing",
+      "head_quality_label": "Very still \u2014 eyes on the ball",
+      "symmetry_label": "Strongly off balance",
+      "swing_intensity_label": "Rhythm swing",
       "footwork_label": "Good foot timing \u2014 stable at contact",
       "shot_quality_label": "Good",
       "flags_plain": [
-        "Head shifting sideways",
+        "Stance uneven",
         "Front foot down late"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.0123,
-        "flick": 0.0136,
-        "pull": 0.7003,
-        "straight": 0.0064,
-        "sweep": 0.2674
+        "cover": 0.0506,
+        "flick": 0.1132,
+        "pull": 0.5662,
+        "straight": 0.0197,
+        "sweep": 0.2503
+      }
+    },
+    {
+      "shot_num": 6,
+      "display_num": 6,
+      "label": "sweep",
+      "confidence": 0.8968,
+      "confirmed": true,
+      "timestamp": "00:14.00",
+      "peak_frame": 420,
+      "travel_px": 145.6,
+      "swing_intensity": 67.6,
+      "swing_intensity_session_relative": 67.6,
+      "swing_path_score": 48.0,
+      "swing_path_label": "A bit tight or short",
+      "swing_path_note": "too_few_wrists",
+      "execution_score": 74.0,
+      "execution_label": "Strong execution",
+      "execution_confidence": 1.0,
+      "length_zone": "yorker",
+      "ball_line_score": 58.0,
+      "execution_length_note": "sweep vs yorker",
+      "peak_swing_speed": 35.9,
+      "speed_is_capped": false,
+      "head_quality_score": 97.0,
+      "head_rule_applied": "sweep",
+      "head_multiplier_used": 2.5,
+      "head_lateral_ratio": 0.0007,
+      "head_vertical_ratio": 0.0006,
+      "head_frames_used": 2,
+      "head_flag": null,
+      "symmetry_score": 55.8,
+      "avg_shoulder_tilt": 10.66,
+      "avg_hip_tilt": 4.07,
+      "stance_flag": null,
+      "elbow_collapse": "consistent",
+      "elbow_delta": 0.06,
+      "setup_elbow_ratio": 1.837,
+      "contact_elbow_ratio": 1.946,
+      "elbow_behind_pad": true,
+      "elbow_flag": "ELBOW_BEHIND_PAD",
+      "elbow_score": 100.0,
+      "feet_active": true,
+      "pre_shot_movement": 123.3,
+      "plant_timing": 9,
+      "feet_timing_score": 50.0,
+      "feet_timing_band": "late",
+      "footwork_score": 72.3,
+      "footwork_flag": "LATE_PLANT",
+      "shot_score": 7.9,
+      "shot_quality": "Good",
+      "flags": [
+        "ELBOW_BEHIND_PAD",
+        "LATE_PLANT"
+      ],
+      "head_quality_label": "Very still \u2014 eyes on the ball",
+      "symmetry_label": "Moderately open",
+      "swing_intensity_label": "Good tempo",
+      "footwork_label": "Front foot used well",
+      "shot_quality_label": "Good",
+      "flags_plain": [
+        "Sweep: bat turning in early",
+        "Front foot down late"
+      ],
+      "data_quality": "good",
+      "data_quality_note": "Reliable read",
+      "head_confidence": "low",
+      "probs": {
+        "cover": 0.0197,
+        "flick": 0.0575,
+        "pull": 0.0211,
+        "straight": 0.0049,
+        "sweep": 0.8968
       }
     }
   ],
   "ball_analytics": {
     "enabled": true,
-    "model_path": "C:\\Users\\DELL\\Downloads\\crickeye-dashboard-working\\assets\\best_ball.pt",
+    "model_path": "C:\\Users\\HP\\OneDrive\\Desktop\\CRIE Project\\CrickEye_Project\\assets\\best_ball.pt",
     "calibration": {
-      "segment_m": 10.0584,
+      "segment_m": 10.06,
       "axis_a_norm": [
         0.5,
         0.88
@@ -963,150 +892,114 @@
         "delivery_id": "d1",
         "track_id": 0,
         "start_frame": 0,
-        "end_frame": 20,
-        "frame_count": 9,
-        "track_confidence_score": 0.6713,
-        "speed_kmh_est": 121.61,
+        "end_frame": 35,
+        "frame_count": 4,
+        "track_confidence_score": 0.5555,
+        "speed_kmh_est": null,
         "speed_is_estimated": true,
-        "speed_reliability_score": 0.7932,
-        "speed_warnings": [],
-        "pace_band": "fast",
+        "speed_reliability_score": 0.0406,
+        "speed_warnings": [
+          "sparse_motion"
+        ],
+        "pace_band": "unknown",
         "bounce": {
-          "frame": 1,
-          "confidence": 1.0,
-          "method_note": "curvature_peak",
+          "frame": null,
+          "confidence": 0.0,
+          "method_note": "too_few_points",
           "point_norm": {
-            "nx": 0.43916,
-            "ny": 0.56128,
-            "distance_from_batter_m": 7.3533
+            "nx": 0.25691,
+            "ny": 0.8038,
+            "distance_from_batter_m": 1.095
           }
         },
         "length": {
-          "label": "good_length",
-          "distance_m": 7.3533,
-          "confidence": 1.0,
+          "label": "full_toss",
+          "distance_m": 1.095,
+          "confidence": 0.55,
           "uncertain": false,
-          "reason": null
+          "reason": "Classified as full toss from trajectory (weak bounce signal)."
         },
         "pitch_plot": {
           "trajectory": [
             {
               "frame": 0,
-              "nx": 0.6423900127410889,
-              "ny": 0.4394899904727936,
-              "along_t": 0.6293,
-              "distance_from_batter_m": 6.3298,
-              "conf": 0.5324
+              "nx": 0.135,
+              "ny": 0.51485,
+              "along_t": 0.52164,
+              "distance_from_batter_m": 5.2477,
+              "conf": 0.5254
             },
             {
-              "frame": 1,
-              "nx": 0.43915998935699463,
-              "ny": 0.5612800121307373,
-              "along_t": 0.45531,
-              "distance_from_batter_m": 4.5797,
-              "conf": 0.5208
+              "frame": 33,
+              "nx": 0.25691,
+              "ny": 0.8038,
+              "along_t": 0.10885,
+              "distance_from_batter_m": 1.095,
+              "conf": 0.5268
             },
             {
-              "frame": 14,
-              "nx": 0.3149400055408478,
-              "ny": 0.29701000452041626,
-              "along_t": 0.83284,
-              "distance_from_batter_m": 8.377,
-              "conf": 0.6686
+              "frame": 34,
+              "nx": 0.25685,
+              "ny": 0.80364,
+              "along_t": 0.10908,
+              "distance_from_batter_m": 1.0973,
+              "conf": 0.5876
             },
             {
-              "frame": 15,
-              "nx": 0.3149299919605255,
-              "ny": 0.2970300018787384,
-              "along_t": 0.83282,
-              "distance_from_batter_m": 8.3768,
-              "conf": 0.6718
-            },
-            {
-              "frame": 16,
-              "nx": 0.32346999645233154,
-              "ny": 0.3379000127315521,
-              "along_t": 0.77443,
-              "distance_from_batter_m": 7.7895,
-              "conf": 0.7361
-            },
-            {
-              "frame": 17,
-              "nx": 0.33417999744415283,
-              "ny": 0.377810001373291,
-              "along_t": 0.71741,
-              "distance_from_batter_m": 7.216,
-              "conf": 0.7586
-            },
-            {
-              "frame": 18,
-              "nx": 0.33976998925209045,
-              "ny": 0.37992000579833984,
-              "along_t": 0.71441,
-              "distance_from_batter_m": 7.1858,
-              "conf": 0.7245
-            },
-            {
-              "frame": 19,
-              "nx": 0.3399699926376343,
-              "ny": 0.3799999952316284,
-              "along_t": 0.71429,
-              "distance_from_batter_m": 7.1846,
-              "conf": 0.7223
-            },
-            {
-              "frame": 20,
-              "nx": 0.3442299962043762,
-              "ny": 0.33199000358581543,
-              "along_t": 0.78287,
-              "distance_from_batter_m": 7.8744,
-              "conf": 0.7067
+              "frame": 35,
+              "nx": 0.25683,
+              "ny": 0.80373,
+              "along_t": 0.10896,
+              "distance_from_batter_m": 1.0961,
+              "conf": 0.582
             }
           ],
           "bounce": {
-            "nx": 0.43916,
-            "ny": 0.56128,
-            "distance_from_batter_m": 7.3533
+            "nx": 0.25691,
+            "ny": 0.8038,
+            "distance_from_batter_m": 1.095
           },
-          "length_zone": "good_length"
+          "length_zone": "full_toss"
         },
-        "quality_flags": [],
+        "quality_flags": [
+          "sparse_motion",
+          "bounce_uncertain",
+          "motion_filter_relaxed"
+        ],
         "shot_num": 1,
         "display_num": 1,
-        "peak_frame": 34,
+        "peak_frame": 13,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 1,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.4085,
+        "shot_classifier_conf": 0.8343,
         "shot_confirmed": true
       },
       {
         "delivery_id": "d2",
         "track_id": 1,
-        "start_frame": 77,
-        "end_frame": 93,
-        "frame_count": 7,
-        "track_confidence_score": 0.6753,
-        "speed_kmh_est": 42.82,
+        "start_frame": 86,
+        "end_frame": 105,
+        "frame_count": 12,
+        "track_confidence_score": 0.7295,
+        "speed_kmh_est": 68.54,
         "speed_is_estimated": true,
-        "speed_reliability_score": 0.7148,
-        "speed_warnings": [
-          "speed_adjusted_club_soft_floor"
-        ],
+        "speed_reliability_score": 0.8086,
+        "speed_warnings": [],
         "pace_band": "slow",
         "bounce": {
-          "frame": 92,
+          "frame": 98,
           "confidence": 1.0,
           "method_note": "curvature_peak",
           "point_norm": {
-            "nx": 0.3981,
-            "ny": 0.34795,
-            "distance_from_batter_m": 7.7576
+            "nx": 0.37118,
+            "ny": 0.85852,
+            "distance_from_batter_m": 0.0
           }
         },
         "length": {
-          "label": "good_length",
-          "distance_m": 7.7576,
+          "label": "yorker",
+          "distance_m": 0.0,
           "confidence": 1.0,
           "uncertain": false,
           "reason": null
@@ -1114,108 +1007,144 @@
         "pitch_plot": {
           "trajectory": [
             {
-              "frame": 77,
-              "nx": 0.3196200132369995,
-              "ny": 0.08827999979257584,
-              "along_t": 1.13102,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.6152
+              "frame": 86,
+              "nx": 0.17728,
+              "ny": 0.62713,
+              "along_t": 0.36124,
+              "distance_from_batter_m": 3.6341,
+              "conf": 0.6939
             },
             {
-              "frame": 78,
-              "nx": 0.3196299970149994,
-              "ny": 0.08828999847173691,
-              "along_t": 1.13102,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.6156
+              "frame": 88,
+              "nx": 0.21835,
+              "ny": 0.68515,
+              "along_t": 0.27836,
+              "distance_from_batter_m": 2.8003,
+              "conf": 0.69
             },
             {
-              "frame": 82,
-              "nx": 0.3541800081729889,
-              "ny": 0.19745999574661255,
-              "along_t": 0.97505,
-              "distance_from_batter_m": 9.8075,
-              "conf": 0.5687
-            },
-            {
-              "frame": 90,
-              "nx": 0.39079999923706055,
-              "ny": 0.33228999376296997,
-              "along_t": 0.78244,
-              "distance_from_batter_m": 7.8701,
-              "conf": 0.7279
-            },
-            {
-              "frame": 91,
-              "nx": 0.3981199860572815,
-              "ny": 0.3479500114917755,
-              "along_t": 0.76007,
-              "distance_from_batter_m": 7.6451,
-              "conf": 0.7468
+              "frame": 89,
+              "nx": 0.23674,
+              "ny": 0.71477,
+              "along_t": 0.23604,
+              "distance_from_batter_m": 2.3746,
+              "conf": 0.5824
             },
             {
               "frame": 92,
-              "nx": 0.39809998869895935,
-              "ny": 0.3479500114917755,
-              "along_t": 0.76007,
-              "distance_from_batter_m": 7.6451,
-              "conf": 0.7473
+              "nx": 0.30085,
+              "ny": 0.83543,
+              "along_t": 0.06368,
+              "distance_from_batter_m": 0.6406,
+              "conf": 0.7272
             },
             {
               "frame": 93,
-              "nx": 0.40334001183509827,
-              "ny": 0.31407999992370605,
-              "along_t": 0.80845,
-              "distance_from_batter_m": 8.1317,
-              "conf": 0.7053
+              "nx": 0.31485,
+              "ny": 0.86139,
+              "along_t": 0.02658,
+              "distance_from_batter_m": 0.2674,
+              "conf": 0.7513
+            },
+            {
+              "frame": 94,
+              "nx": 0.32536,
+              "ny": 0.89224,
+              "along_t": -0.01749,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.8063
+            },
+            {
+              "frame": 95,
+              "nx": 0.33959,
+              "ny": 0.91869,
+              "along_t": -0.05527,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.8279
+            },
+            {
+              "frame": 96,
+              "nx": 0.3534,
+              "ny": 0.94502,
+              "along_t": -0.09288,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.8155
+            },
+            {
+              "frame": 97,
+              "nx": 0.36434,
+              "ny": 0.90591,
+              "along_t": -0.03702,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7965
+            },
+            {
+              "frame": 98,
+              "nx": 0.37118,
+              "ny": 0.85852,
+              "along_t": 0.03069,
+              "distance_from_batter_m": 0.3087,
+              "conf": 0.596
+            },
+            {
+              "frame": 104,
+              "nx": 0.28071,
+              "ny": 0.91376,
+              "along_t": -0.04822,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7116
+            },
+            {
+              "frame": 105,
+              "nx": 0.24432,
+              "ny": 0.90015,
+              "along_t": -0.02878,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7555
             }
           ],
           "bounce": {
-            "nx": 0.3981,
-            "ny": 0.34795,
-            "distance_from_batter_m": 7.7576
+            "nx": 0.37118,
+            "ny": 0.85852,
+            "distance_from_batter_m": 0.0
           },
-          "length_zone": "good_length"
+          "length_zone": "yorker"
         },
-        "quality_flags": [
-          "speed_adjusted_club_soft_floor"
-        ],
+        "quality_flags": [],
         "shot_num": 2,
         "display_num": 2,
-        "peak_frame": 105,
+        "peak_frame": 111,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 2,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.7181,
+        "shot_classifier_conf": 0.8023,
         "shot_confirmed": true
       },
       {
         "delivery_id": "d3",
         "track_id": 2,
-        "start_frame": 193,
-        "end_frame": 221,
-        "frame_count": 10,
-        "track_confidence_score": 0.6393,
-        "speed_kmh_est": 57.73,
+        "start_frame": 145,
+        "end_frame": 183,
+        "frame_count": 39,
+        "track_confidence_score": 0.6966,
+        "speed_kmh_est": 160.0,
         "speed_is_estimated": true,
-        "speed_reliability_score": 0.5886,
-        "speed_warnings": [
-          "high_speed_variance"
-        ],
-        "pace_band": "slow",
+        "speed_reliability_score": 0.4,
+        "speed_warnings": [],
+        "pace_band": "fast",
         "bounce": {
-          "frame": 220,
+          "frame": 182,
           "confidence": 1.0,
           "method_note": "curvature_peak",
           "point_norm": {
-            "nx": 0.36013,
-            "ny": 0.51787,
-            "distance_from_batter_m": 5.2029
+            "nx": 0.72566,
+            "ny": 0.74804,
+            "distance_from_batter_m": 1.8963
           }
         },
         "length": {
-          "label": "full",
-          "distance_m": 5.2029,
+          "label": "yorker",
+          "distance_m": 1.8963,
           "confidence": 1.0,
           "uncertain": false,
           "reason": null
@@ -1223,130 +1152,362 @@
         "pitch_plot": {
           "trajectory": [
             {
-              "frame": 193,
-              "nx": 0.30437999963760376,
-              "ny": 0.386680006980896,
-              "along_t": 0.70474,
-              "distance_from_batter_m": 7.0886,
-              "conf": 0.7124
+              "frame": 145,
+              "nx": 0.72592,
+              "ny": 0.74836,
+              "along_t": 0.18805,
+              "distance_from_batter_m": 1.8918,
+              "conf": 0.7233
             },
             {
-              "frame": 196,
-              "nx": 0.4095599949359894,
-              "ny": 0.5366399884223938,
-              "along_t": 0.49052,
-              "distance_from_batter_m": 4.9338,
-              "conf": 0.7343
+              "frame": 146,
+              "nx": 0.72591,
+              "ny": 0.74836,
+              "along_t": 0.18805,
+              "distance_from_batter_m": 1.8918,
+              "conf": 0.7241
             },
             {
-              "frame": 197,
-              "nx": 0.43608999252319336,
-              "ny": 0.579990029335022,
-              "along_t": 0.42859,
-              "distance_from_batter_m": 4.311,
+              "frame": 147,
+              "nx": 0.7259,
+              "ny": 0.74836,
+              "along_t": 0.18806,
+              "distance_from_batter_m": 1.8919,
+              "conf": 0.724
+            },
+            {
+              "frame": 148,
+              "nx": 0.72591,
+              "ny": 0.74836,
+              "along_t": 0.18805,
+              "distance_from_batter_m": 1.8918,
+              "conf": 0.7165
+            },
+            {
+              "frame": 149,
+              "nx": 0.72591,
+              "ny": 0.74836,
+              "along_t": 0.18805,
+              "distance_from_batter_m": 1.8918,
+              "conf": 0.7181
+            },
+            {
+              "frame": 150,
+              "nx": 0.72594,
+              "ny": 0.74844,
+              "along_t": 0.18794,
+              "distance_from_batter_m": 1.8907,
+              "conf": 0.7184
+            },
+            {
+              "frame": 151,
+              "nx": 0.72587,
+              "ny": 0.74839,
+              "along_t": 0.18801,
+              "distance_from_batter_m": 1.8914,
+              "conf": 0.7211
+            },
+            {
+              "frame": 152,
+              "nx": 0.72587,
+              "ny": 0.74839,
+              "along_t": 0.18802,
+              "distance_from_batter_m": 1.8914,
+              "conf": 0.7244
+            },
+            {
+              "frame": 153,
+              "nx": 0.72588,
+              "ny": 0.74839,
+              "along_t": 0.18801,
+              "distance_from_batter_m": 1.8914,
+              "conf": 0.7244
+            },
+            {
+              "frame": 154,
+              "nx": 0.72587,
+              "ny": 0.7484,
+              "along_t": 0.188,
+              "distance_from_batter_m": 1.8913,
+              "conf": 0.7193
+            },
+            {
+              "frame": 155,
+              "nx": 0.72586,
+              "ny": 0.74839,
+              "along_t": 0.18801,
+              "distance_from_batter_m": 1.8914,
+              "conf": 0.7117
+            },
+            {
+              "frame": 156,
+              "nx": 0.72587,
+              "ny": 0.7484,
+              "along_t": 0.18801,
+              "distance_from_batter_m": 1.8913,
+              "conf": 0.7114
+            },
+            {
+              "frame": 157,
+              "nx": 0.72588,
+              "ny": 0.7484,
+              "along_t": 0.188,
+              "distance_from_batter_m": 1.8913,
               "conf": 0.7094
             },
             {
-              "frame": 198,
-              "nx": 0.4605500102043152,
-              "ny": 0.565280020236969,
-              "along_t": 0.4496,
-              "distance_from_batter_m": 4.5222,
-              "conf": 0.7113
+              "frame": 158,
+              "nx": 0.72585,
+              "ny": 0.74834,
+              "along_t": 0.18809,
+              "distance_from_batter_m": 1.8922,
+              "conf": 0.7074
             },
             {
-              "frame": 216,
-              "nx": 0.3679099977016449,
-              "ny": 0.4918999969959259,
-              "along_t": 0.55443,
-              "distance_from_batter_m": 5.5767,
-              "conf": 0.5791
+              "frame": 159,
+              "nx": 0.72591,
+              "ny": 0.74831,
+              "along_t": 0.18812,
+              "distance_from_batter_m": 1.8925,
+              "conf": 0.7093
             },
             {
-              "frame": 217,
-              "nx": 0.3604600131511688,
-              "ny": 0.5081800222396851,
-              "along_t": 0.53117,
-              "distance_from_batter_m": 5.3427,
-              "conf": 0.56
+              "frame": 160,
+              "nx": 0.28242,
+              "ny": 0.92984,
+              "along_t": -0.0712,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7649
             },
             {
-              "frame": 218,
-              "nx": 0.3602299988269806,
-              "ny": 0.5179499983787537,
-              "along_t": 0.51722,
-              "distance_from_batter_m": 5.2024,
-              "conf": 0.6308
+              "frame": 161,
+              "nx": 0.28253,
+              "ny": 0.92992,
+              "along_t": -0.07131,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7638
             },
             {
-              "frame": 219,
-              "nx": 0.36017000675201416,
-              "ny": 0.5178800225257874,
-              "along_t": 0.51731,
-              "distance_from_batter_m": 5.2033,
-              "conf": 0.6135
+              "frame": 162,
+              "nx": 0.31809,
+              "ny": 0.82989,
+              "along_t": 0.07159,
+              "distance_from_batter_m": 0.7201,
+              "conf": 0.7408
             },
             {
-              "frame": 220,
-              "nx": 0.3601300120353699,
-              "ny": 0.5178700089454651,
-              "along_t": 0.51734,
-              "distance_from_batter_m": 5.2036,
-              "conf": 0.5914
+              "frame": 163,
+              "nx": 0.72589,
+              "ny": 0.74847,
+              "along_t": 0.18789,
+              "distance_from_batter_m": 1.8902,
+              "conf": 0.6934
             },
             {
-              "frame": 221,
-              "nx": 0.36107999086380005,
-              "ny": 0.5204300284385681,
-              "along_t": 0.51367,
-              "distance_from_batter_m": 5.1667,
-              "conf": 0.551
+              "frame": 164,
+              "nx": 0.72589,
+              "ny": 0.74848,
+              "along_t": 0.18789,
+              "distance_from_batter_m": 1.8902,
+              "conf": 0.6937
+            },
+            {
+              "frame": 165,
+              "nx": 0.7259,
+              "ny": 0.74847,
+              "along_t": 0.18789,
+              "distance_from_batter_m": 1.8902,
+              "conf": 0.6888
+            },
+            {
+              "frame": 166,
+              "nx": 0.7259,
+              "ny": 0.74848,
+              "along_t": 0.18789,
+              "distance_from_batter_m": 1.8902,
+              "conf": 0.6885
+            },
+            {
+              "frame": 167,
+              "nx": 0.7259,
+              "ny": 0.74848,
+              "along_t": 0.18789,
+              "distance_from_batter_m": 1.8902,
+              "conf": 0.6888
+            },
+            {
+              "frame": 168,
+              "nx": 0.72589,
+              "ny": 0.74848,
+              "along_t": 0.18789,
+              "distance_from_batter_m": 1.8902,
+              "conf": 0.6961
+            },
+            {
+              "frame": 169,
+              "nx": 0.72584,
+              "ny": 0.74854,
+              "along_t": 0.1878,
+              "distance_from_batter_m": 1.8893,
+              "conf": 0.6833
+            },
+            {
+              "frame": 170,
+              "nx": 0.72584,
+              "ny": 0.74853,
+              "along_t": 0.18781,
+              "distance_from_batter_m": 1.8894,
+              "conf": 0.6847
+            },
+            {
+              "frame": 171,
+              "nx": 0.65199,
+              "ny": 0.59182,
+              "along_t": 0.41169,
+              "distance_from_batter_m": 4.1416,
+              "conf": 0.79
+            },
+            {
+              "frame": 172,
+              "nx": 0.72582,
+              "ny": 0.74855,
+              "along_t": 0.18779,
+              "distance_from_batter_m": 1.8892,
+              "conf": 0.6845
+            },
+            {
+              "frame": 173,
+              "nx": 0.72581,
+              "ny": 0.74854,
+              "along_t": 0.1878,
+              "distance_from_batter_m": 1.8893,
+              "conf": 0.6876
+            },
+            {
+              "frame": 174,
+              "nx": 0.72567,
+              "ny": 0.74805,
+              "along_t": 0.1885,
+              "distance_from_batter_m": 1.8963,
+              "conf": 0.6337
+            },
+            {
+              "frame": 175,
+              "nx": 0.7257,
+              "ny": 0.74802,
+              "along_t": 0.18854,
+              "distance_from_batter_m": 1.8967,
+              "conf": 0.6345
+            },
+            {
+              "frame": 176,
+              "nx": 0.72572,
+              "ny": 0.74807,
+              "along_t": 0.18847,
+              "distance_from_batter_m": 1.896,
+              "conf": 0.6581
+            },
+            {
+              "frame": 177,
+              "nx": 0.72569,
+              "ny": 0.74805,
+              "along_t": 0.1885,
+              "distance_from_batter_m": 1.8963,
+              "conf": 0.6473
+            },
+            {
+              "frame": 178,
+              "nx": 0.72566,
+              "ny": 0.74805,
+              "along_t": 0.1885,
+              "distance_from_batter_m": 1.8963,
+              "conf": 0.6455
+            },
+            {
+              "frame": 179,
+              "nx": 0.7257,
+              "ny": 0.74805,
+              "along_t": 0.1885,
+              "distance_from_batter_m": 1.8963,
+              "conf": 0.6465
+            },
+            {
+              "frame": 180,
+              "nx": 0.7257,
+              "ny": 0.74806,
+              "along_t": 0.18849,
+              "distance_from_batter_m": 1.8962,
+              "conf": 0.6505
+            },
+            {
+              "frame": 181,
+              "nx": 0.72569,
+              "ny": 0.74805,
+              "along_t": 0.1885,
+              "distance_from_batter_m": 1.8963,
+              "conf": 0.6488
+            },
+            {
+              "frame": 182,
+              "nx": 0.72566,
+              "ny": 0.74804,
+              "along_t": 0.18851,
+              "distance_from_batter_m": 1.8964,
+              "conf": 0.6415
+            },
+            {
+              "frame": 183,
+              "nx": 0.72569,
+              "ny": 0.74804,
+              "along_t": 0.18851,
+              "distance_from_batter_m": 1.8964,
+              "conf": 0.649
             }
           ],
           "bounce": {
-            "nx": 0.36013,
-            "ny": 0.51787,
-            "distance_from_batter_m": 5.2029
+            "nx": 0.72566,
+            "ny": 0.74804,
+            "distance_from_batter_m": 1.8963
           },
-          "length_zone": "full"
+          "length_zone": "yorker"
         },
         "quality_flags": [
-          "high_speed_variance"
+          "motion_filter_relaxed"
         ],
         "shot_num": 3,
         "display_num": 3,
-        "peak_frame": 204,
+        "peak_frame": 180,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 3,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.3549,
+        "shot_classifier_conf": 0.7966,
         "shot_confirmed": true
       },
       {
         "delivery_id": "d4",
         "track_id": 3,
-        "start_frame": 237,
-        "end_frame": 268,
-        "frame_count": 32,
-        "track_confidence_score": 0.6642,
-        "speed_kmh_est": 54.31,
+        "start_frame": 242,
+        "end_frame": 303,
+        "frame_count": 24,
+        "track_confidence_score": 0.7636,
+        "speed_kmh_est": 72.78,
         "speed_is_estimated": true,
-        "speed_reliability_score": 0.3957,
+        "speed_reliability_score": 0.4088,
         "speed_warnings": [],
         "pace_band": "slow",
         "bounce": {
-          "frame": 242,
+          "frame": 250,
           "confidence": 1.0,
           "method_note": "curvature_peak",
           "point_norm": {
-            "nx": 0.30936,
-            "ny": 0.16817,
-            "distance_from_batter_m": 10.0584
+            "nx": 0.29448,
+            "ny": 0.77105,
+            "distance_from_batter_m": 1.5665
           }
         },
         "length": {
-          "label": "short",
-          "distance_m": 10.0584,
+          "label": "yorker",
+          "distance_m": 1.5665,
           "confidence": 1.0,
           "uncertain": false,
           "reason": null
@@ -1354,509 +1515,286 @@
         "pitch_plot": {
           "trajectory": [
             {
-              "frame": 237,
-              "nx": 0.30917999148368835,
-              "ny": 0.168380007147789,
-              "along_t": 1.0166,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5553
-            },
-            {
-              "frame": 238,
-              "nx": 0.3092299997806549,
-              "ny": 0.1684200018644333,
-              "along_t": 1.01654,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5571
-            },
-            {
-              "frame": 239,
-              "nx": 0.30928000807762146,
-              "ny": 0.16822999715805054,
-              "along_t": 1.01681,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5784
-            },
-            {
-              "frame": 240,
-              "nx": 0.30932000279426575,
-              "ny": 0.1681399941444397,
-              "along_t": 1.01695,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5765
-            },
-            {
-              "frame": 241,
-              "nx": 0.30932000279426575,
-              "ny": 0.1682800054550171,
-              "along_t": 1.01675,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5976
-            },
-            {
               "frame": 242,
-              "nx": 0.30935999751091003,
-              "ny": 0.1681700050830841,
-              "along_t": 1.01691,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.6108
+              "nx": 0.19868,
+              "ny": 0.51772,
+              "along_t": 0.51754,
+              "distance_from_batter_m": 5.2065,
+              "conf": 0.7546
             },
             {
               "frame": 243,
-              "nx": 0.3093799948692322,
-              "ny": 0.1682099997997284,
-              "along_t": 1.01684,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.61
+              "nx": 0.19865,
+              "ny": 0.5177,
+              "along_t": 0.51757,
+              "distance_from_batter_m": 5.2068,
+              "conf": 0.7568
             },
             {
               "frame": 244,
-              "nx": 0.30924999713897705,
-              "ny": 0.16787999868392944,
-              "along_t": 1.01731,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5806
+              "nx": 0.24531,
+              "ny": 0.63545,
+              "along_t": 0.34936,
+              "distance_from_batter_m": 3.5146,
+              "conf": 0.8239
             },
             {
               "frame": 245,
-              "nx": 0.30935001373291016,
-              "ny": 0.16767999529838562,
-              "along_t": 1.0176,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5259
+              "nx": 0.24534,
+              "ny": 0.63548,
+              "along_t": 0.34931,
+              "distance_from_batter_m": 3.514,
+              "conf": 0.8228
             },
             {
               "frame": 246,
-              "nx": 0.30908000469207764,
-              "ny": 0.1675499975681305,
-              "along_t": 1.01779,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5489
+              "nx": 0.24549,
+              "ny": 0.63558,
+              "along_t": 0.34917,
+              "distance_from_batter_m": 3.5126,
+              "conf": 0.8207
             },
             {
               "frame": 247,
-              "nx": 0.3091199994087219,
-              "ny": 0.16761000454425812,
-              "along_t": 1.0177,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.5508
+              "nx": 0.24555,
+              "ny": 0.63563,
+              "along_t": 0.34909,
+              "distance_from_batter_m": 3.5119,
+              "conf": 0.8197
             },
             {
               "frame": 248,
-              "nx": 0.2425300031900406,
-              "ny": 0.29728999733924866,
-              "along_t": 0.83245,
-              "distance_from_batter_m": 8.3731,
-              "conf": 0.6991
+              "nx": 0.27159,
+              "ny": 0.70667,
+              "along_t": 0.24761,
+              "distance_from_batter_m": 2.491,
+              "conf": 0.8077
             },
             {
               "frame": 249,
-              "nx": 0.2425599992275238,
-              "ny": 0.29732000827789307,
-              "along_t": 0.8324,
-              "distance_from_batter_m": 8.3727,
-              "conf": 0.6969
+              "nx": 0.27161,
+              "ny": 0.70659,
+              "along_t": 0.24773,
+              "distance_from_batter_m": 2.4921,
+              "conf": 0.8077
             },
             {
               "frame": 250,
-              "nx": 0.27755001187324524,
-              "ny": 0.34112000465393066,
-              "along_t": 0.76983,
-              "distance_from_batter_m": 7.7433,
-              "conf": 0.7269
+              "nx": 0.29448,
+              "ny": 0.77105,
+              "along_t": 0.15564,
+              "distance_from_batter_m": 1.5657,
+              "conf": 0.7436
             },
             {
               "frame": 251,
-              "nx": 0.27755001187324524,
-              "ny": 0.3411400020122528,
-              "along_t": 0.7698,
-              "distance_from_batter_m": 7.743,
-              "conf": 0.7272
+              "nx": 0.29443,
+              "ny": 0.771,
+              "along_t": 0.15572,
+              "distance_from_batter_m": 1.5665,
+              "conf": 0.7465
             },
             {
               "frame": 252,
-              "nx": 0.3087100088596344,
-              "ny": 0.3775100111961365,
-              "along_t": 0.71785,
-              "distance_from_batter_m": 7.2204,
-              "conf": 0.6703
+              "nx": 0.31331,
+              "ny": 0.83139,
+              "along_t": 0.06945,
+              "distance_from_batter_m": 0.6986,
+              "conf": 0.7607
             },
             {
               "frame": 253,
-              "nx": 0.3347199857234955,
-              "ny": 0.41255998611450195,
-              "along_t": 0.66777,
-              "distance_from_batter_m": 6.7167,
-              "conf": 0.7194
-            },
-            {
-              "frame": 254,
-              "nx": 0.37768998742103577,
-              "ny": 0.36577001214027405,
-              "along_t": 0.73462,
-              "distance_from_batter_m": 7.3891,
-              "conf": 0.7363
-            },
-            {
-              "frame": 255,
-              "nx": 0.37768998742103577,
-              "ny": 0.36577001214027405,
-              "along_t": 0.73461,
-              "distance_from_batter_m": 7.389,
-              "conf": 0.7364
-            },
-            {
-              "frame": 256,
-              "nx": 0.3955700099468231,
-              "ny": 0.3434999883174896,
-              "along_t": 0.76643,
-              "distance_from_batter_m": 7.7091,
-              "conf": 0.7624
-            },
-            {
-              "frame": 257,
-              "nx": 0.39559000730514526,
-              "ny": 0.34360000491142273,
-              "along_t": 0.76628,
-              "distance_from_batter_m": 7.7075,
+              "nx": 0.31339,
+              "ny": 0.83139,
+              "along_t": 0.06945,
+              "distance_from_batter_m": 0.6987,
               "conf": 0.7614
             },
             {
+              "frame": 254,
+              "nx": 0.33207,
+              "ny": 0.88525,
+              "along_t": -0.0075,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7585
+            },
+            {
+              "frame": 255,
+              "nx": 0.33211,
+              "ny": 0.88516,
+              "along_t": -0.00737,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7599
+            },
+            {
+              "frame": 256,
+              "nx": 0.34593,
+              "ny": 0.80096,
+              "along_t": 0.11291,
+              "distance_from_batter_m": 1.1359,
+              "conf": 0.7777
+            },
+            {
+              "frame": 257,
+              "nx": 0.3459,
+              "ny": 0.80093,
+              "along_t": 0.11296,
+              "distance_from_batter_m": 1.1364,
+              "conf": 0.7782
+            },
+            {
               "frame": 258,
-              "nx": 0.4114600121974945,
-              "ny": 0.32620999217033386,
-              "along_t": 0.79113,
-              "distance_from_batter_m": 7.9575,
-              "conf": 0.636
+              "nx": 0.36052,
+              "ny": 0.72441,
+              "along_t": 0.22227,
+              "distance_from_batter_m": 2.2361,
+              "conf": 0.7638
             },
             {
               "frame": 259,
-              "nx": 0.41148999333381653,
-              "ny": 0.326200008392334,
-              "along_t": 0.79114,
-              "distance_from_batter_m": 7.9576,
-              "conf": 0.6346
+              "nx": 0.3606,
+              "ny": 0.72443,
+              "along_t": 0.22225,
+              "distance_from_batter_m": 2.2358,
+              "conf": 0.7644
             },
             {
               "frame": 260,
-              "nx": 0.3954299986362457,
-              "ny": 0.3377000093460083,
-              "along_t": 0.77472,
-              "distance_from_batter_m": 7.7924,
-              "conf": 0.7149
+              "nx": 0.37549,
+              "ny": 0.65687,
+              "along_t": 0.31876,
+              "distance_from_batter_m": 3.2067,
+              "conf": 0.7934
             },
             {
               "frame": 261,
-              "nx": 0.37775999307632446,
-              "ny": 0.35503000020980835,
-              "along_t": 0.74996,
-              "distance_from_batter_m": 7.5434,
-              "conf": 0.7509
+              "nx": 0.37546,
+              "ny": 0.65686,
+              "along_t": 0.31878,
+              "distance_from_batter_m": 3.2069,
+              "conf": 0.7938
             },
             {
-              "frame": 262,
-              "nx": 0.3777399957180023,
-              "ny": 0.35506999492645264,
-              "along_t": 0.7499,
-              "distance_from_batter_m": 7.5428,
-              "conf": 0.7515
+              "frame": 286,
+              "nx": 0.77937,
+              "ny": 0.47909,
+              "along_t": 0.57272,
+              "distance_from_batter_m": 5.7616,
+              "conf": 0.5448
             },
             {
-              "frame": 263,
-              "nx": 0.3777199983596802,
-              "ny": 0.3550899922847748,
-              "along_t": 0.74987,
-              "distance_from_batter_m": 7.5425,
-              "conf": 0.7513
+              "frame": 301,
+              "nx": 0.15703,
+              "ny": 0.90289,
+              "along_t": -0.0327,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.719
             },
             {
-              "frame": 264,
-              "nx": 0.3584100008010864,
-              "ny": 0.3784399926662445,
-              "along_t": 0.71651,
-              "distance_from_batter_m": 7.207,
-              "conf": 0.7083
+              "frame": 302,
+              "nx": 0.1571,
+              "ny": 0.90346,
+              "along_t": -0.03352,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7214
             },
             {
-              "frame": 265,
-              "nx": 0.3353100121021271,
-              "ny": 0.4055500030517578,
-              "along_t": 0.67778,
-              "distance_from_batter_m": 6.8174,
-              "conf": 0.6742
-            },
-            {
-              "frame": 266,
-              "nx": 0.31046000123023987,
-              "ny": 0.43320000171661377,
-              "along_t": 0.63828,
-              "distance_from_batter_m": 6.4201,
-              "conf": 0.6911
-            },
-            {
-              "frame": 267,
-              "nx": 0.31046000123023987,
-              "ny": 0.43320998549461365,
-              "along_t": 0.63827,
-              "distance_from_batter_m": 6.42,
-              "conf": 0.6909
-            },
-            {
-              "frame": 268,
-              "nx": 0.2527100145816803,
-              "ny": 0.42879998683929443,
-              "along_t": 0.64457,
-              "distance_from_batter_m": 6.4834,
-              "conf": 0.7219
+              "frame": 303,
+              "nx": 0.1572,
+              "ny": 0.90352,
+              "along_t": -0.03361,
+              "distance_from_batter_m": 0.0,
+              "conf": 0.7265
             }
           ],
           "bounce": {
-            "nx": 0.30936,
-            "ny": 0.16817,
-            "distance_from_batter_m": 10.0584
+            "nx": 0.29448,
+            "ny": 0.77105,
+            "distance_from_batter_m": 1.5665
           },
-          "length_zone": "short"
+          "length_zone": "yorker"
         },
         "quality_flags": [
           "motion_filter_relaxed"
         ],
         "shot_num": 4,
         "display_num": 4,
-        "peak_frame": 270,
+        "peak_frame": 283,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 4,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.4466,
+        "shot_classifier_conf": 0.6157,
         "shot_confirmed": true
       },
       {
         "delivery_id": "d5",
-        "track_id": 4,
-        "start_frame": 301,
-        "end_frame": 357,
-        "frame_count": 19,
-        "track_confidence_score": 0.6937,
-        "speed_kmh_est": 66.06,
-        "speed_is_estimated": true,
-        "speed_reliability_score": 0.7991,
-        "speed_warnings": [],
-        "pace_band": "slow",
-        "bounce": {
-          "frame": 318,
-          "confidence": 1.0,
-          "method_note": "curvature_peak",
-          "point_norm": {
-            "nx": 0.40318,
-            "ny": 0.31422,
-            "distance_from_batter_m": 8.1293
-          }
-        },
-        "length": {
-          "label": "short",
-          "distance_m": 8.1293,
-          "confidence": 1.0,
-          "uncertain": false,
-          "reason": null
-        },
-        "pitch_plot": {
-          "trajectory": [
-            {
-              "frame": 301,
-              "nx": 0.31949999928474426,
-              "ny": 0.0885000005364418,
-              "along_t": 1.13071,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.6181
-            },
-            {
-              "frame": 302,
-              "nx": 0.31949999928474426,
-              "ny": 0.08866000175476074,
-              "along_t": 1.13048,
-              "distance_from_batter_m": 10.0584,
-              "conf": 0.6189
-            },
-            {
-              "frame": 306,
-              "nx": 0.3542799949645996,
-              "ny": 0.19760000705718994,
-              "along_t": 0.97485,
-              "distance_from_batter_m": 9.8055,
-              "conf": 0.5867
-            },
-            {
-              "frame": 307,
-              "nx": 0.35433998703956604,
-              "ny": 0.197610005736351,
-              "along_t": 0.97484,
-              "distance_from_batter_m": 9.8053,
-              "conf": 0.5754
-            },
-            {
-              "frame": 315,
-              "nx": 0.3908199965953827,
-              "ny": 0.3324100077152252,
-              "along_t": 0.78227,
-              "distance_from_batter_m": 7.8684,
-              "conf": 0.7262
-            },
-            {
-              "frame": 316,
-              "nx": 0.39812999963760376,
-              "ny": 0.3479999899864197,
-              "along_t": 0.76,
-              "distance_from_batter_m": 7.6444,
-              "conf": 0.7484
-            },
-            {
-              "frame": 317,
-              "nx": 0.398140013217926,
-              "ny": 0.34797000885009766,
-              "along_t": 0.76004,
-              "distance_from_batter_m": 7.6448,
-              "conf": 0.7487
-            },
-            {
-              "frame": 318,
-              "nx": 0.40318000316619873,
-              "ny": 0.31422001123428345,
-              "along_t": 0.80825,
-              "distance_from_batter_m": 8.1297,
-              "conf": 0.7065
-            },
-            {
-              "frame": 319,
-              "nx": 0.40318000316619873,
-              "ny": 0.31424999237060547,
-              "along_t": 0.80821,
-              "distance_from_batter_m": 8.1293,
-              "conf": 0.7076
-            },
-            {
-              "frame": 348,
-              "nx": 0.22854000329971313,
-              "ny": 0.24356000125408173,
-              "along_t": 0.90919,
-              "distance_from_batter_m": 9.145,
-              "conf": 0.6529
-            },
-            {
-              "frame": 349,
-              "nx": 0.2756800055503845,
-              "ny": 0.31046000123023987,
-              "along_t": 0.81363,
-              "distance_from_batter_m": 8.1838,
-              "conf": 0.7582
-            },
-            {
-              "frame": 350,
-              "nx": 0.31929999589920044,
-              "ny": 0.3665100038051605,
-              "along_t": 0.73356,
-              "distance_from_batter_m": 7.3785,
-              "conf": 0.7503
-            },
-            {
-              "frame": 351,
-              "nx": 0.31929999589920044,
-              "ny": 0.36649999022483826,
-              "along_t": 0.73357,
-              "distance_from_batter_m": 7.3785,
-              "conf": 0.75
-            },
-            {
-              "frame": 352,
-              "nx": 0.3544600009918213,
-              "ny": 0.4126400053501129,
-              "along_t": 0.66765,
-              "distance_from_batter_m": 6.7155,
-              "conf": 0.6533
-            },
-            {
-              "frame": 353,
-              "nx": 0.3822599947452545,
-              "ny": 0.45434001088142395,
-              "along_t": 0.60808,
-              "distance_from_batter_m": 6.1164,
-              "conf": 0.7071
-            },
-            {
-              "frame": 354,
-              "nx": 0.4046199917793274,
-              "ny": 0.4662800133228302,
-              "along_t": 0.59103,
-              "distance_from_batter_m": 5.9448,
-              "conf": 0.7144
-            },
-            {
-              "frame": 355,
-              "nx": 0.4046100080013275,
-              "ny": 0.4662500023841858,
-              "along_t": 0.59107,
-              "distance_from_batter_m": 5.9452,
-              "conf": 0.7148
-            },
-            {
-              "frame": 356,
-              "nx": 0.42590001225471497,
-              "ny": 0.43077999353408813,
-              "along_t": 0.64174,
-              "distance_from_batter_m": 6.4548,
-              "conf": 0.726
-            },
-            {
-              "frame": 357,
-              "nx": 0.4430899918079376,
-              "ny": 0.4027000069618225,
-              "along_t": 0.68186,
-              "distance_from_batter_m": 6.8584,
-              "conf": 0.7171
-            }
-          ],
-          "bounce": {
-            "nx": 0.40318,
-            "ny": 0.31422,
-            "distance_from_batter_m": 8.1293
-          },
-          "length_zone": "short"
-        },
-        "quality_flags": [],
         "shot_num": 5,
         "display_num": 5,
         "peak_frame": 333,
-        "ball_track_matched": true,
-        "matched_confirmed_shot_num": 5,
-        "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.3547,
+        "ball_track_matched": false,
+        "track_id": null,
+        "start_frame": null,
+        "end_frame": null,
+        "frame_count": 0,
+        "track_confidence_score": 0.0,
+        "speed_kmh_est": null,
+        "speed_is_estimated": true,
+        "speed_reliability_score": 0.12,
+        "speed_warnings": [
+          "no_moving_ball_track"
+        ],
+        "pace_band": "unknown",
+        "bounce": {
+          "frame": null,
+          "confidence": 0.0,
+          "method_note": "no_track",
+          "point_norm": null
+        },
+        "length": {
+          "label": "full",
+          "distance_m": 3.8,
+          "confidence": 0.32,
+          "uncertain": false,
+          "reason": "No ball track; nominal full length for display."
+        },
+        "pitch_plot": {
+          "trajectory": [],
+          "bounce": null,
+          "length_zone": "full"
+        },
+        "quality_flags": [
+          "no_ball_track"
+        ],
+        "shot_classifier_conf": 0.5662,
         "shot_confirmed": true
       },
       {
         "delivery_id": "d6",
         "track_id": 5,
-        "start_frame": 366,
-        "end_frame": 381,
-        "frame_count": 11,
-        "track_confidence_score": 0.6996,
-        "speed_kmh_est": 71.75,
+        "start_frame": 394,
+        "end_frame": 435,
+        "frame_count": 20,
+        "track_confidence_score": 0.7125,
+        "speed_kmh_est": 43.69,
         "speed_is_estimated": true,
-        "speed_reliability_score": 0.8007,
+        "speed_reliability_score": 0.3618,
         "speed_warnings": [
-          "speed_secant_blend"
+          "speed_adjusted_club_soft_floor"
         ],
         "pace_band": "slow",
         "bounce": {
-          "frame": 377,
+          "frame": 410,
           "confidence": 1.0,
           "method_note": "curvature_peak",
           "point_norm": {
-            "nx": 0.35632,
-            "ny": 0.4823,
-            "distance_from_batter_m": 5.7775
+            "nx": 0.44408,
+            "ny": 0.85946,
+            "distance_from_batter_m": 0.6108
           }
         },
         "length": {
-          "label": "full",
-          "distance_m": 5.7775,
+          "label": "yorker",
+          "distance_m": 0.6108,
           "confidence": 1.0,
           "uncertain": false,
           "reason": null
@@ -1864,212 +1802,184 @@
         "pitch_plot": {
           "trajectory": [
             {
-              "frame": 366,
-              "nx": 0.6006900072097778,
-              "ny": 0.4253599941730499,
-              "along_t": 0.64949,
-              "distance_from_batter_m": 6.5328,
-              "conf": 0.6846
+              "frame": 394,
+              "nx": 0.25069,
+              "ny": 0.28203,
+              "along_t": 0.85424,
+              "distance_from_batter_m": 8.5937,
+              "conf": 0.7147
             },
             {
-              "frame": 367,
-              "nx": 0.6007099747657776,
-              "ny": 0.4253399968147278,
-              "along_t": 0.64951,
-              "distance_from_batter_m": 6.533,
-              "conf": 0.6841
+              "frame": 395,
+              "nx": 0.25067,
+              "ny": 0.28203,
+              "along_t": 0.85424,
+              "distance_from_batter_m": 8.5937,
+              "conf": 0.7127
             },
             {
-              "frame": 368,
-              "nx": 0.6658300161361694,
-              "ny": 0.3948900103569031,
-              "along_t": 0.69302,
-              "distance_from_batter_m": 6.9707,
-              "conf": 0.7329
+              "frame": 396,
+              "nx": 0.25075,
+              "ny": 0.282,
+              "along_t": 0.85428,
+              "distance_from_batter_m": 8.5941,
+              "conf": 0.7207
             },
             {
-              "frame": 369,
-              "nx": 0.7017499804496765,
-              "ny": 0.38179999589920044,
-              "along_t": 0.71172,
-              "distance_from_batter_m": 7.1587,
-              "conf": 0.7557
+              "frame": 397,
+              "nx": 0.25077,
+              "ny": 0.28202,
+              "along_t": 0.85426,
+              "distance_from_batter_m": 8.5938,
+              "conf": 0.7207
             },
             {
-              "frame": 370,
-              "nx": 0.7434399724006653,
-              "ny": 0.3705799877643585,
-              "along_t": 0.72774,
-              "distance_from_batter_m": 7.3199,
-              "conf": 0.7187
+              "frame": 400,
+              "nx": 0.37076,
+              "ny": 0.5464,
+              "along_t": 0.47657,
+              "distance_from_batter_m": 4.7943,
+              "conf": 0.7038
             },
             {
-              "frame": 371,
-              "nx": 0.7434300184249878,
-              "ny": 0.3705900013446808,
-              "along_t": 0.72773,
-              "distance_from_batter_m": 7.3198,
-              "conf": 0.7187
+              "frame": 401,
+              "nx": 0.3707,
+              "ny": 0.54634,
+              "along_t": 0.47665,
+              "distance_from_batter_m": 4.7951,
+              "conf": 0.7008
             },
             {
-              "frame": 377,
-              "nx": 0.35631999373435974,
-              "ny": 0.4823000133037567,
-              "along_t": 0.56814,
-              "distance_from_batter_m": 5.7146,
-              "conf": 0.6806
+              "frame": 402,
+              "nx": 0.37058,
+              "ny": 0.54613,
+              "along_t": 0.47696,
+              "distance_from_batter_m": 4.7982,
+              "conf": 0.7489
             },
             {
-              "frame": 378,
-              "nx": 0.4333600103855133,
-              "ny": 0.4779300093650818,
-              "along_t": 0.57439,
-              "distance_from_batter_m": 5.7775,
-              "conf": 0.6966
+              "frame": 403,
+              "nx": 0.37057,
+              "ny": 0.54607,
+              "along_t": 0.47705,
+              "distance_from_batter_m": 4.7991,
+              "conf": 0.7481
             },
             {
-              "frame": 379,
-              "nx": 0.4333600103855133,
-              "ny": 0.47795000672340393,
-              "along_t": 0.57436,
-              "distance_from_batter_m": 5.7771,
-              "conf": 0.6955
+              "frame": 406,
+              "nx": 0.43039,
+              "ny": 0.78574,
+              "along_t": 0.13466,
+              "distance_from_batter_m": 1.3547,
+              "conf": 0.7127
             },
             {
-              "frame": 380,
-              "nx": 0.5128300189971924,
-              "ny": 0.4722500145435333,
-              "along_t": 0.5825,
-              "distance_from_batter_m": 5.859,
-              "conf": 0.663
+              "frame": 407,
+              "nx": 0.43039,
+              "ny": 0.78575,
+              "along_t": 0.13464,
+              "distance_from_batter_m": 1.3545,
+              "conf": 0.7149
             },
             {
-              "frame": 381,
-              "nx": 0.5128600001335144,
-              "ny": 0.47224000096321106,
-              "along_t": 0.58251,
-              "distance_from_batter_m": 5.8592,
-              "conf": 0.6655
+              "frame": 408,
+              "nx": 0.43041,
+              "ny": 0.78604,
+              "along_t": 0.13422,
+              "distance_from_batter_m": 1.3503,
+              "conf": 0.7109
+            },
+            {
+              "frame": 409,
+              "nx": 0.43042,
+              "ny": 0.78601,
+              "along_t": 0.13428,
+              "distance_from_batter_m": 1.3508,
+              "conf": 0.7349
+            },
+            {
+              "frame": 410,
+              "nx": 0.44408,
+              "ny": 0.85946,
+              "along_t": 0.02935,
+              "distance_from_batter_m": 0.2952,
+              "conf": 0.7592
+            },
+            {
+              "frame": 411,
+              "nx": 0.44414,
+              "ny": 0.85946,
+              "along_t": 0.02934,
+              "distance_from_batter_m": 0.2951,
+              "conf": 0.7596
+            },
+            {
+              "frame": 412,
+              "nx": 0.46996,
+              "ny": 0.8375,
+              "along_t": 0.06072,
+              "distance_from_batter_m": 0.6108,
+              "conf": 0.6995
+            },
+            {
+              "frame": 413,
+              "nx": 0.46992,
+              "ny": 0.8375,
+              "along_t": 0.06072,
+              "distance_from_batter_m": 0.6108,
+              "conf": 0.6999
+            },
+            {
+              "frame": 414,
+              "nx": 0.46996,
+              "ny": 0.8375,
+              "along_t": 0.06071,
+              "distance_from_batter_m": 0.6107,
+              "conf": 0.6985
+            },
+            {
+              "frame": 415,
+              "nx": 0.46997,
+              "ny": 0.83749,
+              "along_t": 0.06073,
+              "distance_from_batter_m": 0.611,
+              "conf": 0.6982
+            },
+            {
+              "frame": 434,
+              "nx": 0.2871,
+              "ny": 0.55533,
+              "along_t": 0.46381,
+              "distance_from_batter_m": 4.6659,
+              "conf": 0.6448
+            },
+            {
+              "frame": 435,
+              "nx": 0.28688,
+              "ny": 0.55535,
+              "along_t": 0.46379,
+              "distance_from_batter_m": 4.6657,
+              "conf": 0.6465
             }
           ],
           "bounce": {
-            "nx": 0.35632,
-            "ny": 0.4823,
-            "distance_from_batter_m": 5.7775
+            "nx": 0.44408,
+            "ny": 0.85946,
+            "distance_from_batter_m": 0.6108
           },
-          "length_zone": "full"
+          "length_zone": "yorker"
         },
         "quality_flags": [
-          "speed_secant_blend"
+          "speed_adjusted_club_soft_floor",
+          "motion_filter_relaxed"
         ],
         "shot_num": 6,
         "display_num": 6,
-        "peak_frame": 400,
+        "peak_frame": 420,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 6,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.5174,
-        "shot_confirmed": true
-      },
-      {
-        "delivery_id": "d7",
-        "track_id": 6,
-        "start_frame": 471,
-        "end_frame": 480,
-        "frame_count": 6,
-        "track_confidence_score": 0.6276,
-        "speed_kmh_est": 73.07,
-        "speed_is_estimated": true,
-        "speed_reliability_score": 0.5097,
-        "speed_warnings": [
-          "speed_secant_blend"
-        ],
-        "pace_band": "slow",
-        "bounce": {
-          "frame": 477,
-          "confidence": 0.3041,
-          "method_note": "curvature_peak",
-          "point_norm": {
-            "nx": 0.35231,
-            "ny": 0.38679,
-            "distance_from_batter_m": 7.087
-          }
-        },
-        "length": {
-          "label": "good_length",
-          "distance_m": 7.087,
-          "confidence": 0.499,
-          "uncertain": false,
-          "reason": null
-        },
-        "pitch_plot": {
-          "trajectory": [
-            {
-              "frame": 471,
-              "nx": 0.212909996509552,
-              "ny": 0.6729699969291687,
-              "along_t": 0.29576,
-              "distance_from_batter_m": 2.9748,
-              "conf": 0.5472
-            },
-            {
-              "frame": 476,
-              "nx": 0.32916998863220215,
-              "ny": 0.4266799986362457,
-              "along_t": 0.64759,
-              "distance_from_batter_m": 6.5138,
-              "conf": 0.6947
-            },
-            {
-              "frame": 477,
-              "nx": 0.3523100018501282,
-              "ny": 0.386790007352829,
-              "along_t": 0.70459,
-              "distance_from_batter_m": 7.087,
-              "conf": 0.6732
-            },
-            {
-              "frame": 478,
-              "nx": 0.35234999656677246,
-              "ny": 0.38677000999450684,
-              "along_t": 0.70462,
-              "distance_from_batter_m": 7.0873,
-              "conf": 0.6735
-            },
-            {
-              "frame": 479,
-              "nx": 0.371969997882843,
-              "ny": 0.35471001267433167,
-              "along_t": 0.75042,
-              "distance_from_batter_m": 7.548,
-              "conf": 0.6248
-            },
-            {
-              "frame": 480,
-              "nx": 0.3884899914264679,
-              "ny": 0.32861000299453735,
-              "along_t": 0.7877,
-              "distance_from_batter_m": 7.923,
-              "conf": 0.5519
-            }
-          ],
-          "bounce": {
-            "nx": 0.35231,
-            "ny": 0.38679,
-            "distance_from_batter_m": 7.087
-          },
-          "length_zone": "good_length"
-        },
-        "quality_flags": [
-          "speed_secant_blend"
-        ],
-        "shot_num": 7,
-        "display_num": 7,
-        "peak_frame": 473,
-        "ball_track_matched": true,
-        "matched_confirmed_shot_num": 7,
-        "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.7003,
+        "shot_classifier_conf": 0.8968,
         "shot_confirmed": true
       }
     ],
@@ -2078,180 +1988,154 @@
         "frame": 0,
         "boxes": [
           {
-            "cx": 693.78,
-            "cy": 593.31,
-            "w": 15.8,
-            "h": 16.86,
-            "conf": 0.5324,
+            "cx": 97.2,
+            "cy": 463.36,
+            "w": 64.14,
+            "h": 123.6,
+            "conf": 0.5254,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 1,
+        "frame": 33,
         "boxes": [
           {
-            "cx": 474.3,
-            "cy": 757.73,
-            "w": 14.7,
-            "h": 15.28,
-            "conf": 0.5208,
+            "cx": 184.98,
+            "cy": 723.42,
+            "w": 41.28,
+            "h": 38.36,
+            "conf": 0.5268,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 14,
+        "frame": 34,
         "boxes": [
           {
-            "cx": 340.13,
-            "cy": 400.97,
-            "w": 32.02,
-            "h": 40.77,
-            "conf": 0.6686,
+            "cx": 184.93,
+            "cy": 723.28,
+            "w": 41.77,
+            "h": 38.61,
+            "conf": 0.5876,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 15,
+        "frame": 35,
         "boxes": [
           {
-            "cx": 340.13,
-            "cy": 400.99,
-            "w": 32.02,
-            "h": 40.85,
-            "conf": 0.6718,
+            "cx": 184.92,
+            "cy": 723.36,
+            "w": 41.75,
+            "h": 38.55,
+            "conf": 0.582,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 16,
+        "frame": 54,
         "boxes": [
           {
-            "cx": 349.34,
-            "cy": 456.16,
-            "w": 35.03,
-            "h": 46.02,
-            "conf": 0.7361,
+            "cx": 561.15,
+            "cy": 441.53,
+            "w": 14.18,
+            "h": 15.26,
+            "conf": 0.5339,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 17,
+        "frame": 55,
         "boxes": [
           {
-            "cx": 360.92,
-            "cy": 510.04,
-            "w": 33.92,
-            "h": 43.62,
-            "conf": 0.7586,
+            "cx": 561.14,
+            "cy": 441.54,
+            "w": 14.18,
+            "h": 15.25,
+            "conf": 0.5323,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 18,
+        "frame": 56,
         "boxes": [
           {
-            "cx": 366.95,
-            "cy": 512.89,
-            "w": 34.41,
-            "h": 41.41,
-            "conf": 0.7245,
+            "cx": 561.15,
+            "cy": 441.53,
+            "w": 14.16,
+            "h": 15.24,
+            "conf": 0.5329,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 19,
+        "frame": 59,
         "boxes": [
           {
-            "cx": 367.17,
-            "cy": 513.0,
-            "w": 34.21,
-            "h": 41.45,
-            "conf": 0.7223,
+            "cx": 561.2,
+            "cy": 441.61,
+            "w": 14.22,
+            "h": 15.25,
+            "conf": 0.529,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 20,
+        "frame": 60,
         "boxes": [
           {
-            "cx": 371.77,
-            "cy": 448.19,
-            "w": 29.45,
-            "h": 34.61,
-            "conf": 0.7067,
+            "cx": 561.22,
+            "cy": 441.61,
+            "w": 14.23,
+            "h": 15.27,
+            "conf": 0.5104,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 77,
+        "frame": 86,
         "boxes": [
           {
-            "cx": 345.19,
-            "cy": 119.18,
-            "w": 40.31,
-            "h": 55.64,
-            "conf": 0.6152,
+            "cx": 127.64,
+            "cy": 564.42,
+            "w": 63.35,
+            "h": 75.34,
+            "conf": 0.6939,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 78,
+        "frame": 88,
         "boxes": [
           {
-            "cx": 345.2,
-            "cy": 119.19,
-            "w": 40.35,
-            "h": 55.66,
-            "conf": 0.6156,
+            "cx": 157.21,
+            "cy": 616.63,
+            "w": 62.84,
+            "h": 72.55,
+            "conf": 0.69,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 82,
+        "frame": 89,
         "boxes": [
           {
-            "cx": 382.51,
-            "cy": 266.58,
-            "w": 35.33,
-            "h": 46.57,
-            "conf": 0.5687,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 90,
-        "boxes": [
-          {
-            "cx": 422.06,
-            "cy": 448.59,
-            "w": 27.37,
-            "h": 29.86,
-            "conf": 0.7279,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 91,
-        "boxes": [
-          {
-            "cx": 429.97,
-            "cy": 469.73,
-            "w": 26.98,
-            "h": 35.32,
-            "conf": 0.7468,
+            "cx": 170.45,
+            "cy": 643.29,
+            "w": 56.02,
+            "h": 68.35,
+            "conf": 0.5824,
             "track_id": 0
           }
         ]
@@ -2260,11 +2144,11 @@
         "frame": 92,
         "boxes": [
           {
-            "cx": 429.95,
-            "cy": 469.74,
-            "w": 26.97,
-            "h": 35.31,
-            "conf": 0.7473,
+            "cx": 216.61,
+            "cy": 751.88,
+            "w": 50.01,
+            "h": 61.69,
+            "conf": 0.7272,
             "track_id": 0
           }
         ]
@@ -2273,206 +2157,726 @@
         "frame": 93,
         "boxes": [
           {
-            "cx": 435.61,
-            "cy": 424.01,
-            "w": 26.56,
-            "h": 31.34,
-            "conf": 0.7053,
+            "cx": 226.69,
+            "cy": 775.25,
+            "w": 54.6,
+            "h": 64.16,
+            "conf": 0.7513,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 193,
+        "frame": 94,
         "boxes": [
           {
-            "cx": 328.73,
-            "cy": 522.02,
-            "w": 72.47,
-            "h": 81.39,
-            "conf": 0.7124,
+            "cx": 234.26,
+            "cy": 803.02,
+            "w": 49.47,
+            "h": 62.61,
+            "conf": 0.8063,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 196,
+        "frame": 95,
         "boxes": [
           {
-            "cx": 442.32,
-            "cy": 724.46,
-            "w": 59.48,
-            "h": 55.88,
-            "conf": 0.7343,
+            "cx": 244.5,
+            "cy": 826.82,
+            "w": 51.69,
+            "h": 63.42,
+            "conf": 0.8279,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 197,
+        "frame": 96,
         "boxes": [
           {
-            "cx": 470.97,
-            "cy": 782.98,
-            "w": 55.04,
-            "h": 49.59,
+            "cx": 254.45,
+            "cy": 850.52,
+            "w": 52.42,
+            "h": 65.6,
+            "conf": 0.8155,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 97,
+        "boxes": [
+          {
+            "cx": 262.32,
+            "cy": 815.32,
+            "w": 49.81,
+            "h": 67.61,
+            "conf": 0.7965,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 98,
+        "boxes": [
+          {
+            "cx": 267.25,
+            "cy": 772.67,
+            "w": 48.24,
+            "h": 63.7,
+            "conf": 0.596,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 104,
+        "boxes": [
+          {
+            "cx": 202.11,
+            "cy": 822.38,
+            "w": 54.87,
+            "h": 72.45,
+            "conf": 0.7116,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 105,
+        "boxes": [
+          {
+            "cx": 175.91,
+            "cy": 810.13,
+            "w": 51.65,
+            "h": 57.05,
+            "conf": 0.7555,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 136,
+        "boxes": [
+          {
+            "cx": 522.61,
+            "cy": 673.6,
+            "w": 13.29,
+            "h": 14.13,
+            "conf": 0.7244,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 137,
+        "boxes": [
+          {
+            "cx": 522.67,
+            "cy": 673.53,
+            "w": 13.36,
+            "h": 14.24,
+            "conf": 0.7254,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 138,
+        "boxes": [
+          {
+            "cx": 522.67,
+            "cy": 673.59,
+            "w": 13.31,
+            "h": 14.17,
+            "conf": 0.7205,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 139,
+        "boxes": [
+          {
+            "cx": 522.64,
+            "cy": 673.55,
+            "w": 13.29,
+            "h": 14.17,
+            "conf": 0.7226,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 140,
+        "boxes": [
+          {
+            "cx": 522.66,
+            "cy": 673.61,
+            "w": 13.25,
+            "h": 14.08,
+            "conf": 0.7203,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 141,
+        "boxes": [
+          {
+            "cx": 522.63,
+            "cy": 673.6,
+            "w": 13.28,
+            "h": 14.12,
+            "conf": 0.7209,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 142,
+        "boxes": [
+          {
+            "cx": 522.65,
+            "cy": 673.58,
+            "w": 13.22,
+            "h": 14.07,
+            "conf": 0.7213,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 143,
+        "boxes": [
+          {
+            "cx": 522.65,
+            "cy": 673.52,
+            "w": 13.2,
+            "h": 14.11,
+            "conf": 0.7235,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 144,
+        "boxes": [
+          {
+            "cx": 522.66,
+            "cy": 673.52,
+            "w": 13.2,
+            "h": 14.11,
+            "conf": 0.7237,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 145,
+        "boxes": [
+          {
+            "cx": 522.66,
+            "cy": 673.53,
+            "w": 13.22,
+            "h": 14.11,
+            "conf": 0.7233,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 146,
+        "boxes": [
+          {
+            "cx": 522.65,
+            "cy": 673.53,
+            "w": 13.2,
+            "h": 14.1,
+            "conf": 0.7241,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 147,
+        "boxes": [
+          {
+            "cx": 522.65,
+            "cy": 673.52,
+            "w": 13.2,
+            "h": 14.1,
+            "conf": 0.724,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 148,
+        "boxes": [
+          {
+            "cx": 522.65,
+            "cy": 673.53,
+            "w": 13.35,
+            "h": 14.22,
+            "conf": 0.7165,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 149,
+        "boxes": [
+          {
+            "cx": 522.66,
+            "cy": 673.53,
+            "w": 13.32,
+            "h": 14.19,
+            "conf": 0.7181,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 150,
+        "boxes": [
+          {
+            "cx": 522.68,
+            "cy": 673.6,
+            "w": 13.35,
+            "h": 14.2,
+            "conf": 0.7184,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 151,
+        "boxes": [
+          {
+            "cx": 522.63,
+            "cy": 673.55,
+            "w": 13.28,
+            "h": 14.15,
+            "conf": 0.7211,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 152,
+        "boxes": [
+          {
+            "cx": 522.63,
+            "cy": 673.55,
+            "w": 13.21,
+            "h": 14.1,
+            "conf": 0.7244,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 153,
+        "boxes": [
+          {
+            "cx": 522.63,
+            "cy": 673.55,
+            "w": 13.21,
+            "h": 14.1,
+            "conf": 0.7244,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 154,
+        "boxes": [
+          {
+            "cx": 522.63,
+            "cy": 673.56,
+            "w": 13.31,
+            "h": 14.18,
+            "conf": 0.7193,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 155,
+        "boxes": [
+          {
+            "cx": 522.62,
+            "cy": 673.55,
+            "w": 13.43,
+            "h": 14.27,
+            "conf": 0.7117,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 156,
+        "boxes": [
+          {
+            "cx": 522.63,
+            "cy": 673.56,
+            "w": 13.44,
+            "h": 14.28,
+            "conf": 0.7114,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 157,
+        "boxes": [
+          {
+            "cx": 522.63,
+            "cy": 673.56,
+            "w": 13.47,
+            "h": 14.3,
             "conf": 0.7094,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 198,
+        "frame": 158,
         "boxes": [
           {
-            "cx": 497.4,
-            "cy": 763.13,
-            "w": 48.51,
-            "h": 56.38,
-            "conf": 0.7113,
+            "cx": 522.61,
+            "cy": 673.5,
+            "w": 13.6,
+            "h": 14.45,
+            "conf": 0.7074,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 216,
+        "frame": 159,
         "boxes": [
           {
-            "cx": 397.35,
-            "cy": 664.07,
-            "w": 32.26,
-            "h": 36.89,
-            "conf": 0.5791,
+            "cx": 522.66,
+            "cy": 673.48,
+            "w": 13.67,
+            "h": 14.52,
+            "conf": 0.7093,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 217,
+        "frame": 160,
         "boxes": [
           {
-            "cx": 389.3,
-            "cy": 686.04,
-            "w": 35.49,
-            "h": 49.99,
-            "conf": 0.56,
+            "cx": 203.34,
+            "cy": 836.86,
+            "w": 47.49,
+            "h": 53.18,
+            "conf": 0.7649,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 218,
+        "frame": 161,
         "boxes": [
           {
-            "cx": 389.05,
-            "cy": 699.23,
-            "w": 34.05,
-            "h": 59.5,
-            "conf": 0.6308,
+            "cx": 203.42,
+            "cy": 836.93,
+            "w": 47.34,
+            "h": 53.0,
+            "conf": 0.7638,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 219,
+        "frame": 162,
         "boxes": [
           {
-            "cx": 388.99,
-            "cy": 699.14,
-            "w": 33.87,
-            "h": 59.18,
-            "conf": 0.6135,
+            "cx": 229.02,
+            "cy": 746.9,
+            "w": 40.6,
+            "h": 48.96,
+            "conf": 0.7408,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 220,
+        "frame": 163,
         "boxes": [
           {
-            "cx": 388.94,
-            "cy": 699.12,
-            "w": 33.72,
-            "h": 59.11,
-            "conf": 0.5914,
+            "cx": 522.64,
+            "cy": 673.63,
+            "w": 13.49,
+            "h": 14.3,
+            "conf": 0.6934,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 221,
+        "frame": 164,
         "boxes": [
           {
-            "cx": 389.97,
-            "cy": 702.58,
-            "w": 35.06,
-            "h": 56.07,
-            "conf": 0.551,
+            "cx": 522.64,
+            "cy": 673.63,
+            "w": 13.48,
+            "h": 14.3,
+            "conf": 0.6937,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 237,
+        "frame": 165,
         "boxes": [
           {
-            "cx": 333.91,
-            "cy": 227.31,
-            "w": 28.69,
-            "h": 39.15,
-            "conf": 0.5553,
+            "cx": 522.64,
+            "cy": 673.63,
+            "w": 13.53,
+            "h": 14.33,
+            "conf": 0.6888,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 238,
+        "frame": 166,
         "boxes": [
           {
-            "cx": 333.97,
-            "cy": 227.37,
-            "w": 28.71,
-            "h": 38.81,
-            "conf": 0.5571,
+            "cx": 522.65,
+            "cy": 673.63,
+            "w": 13.54,
+            "h": 14.35,
+            "conf": 0.6885,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 239,
+        "frame": 167,
         "boxes": [
           {
-            "cx": 334.02,
-            "cy": 227.11,
-            "w": 28.92,
-            "h": 39.29,
-            "conf": 0.5784,
+            "cx": 522.65,
+            "cy": 673.63,
+            "w": 13.55,
+            "h": 14.35,
+            "conf": 0.6888,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 240,
+        "frame": 168,
         "boxes": [
           {
-            "cx": 334.07,
-            "cy": 226.99,
-            "w": 29.01,
-            "h": 40.33,
-            "conf": 0.5765,
+            "cx": 522.64,
+            "cy": 673.63,
+            "w": 13.46,
+            "h": 14.28,
+            "conf": 0.6961,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 241,
+        "frame": 169,
         "boxes": [
           {
-            "cx": 334.07,
-            "cy": 227.17,
-            "w": 28.86,
-            "h": 39.59,
-            "conf": 0.5976,
+            "cx": 522.61,
+            "cy": 673.69,
+            "w": 13.38,
+            "h": 14.17,
+            "conf": 0.6833,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 170,
+        "boxes": [
+          {
+            "cx": 522.61,
+            "cy": 673.68,
+            "w": 13.34,
+            "h": 14.13,
+            "conf": 0.6847,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 171,
+        "boxes": [
+          {
+            "cx": 469.44,
+            "cy": 532.63,
+            "w": 37.32,
+            "h": 51.66,
+            "conf": 0.79,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 172,
+        "boxes": [
+          {
+            "cx": 522.59,
+            "cy": 673.69,
+            "w": 13.38,
+            "h": 14.16,
+            "conf": 0.6845,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 173,
+        "boxes": [
+          {
+            "cx": 522.59,
+            "cy": 673.69,
+            "w": 13.32,
+            "h": 14.12,
+            "conf": 0.6876,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 174,
+        "boxes": [
+          {
+            "cx": 522.48,
+            "cy": 673.25,
+            "w": 13.0,
+            "h": 13.64,
+            "conf": 0.6337,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 175,
+        "boxes": [
+          {
+            "cx": 522.5,
+            "cy": 673.22,
+            "w": 12.97,
+            "h": 13.58,
+            "conf": 0.6345,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 176,
+        "boxes": [
+          {
+            "cx": 522.52,
+            "cy": 673.26,
+            "w": 12.92,
+            "h": 13.59,
+            "conf": 0.6581,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 177,
+        "boxes": [
+          {
+            "cx": 522.49,
+            "cy": 673.25,
+            "w": 12.89,
+            "h": 13.54,
+            "conf": 0.6473,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 178,
+        "boxes": [
+          {
+            "cx": 522.48,
+            "cy": 673.24,
+            "w": 12.91,
+            "h": 13.58,
+            "conf": 0.6455,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 179,
+        "boxes": [
+          {
+            "cx": 522.5,
+            "cy": 673.25,
+            "w": 12.97,
+            "h": 13.63,
+            "conf": 0.6465,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 180,
+        "boxes": [
+          {
+            "cx": 522.51,
+            "cy": 673.25,
+            "w": 12.95,
+            "h": 13.61,
+            "conf": 0.6505,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 181,
+        "boxes": [
+          {
+            "cx": 522.5,
+            "cy": 673.25,
+            "w": 12.91,
+            "h": 13.59,
+            "conf": 0.6488,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 182,
+        "boxes": [
+          {
+            "cx": 522.47,
+            "cy": 673.24,
+            "w": 12.95,
+            "h": 13.62,
+            "conf": 0.6415,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 183,
+        "boxes": [
+          {
+            "cx": 522.5,
+            "cy": 673.24,
+            "w": 12.96,
+            "h": 13.63,
+            "conf": 0.649,
             "track_id": 0
           }
         ]
@@ -2481,11 +2885,11 @@
         "frame": 242,
         "boxes": [
           {
-            "cx": 334.11,
-            "cy": 227.02,
-            "w": 28.67,
-            "h": 39.86,
-            "conf": 0.6108,
+            "cx": 143.05,
+            "cy": 465.95,
+            "w": 51.34,
+            "h": 62.83,
+            "conf": 0.7546,
             "track_id": 0
           }
         ]
@@ -2494,11 +2898,11 @@
         "frame": 243,
         "boxes": [
           {
-            "cx": 334.13,
-            "cy": 227.08,
-            "w": 28.67,
-            "h": 39.86,
-            "conf": 0.61,
+            "cx": 143.03,
+            "cy": 465.93,
+            "w": 51.35,
+            "h": 62.84,
+            "conf": 0.7568,
             "track_id": 0
           }
         ]
@@ -2507,11 +2911,11 @@
         "frame": 244,
         "boxes": [
           {
-            "cx": 333.99,
-            "cy": 226.64,
-            "w": 28.83,
-            "h": 42.62,
-            "conf": 0.5806,
+            "cx": 176.62,
+            "cy": 571.9,
+            "w": 49.29,
+            "h": 58.14,
+            "conf": 0.8239,
             "track_id": 0
           }
         ]
@@ -2520,11 +2924,11 @@
         "frame": 245,
         "boxes": [
           {
-            "cx": 334.1,
-            "cy": 226.37,
-            "w": 29.26,
-            "h": 43.0,
-            "conf": 0.5259,
+            "cx": 176.65,
+            "cy": 571.94,
+            "w": 49.3,
+            "h": 58.11,
+            "conf": 0.8228,
             "track_id": 0
           }
         ]
@@ -2533,11 +2937,11 @@
         "frame": 246,
         "boxes": [
           {
-            "cx": 333.81,
-            "cy": 226.19,
-            "w": 29.45,
-            "h": 43.26,
-            "conf": 0.5489,
+            "cx": 176.75,
+            "cy": 572.02,
+            "w": 49.16,
+            "h": 58.12,
+            "conf": 0.8207,
             "track_id": 0
           }
         ]
@@ -2546,11 +2950,11 @@
         "frame": 247,
         "boxes": [
           {
-            "cx": 333.85,
-            "cy": 226.28,
-            "w": 29.35,
-            "h": 43.26,
-            "conf": 0.5508,
+            "cx": 176.8,
+            "cy": 572.07,
+            "w": 49.17,
+            "h": 58.08,
+            "conf": 0.8197,
             "track_id": 0
           }
         ]
@@ -2559,11 +2963,11 @@
         "frame": 248,
         "boxes": [
           {
-            "cx": 261.93,
-            "cy": 401.34,
-            "w": 42.49,
-            "h": 47.27,
-            "conf": 0.6991,
+            "cx": 195.54,
+            "cy": 636.0,
+            "w": 43.78,
+            "h": 51.28,
+            "conf": 0.8077,
             "track_id": 0
           }
         ]
@@ -2572,11 +2976,11 @@
         "frame": 249,
         "boxes": [
           {
-            "cx": 261.97,
-            "cy": 401.38,
-            "w": 42.31,
-            "h": 47.2,
-            "conf": 0.6969,
+            "cx": 195.56,
+            "cy": 635.93,
+            "w": 43.86,
+            "h": 51.53,
+            "conf": 0.8077,
             "track_id": 0
           }
         ]
@@ -2585,11 +2989,11 @@
         "frame": 250,
         "boxes": [
           {
-            "cx": 299.75,
-            "cy": 460.51,
-            "w": 39.36,
-            "h": 43.82,
-            "conf": 0.7269,
+            "cx": 212.02,
+            "cy": 693.95,
+            "w": 39.79,
+            "h": 52.34,
+            "conf": 0.7436,
             "track_id": 0
           }
         ]
@@ -2598,11 +3002,11 @@
         "frame": 251,
         "boxes": [
           {
-            "cx": 299.76,
-            "cy": 460.54,
-            "w": 39.41,
-            "h": 43.91,
-            "conf": 0.7272,
+            "cx": 211.99,
+            "cy": 693.9,
+            "w": 39.73,
+            "h": 52.32,
+            "conf": 0.7465,
             "track_id": 0
           }
         ]
@@ -2611,11 +3015,11 @@
         "frame": 252,
         "boxes": [
           {
-            "cx": 333.41,
-            "cy": 509.63,
-            "w": 36.23,
-            "h": 41.35,
-            "conf": 0.6703,
+            "cx": 225.59,
+            "cy": 748.25,
+            "w": 40.62,
+            "h": 43.74,
+            "conf": 0.7607,
             "track_id": 0
           }
         ]
@@ -2624,11 +3028,11 @@
         "frame": 253,
         "boxes": [
           {
-            "cx": 361.5,
-            "cy": 556.96,
-            "w": 31.52,
-            "h": 35.13,
-            "conf": 0.7194,
+            "cx": 225.64,
+            "cy": 748.25,
+            "w": 40.71,
+            "h": 43.78,
+            "conf": 0.7614,
             "track_id": 0
           }
         ]
@@ -2637,11 +3041,11 @@
         "frame": 254,
         "boxes": [
           {
-            "cx": 407.9,
-            "cy": 493.78,
-            "w": 29.29,
-            "h": 31.16,
-            "conf": 0.7363,
+            "cx": 239.09,
+            "cy": 796.72,
+            "w": 36.11,
+            "h": 43.33,
+            "conf": 0.7585,
             "track_id": 0
           }
         ]
@@ -2650,11 +3054,11 @@
         "frame": 255,
         "boxes": [
           {
-            "cx": 407.91,
-            "cy": 493.79,
-            "w": 29.28,
-            "h": 31.15,
-            "conf": 0.7364,
+            "cx": 239.12,
+            "cy": 796.64,
+            "w": 36.28,
+            "h": 43.61,
+            "conf": 0.7599,
             "track_id": 0
           }
         ]
@@ -2663,11 +3067,11 @@
         "frame": 256,
         "boxes": [
           {
-            "cx": 427.22,
-            "cy": 463.72,
-            "w": 27.57,
-            "h": 31.38,
-            "conf": 0.7624,
+            "cx": 249.07,
+            "cy": 720.87,
+            "w": 33.04,
+            "h": 38.75,
+            "conf": 0.7777,
             "track_id": 0
           }
         ]
@@ -2676,11 +3080,11 @@
         "frame": 257,
         "boxes": [
           {
-            "cx": 427.23,
-            "cy": 463.87,
-            "w": 27.62,
-            "h": 31.57,
-            "conf": 0.7614,
+            "cx": 249.05,
+            "cy": 720.83,
+            "w": 33.04,
+            "h": 38.76,
+            "conf": 0.7782,
             "track_id": 0
           }
         ]
@@ -2689,11 +3093,11 @@
         "frame": 258,
         "boxes": [
           {
-            "cx": 444.38,
-            "cy": 440.38,
-            "w": 29.3,
-            "h": 32.92,
-            "conf": 0.636,
+            "cx": 259.57,
+            "cy": 651.97,
+            "w": 31.58,
+            "h": 41.11,
+            "conf": 0.7638,
             "track_id": 0
           }
         ]
@@ -2702,11 +3106,11 @@
         "frame": 259,
         "boxes": [
           {
-            "cx": 444.41,
-            "cy": 440.37,
-            "w": 29.25,
-            "h": 32.84,
-            "conf": 0.6346,
+            "cx": 259.63,
+            "cy": 651.98,
+            "w": 31.7,
+            "h": 41.22,
+            "conf": 0.7644,
             "track_id": 0
           }
         ]
@@ -2715,11 +3119,11 @@
         "frame": 260,
         "boxes": [
           {
-            "cx": 427.06,
-            "cy": 455.89,
-            "w": 28.01,
-            "h": 32.29,
-            "conf": 0.7149,
+            "cx": 270.36,
+            "cy": 591.18,
+            "w": 32.04,
+            "h": 37.71,
+            "conf": 0.7934,
             "track_id": 0
           }
         ]
@@ -2728,102 +3132,24 @@
         "frame": 261,
         "boxes": [
           {
-            "cx": 407.98,
-            "cy": 479.29,
-            "w": 31.53,
-            "h": 33.43,
-            "conf": 0.7509,
+            "cx": 270.33,
+            "cy": 591.17,
+            "w": 32.03,
+            "h": 37.7,
+            "conf": 0.7938,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 262,
+        "frame": 286,
         "boxes": [
           {
-            "cx": 407.96,
-            "cy": 479.35,
-            "w": 31.49,
-            "h": 33.52,
-            "conf": 0.7515,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 263,
-        "boxes": [
-          {
-            "cx": 407.94,
-            "cy": 479.38,
-            "w": 31.54,
-            "h": 33.54,
-            "conf": 0.7513,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 264,
-        "boxes": [
-          {
-            "cx": 387.08,
-            "cy": 510.9,
-            "w": 29.99,
-            "h": 35.37,
-            "conf": 0.7083,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 265,
-        "boxes": [
-          {
-            "cx": 362.13,
-            "cy": 547.5,
-            "w": 33.32,
-            "h": 40.49,
-            "conf": 0.6742,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 266,
-        "boxes": [
-          {
-            "cx": 335.3,
-            "cy": 584.82,
-            "w": 34.6,
-            "h": 41.88,
-            "conf": 0.6911,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 267,
-        "boxes": [
-          {
-            "cx": 335.29,
-            "cy": 584.84,
-            "w": 34.56,
-            "h": 41.82,
-            "conf": 0.6909,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 268,
-        "boxes": [
-          {
-            "cx": 272.92,
-            "cy": 578.88,
-            "w": 37.32,
-            "h": 43.89,
-            "conf": 0.7219,
+            "cx": 561.14,
+            "cy": 431.19,
+            "w": 15.0,
+            "h": 15.29,
+            "conf": 0.5448,
             "track_id": 0
           }
         ]
@@ -2832,11 +3158,11 @@
         "frame": 301,
         "boxes": [
           {
-            "cx": 345.06,
-            "cy": 119.47,
-            "w": 40.46,
-            "h": 54.75,
-            "conf": 0.6181,
+            "cx": 113.06,
+            "cy": 812.6,
+            "w": 45.56,
+            "h": 50.94,
+            "conf": 0.719,
             "track_id": 0
           }
         ]
@@ -2845,531 +3171,284 @@
         "frame": 302,
         "boxes": [
           {
-            "cx": 345.06,
-            "cy": 119.69,
-            "w": 40.43,
-            "h": 54.4,
-            "conf": 0.6189,
+            "cx": 113.11,
+            "cy": 813.12,
+            "w": 45.67,
+            "h": 51.93,
+            "conf": 0.7214,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 306,
+        "frame": 303,
         "boxes": [
           {
-            "cx": 382.62,
-            "cy": 266.76,
-            "w": 35.9,
-            "h": 47.06,
-            "conf": 0.5867,
+            "cx": 113.19,
+            "cy": 813.17,
+            "w": 45.76,
+            "h": 52.37,
+            "conf": 0.7265,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 307,
+        "frame": 394,
         "boxes": [
           {
-            "cx": 382.69,
-            "cy": 266.78,
-            "w": 36.03,
-            "h": 47.22,
-            "conf": 0.5754,
+            "cx": 180.49,
+            "cy": 253.83,
+            "w": 69.1,
+            "h": 75.94,
+            "conf": 0.7147,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 315,
+        "frame": 395,
         "boxes": [
           {
-            "cx": 422.09,
-            "cy": 448.76,
-            "w": 27.56,
-            "h": 30.09,
-            "conf": 0.7262,
+            "cx": 180.48,
+            "cy": 253.83,
+            "w": 69.1,
+            "h": 75.88,
+            "conf": 0.7127,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 316,
+        "frame": 396,
         "boxes": [
           {
-            "cx": 429.98,
-            "cy": 469.8,
-            "w": 27.05,
-            "h": 35.38,
-            "conf": 0.7484,
+            "cx": 180.54,
+            "cy": 253.8,
+            "w": 69.04,
+            "h": 76.62,
+            "conf": 0.7207,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 317,
+        "frame": 397,
         "boxes": [
           {
-            "cx": 429.99,
-            "cy": 469.76,
-            "w": 27.09,
-            "h": 35.42,
-            "conf": 0.7487,
+            "cx": 180.56,
+            "cy": 253.82,
+            "w": 69.01,
+            "h": 76.6,
+            "conf": 0.7207,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 318,
+        "frame": 400,
         "boxes": [
           {
-            "cx": 435.44,
-            "cy": 424.2,
-            "w": 26.55,
-            "h": 31.28,
-            "conf": 0.7065,
+            "cx": 266.95,
+            "cy": 491.76,
+            "w": 59.9,
+            "h": 61.24,
+            "conf": 0.7038,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 319,
+        "frame": 401,
         "boxes": [
           {
-            "cx": 435.44,
-            "cy": 424.24,
-            "w": 26.64,
-            "h": 31.57,
-            "conf": 0.7076,
+            "cx": 266.9,
+            "cy": 491.71,
+            "w": 59.88,
+            "h": 61.19,
+            "conf": 0.7008,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 348,
+        "frame": 402,
         "boxes": [
           {
-            "cx": 246.83,
-            "cy": 328.81,
-            "w": 39.76,
-            "h": 55.32,
-            "conf": 0.6529,
+            "cx": 266.82,
+            "cy": 491.52,
+            "w": 58.66,
+            "h": 62.56,
+            "conf": 0.7489,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 349,
+        "frame": 403,
         "boxes": [
           {
-            "cx": 297.74,
-            "cy": 419.12,
-            "w": 48.06,
-            "h": 52.59,
-            "conf": 0.7582,
+            "cx": 266.81,
+            "cy": 491.46,
+            "w": 58.53,
+            "h": 62.58,
+            "conf": 0.7481,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 350,
+        "frame": 406,
         "boxes": [
           {
-            "cx": 344.84,
-            "cy": 494.78,
-            "w": 45.96,
-            "h": 47.03,
-            "conf": 0.7503,
+            "cx": 309.88,
+            "cy": 707.16,
+            "w": 47.45,
+            "h": 56.3,
+            "conf": 0.7127,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 351,
+        "frame": 407,
         "boxes": [
           {
-            "cx": 344.84,
-            "cy": 494.78,
-            "w": 46.0,
-            "h": 47.01,
-            "conf": 0.75,
+            "cx": 309.88,
+            "cy": 707.18,
+            "w": 47.41,
+            "h": 56.24,
+            "conf": 0.7149,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 352,
+        "frame": 408,
         "boxes": [
           {
-            "cx": 382.82,
-            "cy": 557.07,
-            "w": 37.66,
-            "h": 38.85,
-            "conf": 0.6533,
+            "cx": 309.9,
+            "cy": 707.44,
+            "w": 47.3,
+            "h": 55.8,
+            "conf": 0.7109,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 353,
+        "frame": 409,
         "boxes": [
           {
-            "cx": 412.84,
-            "cy": 613.36,
-            "w": 35.57,
-            "h": 41.84,
-            "conf": 0.7071,
+            "cx": 309.9,
+            "cy": 707.4,
+            "w": 47.29,
+            "h": 55.74,
+            "conf": 0.7349,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 354,
+        "frame": 410,
         "boxes": [
           {
-            "cx": 436.99,
-            "cy": 629.48,
-            "w": 34.18,
-            "h": 38.01,
-            "conf": 0.7144,
+            "cx": 319.74,
+            "cy": 773.51,
+            "w": 46.21,
+            "h": 54.89,
+            "conf": 0.7592,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 355,
+        "frame": 411,
         "boxes": [
           {
-            "cx": 436.97,
-            "cy": 629.44,
-            "w": 34.18,
-            "h": 37.97,
-            "conf": 0.7148,
+            "cx": 319.78,
+            "cy": 773.52,
+            "w": 46.14,
+            "h": 54.86,
+            "conf": 0.7596,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 356,
+        "frame": 412,
         "boxes": [
           {
-            "cx": 459.97,
-            "cy": 581.56,
-            "w": 31.92,
-            "h": 37.34,
-            "conf": 0.726,
+            "cx": 338.37,
+            "cy": 753.75,
+            "w": 40.75,
+            "h": 44.27,
+            "conf": 0.6995,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 357,
+        "frame": 413,
         "boxes": [
           {
-            "cx": 478.54,
-            "cy": 543.65,
-            "w": 27.98,
-            "h": 30.96,
-            "conf": 0.7171,
+            "cx": 338.34,
+            "cy": 753.75,
+            "w": 40.52,
+            "h": 44.22,
+            "conf": 0.6999,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 358,
+        "frame": 414,
         "boxes": [
           {
-            "cx": 495.31,
-            "cy": 512.96,
-            "w": 27.95,
-            "h": 30.88,
-            "conf": 0.7631,
+            "cx": 338.37,
+            "cy": 753.75,
+            "w": 40.71,
+            "h": 44.26,
+            "conf": 0.6985,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 359,
+        "frame": 415,
         "boxes": [
           {
-            "cx": 495.27,
-            "cy": 512.95,
-            "w": 27.91,
-            "h": 30.88,
-            "conf": 0.7637,
+            "cx": 338.38,
+            "cy": 753.74,
+            "w": 40.73,
+            "h": 44.33,
+            "conf": 0.6982,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 360,
+        "frame": 434,
         "boxes": [
           {
-            "cx": 510.27,
-            "cy": 489.54,
-            "w": 27.31,
-            "h": 31.0,
-            "conf": 0.6622,
+            "cx": 206.71,
+            "cy": 499.8,
+            "w": 50.23,
+            "h": 53.72,
+            "conf": 0.6448,
             "track_id": 0
           }
         ]
       },
       {
-        "frame": 361,
+        "frame": 435,
         "boxes": [
           {
-            "cx": 521.93,
-            "cy": 472.52,
-            "w": 30.02,
-            "h": 32.89,
-            "conf": 0.5904,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 364,
-        "boxes": [
-          {
-            "cx": 587.25,
-            "cy": 560.22,
-            "w": 27.18,
-            "h": 28.62,
-            "conf": 0.6658,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 365,
-        "boxes": [
-          {
-            "cx": 619.01,
-            "cy": 598.03,
-            "w": 29.01,
-            "h": 33.99,
-            "conf": 0.7203,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 366,
-        "boxes": [
-          {
-            "cx": 648.74,
-            "cy": 574.23,
-            "w": 28.91,
-            "h": 33.89,
-            "conf": 0.6846,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 367,
-        "boxes": [
-          {
-            "cx": 648.76,
-            "cy": 574.21,
-            "w": 28.97,
-            "h": 34.06,
-            "conf": 0.6841,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 368,
-        "boxes": [
-          {
-            "cx": 719.1,
-            "cy": 533.1,
-            "w": 35.32,
-            "h": 37.38,
-            "conf": 0.7329,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 369,
-        "boxes": [
-          {
-            "cx": 757.89,
-            "cy": 515.43,
-            "w": 35.7,
-            "h": 37.36,
-            "conf": 0.7557,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 370,
-        "boxes": [
-          {
-            "cx": 802.92,
-            "cy": 500.28,
-            "w": 34.31,
-            "h": 37.63,
-            "conf": 0.7187,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 371,
-        "boxes": [
-          {
-            "cx": 802.9,
-            "cy": 500.3,
-            "w": 34.31,
-            "h": 37.66,
-            "conf": 0.7187,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 377,
-        "boxes": [
-          {
-            "cx": 384.82,
-            "cy": 651.1,
-            "w": 18.65,
-            "h": 20.23,
-            "conf": 0.6806,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 378,
-        "boxes": [
-          {
-            "cx": 468.02,
-            "cy": 645.2,
-            "w": 18.3,
-            "h": 18.67,
-            "conf": 0.6966,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 379,
-        "boxes": [
-          {
-            "cx": 468.03,
-            "cy": 645.23,
-            "w": 18.36,
-            "h": 18.75,
-            "conf": 0.6955,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 380,
-        "boxes": [
-          {
-            "cx": 553.85,
-            "cy": 637.54,
-            "w": 17.97,
-            "h": 19.46,
-            "conf": 0.663,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 381,
-        "boxes": [
-          {
-            "cx": 553.89,
-            "cy": 637.52,
-            "w": 18.01,
-            "h": 19.51,
-            "conf": 0.6655,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 471,
-        "boxes": [
-          {
-            "cx": 229.94,
-            "cy": 908.51,
-            "w": 45.65,
-            "h": 47.22,
-            "conf": 0.5472,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 476,
-        "boxes": [
-          {
-            "cx": 355.51,
-            "cy": 576.02,
-            "w": 48.9,
-            "h": 54.94,
-            "conf": 0.6947,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 477,
-        "boxes": [
-          {
-            "cx": 380.49,
-            "cy": 522.16,
-            "w": 41.91,
-            "h": 49.84,
-            "conf": 0.6732,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 478,
-        "boxes": [
-          {
-            "cx": 380.54,
-            "cy": 522.13,
-            "w": 41.84,
-            "h": 49.87,
-            "conf": 0.6735,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 479,
-        "boxes": [
-          {
-            "cx": 401.72,
-            "cy": 478.85,
-            "w": 39.08,
-            "h": 46.78,
-            "conf": 0.6248,
-            "track_id": 0
-          }
-        ]
-      },
-      {
-        "frame": 480,
-        "boxes": [
-          {
-            "cx": 419.57,
-            "cy": 443.63,
-            "w": 38.34,
-            "h": 44.13,
-            "conf": 0.5519,
+            "cx": 206.55,
+            "cy": 499.81,
+            "w": 50.31,
+            "h": 53.65,
+            "conf": 0.6465,
             "track_id": 0
           }
         ]
@@ -3386,48 +3465,23 @@
         "points": [
           {
             "frame": 0,
-            "x": 694,
-            "y": 593
+            "x": 97,
+            "y": 463
           },
           {
-            "frame": 1,
-            "x": 474,
-            "y": 758
+            "frame": 33,
+            "x": 185,
+            "y": 723
           },
           {
-            "frame": 14,
-            "x": 340,
-            "y": 401
+            "frame": 34,
+            "x": 185,
+            "y": 723
           },
           {
-            "frame": 15,
-            "x": 340,
-            "y": 401
-          },
-          {
-            "frame": 16,
-            "x": 349,
-            "y": 456
-          },
-          {
-            "frame": 17,
-            "x": 361,
-            "y": 510
-          },
-          {
-            "frame": 18,
-            "x": 367,
-            "y": 513
-          },
-          {
-            "frame": 19,
-            "x": 367,
-            "y": 513
-          },
-          {
-            "frame": 20,
-            "x": 372,
-            "y": 448
+            "frame": 35,
+            "x": 185,
+            "y": 723
           }
         ]
       },
@@ -3440,39 +3494,64 @@
         ],
         "points": [
           {
-            "frame": 77,
-            "x": 345,
-            "y": 119
+            "frame": 86,
+            "x": 128,
+            "y": 564
           },
           {
-            "frame": 78,
-            "x": 345,
-            "y": 119
+            "frame": 88,
+            "x": 157,
+            "y": 617
           },
           {
-            "frame": 82,
-            "x": 383,
-            "y": 267
-          },
-          {
-            "frame": 90,
-            "x": 422,
-            "y": 449
-          },
-          {
-            "frame": 91,
-            "x": 430,
-            "y": 470
+            "frame": 89,
+            "x": 170,
+            "y": 643
           },
           {
             "frame": 92,
-            "x": 430,
-            "y": 470
+            "x": 217,
+            "y": 752
           },
           {
             "frame": 93,
-            "x": 436,
-            "y": 424
+            "x": 227,
+            "y": 775
+          },
+          {
+            "frame": 94,
+            "x": 234,
+            "y": 803
+          },
+          {
+            "frame": 95,
+            "x": 245,
+            "y": 827
+          },
+          {
+            "frame": 96,
+            "x": 254,
+            "y": 851
+          },
+          {
+            "frame": 97,
+            "x": 262,
+            "y": 815
+          },
+          {
+            "frame": 98,
+            "x": 267,
+            "y": 773
+          },
+          {
+            "frame": 104,
+            "x": 202,
+            "y": 822
+          },
+          {
+            "frame": 105,
+            "x": 176,
+            "y": 810
           }
         ]
       },
@@ -3485,54 +3564,199 @@
         ],
         "points": [
           {
-            "frame": 193,
-            "x": 329,
-            "y": 522
+            "frame": 145,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 196,
-            "x": 442,
-            "y": 724
+            "frame": 146,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 197,
-            "x": 471,
-            "y": 783
+            "frame": 147,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 198,
-            "x": 497,
-            "y": 763
+            "frame": 148,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 216,
-            "x": 397,
-            "y": 664
+            "frame": 149,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 217,
-            "x": 389,
-            "y": 686
+            "frame": 150,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 218,
-            "x": 389,
-            "y": 699
+            "frame": 151,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 219,
-            "x": 389,
-            "y": 699
+            "frame": 152,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 220,
-            "x": 389,
-            "y": 699
+            "frame": 153,
+            "x": 523,
+            "y": 674
           },
           {
-            "frame": 221,
-            "x": 390,
-            "y": 703
+            "frame": 154,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 155,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 156,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 157,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 158,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 159,
+            "x": 523,
+            "y": 673
+          },
+          {
+            "frame": 160,
+            "x": 203,
+            "y": 837
+          },
+          {
+            "frame": 161,
+            "x": 203,
+            "y": 837
+          },
+          {
+            "frame": 162,
+            "x": 229,
+            "y": 747
+          },
+          {
+            "frame": 163,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 164,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 165,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 166,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 167,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 168,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 169,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 170,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 171,
+            "x": 469,
+            "y": 533
+          },
+          {
+            "frame": 172,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 173,
+            "x": 523,
+            "y": 674
+          },
+          {
+            "frame": 174,
+            "x": 522,
+            "y": 673
+          },
+          {
+            "frame": 175,
+            "x": 523,
+            "y": 673
+          },
+          {
+            "frame": 176,
+            "x": 523,
+            "y": 673
+          },
+          {
+            "frame": 177,
+            "x": 522,
+            "y": 673
+          },
+          {
+            "frame": 178,
+            "x": 522,
+            "y": 673
+          },
+          {
+            "frame": 179,
+            "x": 523,
+            "y": 673
+          },
+          {
+            "frame": 180,
+            "x": 523,
+            "y": 673
+          },
+          {
+            "frame": 181,
+            "x": 522,
+            "y": 673
+          },
+          {
+            "frame": 182,
+            "x": 522,
+            "y": 673
+          },
+          {
+            "frame": 183,
+            "x": 522,
+            "y": 673
           }
         ]
       },
@@ -3545,269 +3769,124 @@
         ],
         "points": [
           {
-            "frame": 237,
-            "x": 334,
-            "y": 227
-          },
-          {
-            "frame": 238,
-            "x": 334,
-            "y": 227
-          },
-          {
-            "frame": 239,
-            "x": 334,
-            "y": 227
-          },
-          {
-            "frame": 240,
-            "x": 334,
-            "y": 227
-          },
-          {
-            "frame": 241,
-            "x": 334,
-            "y": 227
-          },
-          {
             "frame": 242,
-            "x": 334,
-            "y": 227
+            "x": 143,
+            "y": 466
           },
           {
             "frame": 243,
-            "x": 334,
-            "y": 227
+            "x": 143,
+            "y": 466
           },
           {
             "frame": 244,
-            "x": 334,
-            "y": 227
+            "x": 177,
+            "y": 572
           },
           {
             "frame": 245,
-            "x": 334,
-            "y": 226
+            "x": 177,
+            "y": 572
           },
           {
             "frame": 246,
-            "x": 334,
-            "y": 226
+            "x": 177,
+            "y": 572
           },
           {
             "frame": 247,
-            "x": 334,
-            "y": 226
+            "x": 177,
+            "y": 572
           },
           {
             "frame": 248,
-            "x": 262,
-            "y": 401
+            "x": 196,
+            "y": 636
           },
           {
             "frame": 249,
-            "x": 262,
-            "y": 401
+            "x": 196,
+            "y": 636
           },
           {
             "frame": 250,
-            "x": 300,
-            "y": 461
+            "x": 212,
+            "y": 694
           },
           {
             "frame": 251,
-            "x": 300,
-            "y": 461
+            "x": 212,
+            "y": 694
           },
           {
             "frame": 252,
-            "x": 333,
-            "y": 510
+            "x": 226,
+            "y": 748
           },
           {
             "frame": 253,
-            "x": 361,
-            "y": 557
+            "x": 226,
+            "y": 748
           },
           {
             "frame": 254,
-            "x": 408,
-            "y": 494
+            "x": 239,
+            "y": 797
           },
           {
             "frame": 255,
-            "x": 408,
-            "y": 494
+            "x": 239,
+            "y": 797
           },
           {
             "frame": 256,
-            "x": 427,
-            "y": 464
+            "x": 249,
+            "y": 721
           },
           {
             "frame": 257,
-            "x": 427,
-            "y": 464
+            "x": 249,
+            "y": 721
           },
           {
             "frame": 258,
-            "x": 444,
-            "y": 440
+            "x": 260,
+            "y": 652
           },
           {
             "frame": 259,
-            "x": 444,
-            "y": 440
+            "x": 260,
+            "y": 652
           },
           {
             "frame": 260,
-            "x": 427,
-            "y": 456
+            "x": 270,
+            "y": 591
           },
           {
             "frame": 261,
-            "x": 408,
-            "y": 479
+            "x": 270,
+            "y": 591
           },
           {
-            "frame": 262,
-            "x": 408,
-            "y": 479
+            "frame": 286,
+            "x": 561,
+            "y": 431
           },
-          {
-            "frame": 263,
-            "x": 408,
-            "y": 479
-          },
-          {
-            "frame": 264,
-            "x": 387,
-            "y": 511
-          },
-          {
-            "frame": 265,
-            "x": 362,
-            "y": 547
-          },
-          {
-            "frame": 266,
-            "x": 335,
-            "y": 585
-          },
-          {
-            "frame": 267,
-            "x": 335,
-            "y": 585
-          },
-          {
-            "frame": 268,
-            "x": 273,
-            "y": 579
-          }
-        ]
-      },
-      {
-        "track_id": 4,
-        "bgr": [
-          255,
-          140,
-          0
-        ],
-        "points": [
           {
             "frame": 301,
-            "x": 345,
-            "y": 119
+            "x": 113,
+            "y": 813
           },
           {
             "frame": 302,
-            "x": 345,
-            "y": 120
+            "x": 113,
+            "y": 813
           },
           {
-            "frame": 306,
-            "x": 383,
-            "y": 267
-          },
-          {
-            "frame": 307,
-            "x": 383,
-            "y": 267
-          },
-          {
-            "frame": 315,
-            "x": 422,
-            "y": 449
-          },
-          {
-            "frame": 316,
-            "x": 430,
-            "y": 470
-          },
-          {
-            "frame": 317,
-            "x": 430,
-            "y": 470
-          },
-          {
-            "frame": 318,
-            "x": 435,
-            "y": 424
-          },
-          {
-            "frame": 319,
-            "x": 435,
-            "y": 424
-          },
-          {
-            "frame": 348,
-            "x": 247,
-            "y": 329
-          },
-          {
-            "frame": 349,
-            "x": 298,
-            "y": 419
-          },
-          {
-            "frame": 350,
-            "x": 345,
-            "y": 495
-          },
-          {
-            "frame": 351,
-            "x": 345,
-            "y": 495
-          },
-          {
-            "frame": 352,
-            "x": 383,
-            "y": 557
-          },
-          {
-            "frame": 353,
-            "x": 413,
-            "y": 613
-          },
-          {
-            "frame": 354,
-            "x": 437,
-            "y": 629
-          },
-          {
-            "frame": 355,
-            "x": 437,
-            "y": 629
-          },
-          {
-            "frame": 356,
-            "x": 460,
-            "y": 582
-          },
-          {
-            "frame": 357,
-            "x": 479,
-            "y": 544
+            "frame": 303,
+            "x": 113,
+            "y": 813
           }
         ]
       },
@@ -3820,99 +3899,104 @@
         ],
         "points": [
           {
-            "frame": 366,
-            "x": 649,
-            "y": 574
+            "frame": 394,
+            "x": 180,
+            "y": 254
           },
           {
-            "frame": 367,
-            "x": 649,
-            "y": 574
+            "frame": 395,
+            "x": 180,
+            "y": 254
           },
           {
-            "frame": 368,
-            "x": 719,
-            "y": 533
+            "frame": 396,
+            "x": 181,
+            "y": 254
           },
           {
-            "frame": 369,
-            "x": 758,
-            "y": 515
+            "frame": 397,
+            "x": 181,
+            "y": 254
           },
           {
-            "frame": 370,
-            "x": 803,
+            "frame": 400,
+            "x": 267,
+            "y": 492
+          },
+          {
+            "frame": 401,
+            "x": 267,
+            "y": 492
+          },
+          {
+            "frame": 402,
+            "x": 267,
+            "y": 492
+          },
+          {
+            "frame": 403,
+            "x": 267,
+            "y": 491
+          },
+          {
+            "frame": 406,
+            "x": 310,
+            "y": 707
+          },
+          {
+            "frame": 407,
+            "x": 310,
+            "y": 707
+          },
+          {
+            "frame": 408,
+            "x": 310,
+            "y": 707
+          },
+          {
+            "frame": 409,
+            "x": 310,
+            "y": 707
+          },
+          {
+            "frame": 410,
+            "x": 320,
+            "y": 774
+          },
+          {
+            "frame": 411,
+            "x": 320,
+            "y": 774
+          },
+          {
+            "frame": 412,
+            "x": 338,
+            "y": 754
+          },
+          {
+            "frame": 413,
+            "x": 338,
+            "y": 754
+          },
+          {
+            "frame": 414,
+            "x": 338,
+            "y": 754
+          },
+          {
+            "frame": 415,
+            "x": 338,
+            "y": 754
+          },
+          {
+            "frame": 434,
+            "x": 207,
             "y": 500
           },
           {
-            "frame": 371,
-            "x": 803,
+            "frame": 435,
+            "x": 207,
             "y": 500
-          },
-          {
-            "frame": 377,
-            "x": 385,
-            "y": 651
-          },
-          {
-            "frame": 378,
-            "x": 468,
-            "y": 645
-          },
-          {
-            "frame": 379,
-            "x": 468,
-            "y": 645
-          },
-          {
-            "frame": 380,
-            "x": 554,
-            "y": 638
-          },
-          {
-            "frame": 381,
-            "x": 554,
-            "y": 638
-          }
-        ]
-      },
-      {
-        "track_id": 6,
-        "bgr": [
-          255,
-          60,
-          160
-        ],
-        "points": [
-          {
-            "frame": 471,
-            "x": 230,
-            "y": 909
-          },
-          {
-            "frame": 476,
-            "x": 356,
-            "y": 576
-          },
-          {
-            "frame": 477,
-            "x": 380,
-            "y": 522
-          },
-          {
-            "frame": 478,
-            "x": 381,
-            "y": 522
-          },
-          {
-            "frame": 479,
-            "x": 402,
-            "y": 479
-          },
-          {
-            "frame": 480,
-            "x": 420,
-            "y": 444
           }
         ]
       }
@@ -3924,12 +4008,12 @@
             "delivery_id": "d1",
             "matched_shot_num": 1,
             "ball_track_matched": true,
-            "pace_band": "fast",
-            "length_zone": "good_length",
+            "pace_band": "unknown",
+            "length_zone": "full_toss",
             "shot_outcome": {
               "shot_label": "pull",
-              "shot_score": 6.4,
-              "shot_quality": "Average",
+              "shot_score": 7.2,
+              "shot_quality": "Good",
               "confirmed": true
             }
           },
@@ -3938,11 +4022,11 @@
             "matched_shot_num": 2,
             "ball_track_matched": true,
             "pace_band": "slow",
-            "length_zone": "good_length",
+            "length_zone": "yorker",
             "shot_outcome": {
               "shot_label": "straight",
-              "shot_score": 5.6,
-              "shot_quality": "Average",
+              "shot_score": 6.5,
+              "shot_quality": "Good",
               "confirmed": true
             }
           },
@@ -3950,11 +4034,11 @@
             "delivery_id": "d3",
             "matched_shot_num": 3,
             "ball_track_matched": true,
-            "pace_band": "slow",
-            "length_zone": "full",
+            "pace_band": "fast",
+            "length_zone": "yorker",
             "shot_outcome": {
               "shot_label": "flick",
-              "shot_score": 5.4,
+              "shot_score": 5.6,
               "shot_quality": "Average",
               "confirmed": true
             }
@@ -3964,24 +4048,24 @@
             "matched_shot_num": 4,
             "ball_track_matched": true,
             "pace_band": "slow",
-            "length_zone": "short",
+            "length_zone": "yorker",
             "shot_outcome": {
-              "shot_label": "straight",
-              "shot_score": 5.9,
-              "shot_quality": "Average",
+              "shot_label": "cover",
+              "shot_score": 7.4,
+              "shot_quality": "Good",
               "confirmed": true
             }
           },
           {
             "delivery_id": "d5",
             "matched_shot_num": 5,
-            "ball_track_matched": true,
-            "pace_band": "slow",
-            "length_zone": "short",
+            "ball_track_matched": false,
+            "pace_band": "unknown",
+            "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "cover",
-              "shot_score": 5.7,
-              "shot_quality": "Average",
+              "shot_label": "pull",
+              "shot_score": 7.5,
+              "shot_quality": "Good",
               "confirmed": true
             }
           },
@@ -3990,24 +4074,11 @@
             "matched_shot_num": 6,
             "ball_track_matched": true,
             "pace_band": "slow",
-            "length_zone": "full",
+            "length_zone": "yorker",
             "shot_outcome": {
-              "shot_label": "straight",
-              "shot_score": 6.8,
+              "shot_label": "sweep",
+              "shot_score": 7.5,
               "shot_quality": "Good",
-              "confirmed": true
-            }
-          },
-          {
-            "delivery_id": "d7",
-            "matched_shot_num": 7,
-            "ball_track_matched": true,
-            "pace_band": "slow",
-            "length_zone": "good_length",
-            "shot_outcome": {
-              "shot_label": "pull",
-              "shot_score": 6.1,
-              "shot_quality": "Average",
               "confirmed": true
             }
           }
@@ -4016,38 +4087,39 @@
       },
       "bowler": {
         "length_distribution": {
-          "good_length": 3,
-          "full": 2,
-          "short": 2
+          "full_toss": 1,
+          "yorker": 4,
+          "full": 1
         },
-        "pace_consistency_std_kmh": 23.38,
+        "pace_consistency_std_kmh": 44.0,
         "notes": [
           "Pace varies noticeably between deliveries \u2014 work on run-up and release repeatability.",
-          "Most common length zone this session: good length.",
+          "Most common length zone this session: yorker.",
           "1 delivery/deliveries in threatening pace+length combinations (good yorker/good length at higher pace \u2014 estimated)."
         ]
       }
     },
     "session_aggregates": {
-      "delivery_count": 7,
-      "confirmed_shot_count": 7,
-      "moving_track_segments": 6,
-      "raw_track_segments": 6,
+      "delivery_count": 6,
+      "confirmed_shot_count": 6,
+      "moving_track_segments": 1,
+      "raw_track_segments": 4,
       "shot_assignment_pool": "motion_validated",
       "shot_ball_mapping": "per_peak_time_window",
-      "video_trajectory_layers": 7,
-      "unmatched_tracks_after_assignment": 6,
-      "unmatched_moving_tracks_after_assignment": 6,
+      "video_trajectory_layers": 5,
+      "unmatched_tracks_after_assignment": 1,
+      "unmatched_moving_tracks_after_assignment": 1,
       "pace_band_counts": {
-        "fast": 1,
-        "slow": 6
+        "unknown": 2,
+        "slow": 3,
+        "fast": 1
       },
       "length_zone_counts": {
-        "good_length": 3,
-        "full": 2,
-        "short": 2
+        "full_toss": 1,
+        "yorker": 4,
+        "full": 1
       },
-      "mean_speed_kmh_est": 69.62,
+      "mean_speed_kmh_est": 86.25,
       "uncertainty_note": "All ball metrics are single-camera estimates; see calibration section.",
       "session_ball_speed_rescale": null
     }

@@ -3234,16 +3234,21 @@ async function fetchUserSessions() {
   if (isCoachRole()) {
     return;
   }
-  const { data, error } = await supabaseClient
-    .from('sessions')
-    .select('*')
-    .eq('user_id', state.currentUser.id)
-    .order('created_at', { ascending: false });
-  if (error) {
-    console.error('[CrickEye] sessions fetch error:', error.message);
-    return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('sessions')
+      .select('*')
+      .eq('user_id', state.currentUser.id)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('[CrickEye] sessions fetch error:', error.message);
+      return;
+    }
+    renderSessions(data || []);
+  } catch (err) {
+    console.warn('[CrickEye] fetchUserSessions failed:', err?.message || err);
+    renderSessions([]);
   }
-  renderSessions(data || []);
 }
 
 /**
@@ -3365,29 +3370,36 @@ async function signup() {
     setGateMessage('Age must be a whole number between 8 and 100.', true);
     return;
   }
-  const { data, error } = await supabaseClient.auth.signUp({ email, password });
-  if (error) {
-    setGateMessage(error.message, true);
-    return;
-  }
-  const newUser = data?.user || null;
-  if (newUser) {
-    const { error: profileError } = await supabaseClient.from('profiles').upsert({
-      id: newUser.id,
-      full_name: fullName,
-      age: ageVal,
-      gender,
-      email,
-      role: 'player',
-    });
-    if (profileError) {
-      setGateMessage(`Signup succeeded but profile save failed: ${profileError.message}`, true);
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+    if (error) {
+      setGateMessage(error.message, true);
       return;
     }
+    const newUser = data?.user || null;
+    if (newUser) {
+      const { error: profileError } = await supabaseClient.from('profiles').upsert({
+        id: newUser.id,
+        full_name: fullName,
+        age: ageVal,
+        gender,
+        email,
+        role: 'player',
+      });
+      if (profileError) {
+        setGateMessage(`Signup succeeded but profile save failed: ${profileError.message}`, true);
+        return;
+      }
+    }
+    setGateMessage('Signup successful. Please login.', false);
+    setAuthMode('login');
+    if (gatePassword) gatePassword.value = '';
+  } catch (err) {
+    const msg = err?.message === 'Failed to fetch'
+      ? 'Unable to connect to Supabase auth host. Check your network connection or SUPABASE_URL in backend/.env.'
+      : (err?.message || 'Signup failed');
+    setGateMessage(msg, true);
   }
-  setGateMessage('Signup successful. Please login.', false);
-  setAuthMode('login');
-  if (gatePassword) gatePassword.value = '';
 }
 
 async function login() {
@@ -3406,28 +3418,35 @@ async function login() {
     setGateMessage('Enter email and password.', true);
     return;
   }
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) {
-    setGateMessage(error.message, true);
-    return;
-  }
-  const { data } = await supabaseClient.auth.getUser();
-  state.currentUser = data?.user || null;
-  state.currentProfile = await resolveProfileForUser(state.currentUser, { allowCreateFallback: true });
-  state.currentRole = resolveRole(state.currentProfile, state.currentUser);
-  setGateMessage('', true);
-  setPlayerAppVisible(!isCoachRole());
-  updateAuthUi();
-  if (isCoachRole()) {
-    await fetchCoachDashboard();
-  } else {
-    await fetchUserSessions();
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) {
+      setGateMessage(error.message, true);
+      return;
+    }
+    const { data } = await supabaseClient.auth.getUser();
+    state.currentUser = data?.user || null;
+    state.currentProfile = await resolveProfileForUser(state.currentUser, { allowCreateFallback: true });
+    state.currentRole = resolveRole(state.currentProfile, state.currentUser);
+    setGateMessage('', true);
+    setPlayerAppVisible(!isCoachRole());
+    updateAuthUi();
+    if (isCoachRole()) {
+      await fetchCoachDashboard();
+    } else {
+      await fetchUserSessions();
+    }
+  } catch (err) {
+    const msg = err?.message === 'Failed to fetch'
+      ? 'Unable to connect to Supabase auth host. Check your network connection or SUPABASE_URL in backend/.env.'
+      : (err?.message || 'Login failed');
+    setGateMessage(msg, true);
   }
 }
 
 async function logout() {
   if (!supabaseClient) return;
-  await supabaseClient.auth.signOut();
+  try { await supabaseClient.auth.signOut(); } catch { /* ignore */ }
   state.currentUser = null;
   state.currentProfile = null;
   state.currentRole = 'player';
@@ -3448,15 +3467,21 @@ async function initAuth() {
     return;
   }
   if (headerAuthHint) headerAuthHint.hidden = true;
-  const { data } = await supabaseClient.auth.getUser();
-  state.currentUser = data?.user || null;
-  state.currentProfile = await resolveProfileForUser(state.currentUser, { allowCreateFallback: !!state.currentUser });
-  state.currentRole = resolveRole(state.currentProfile, state.currentUser);
-  setPlayerAppVisible(!isCoachRole());
-  updateAuthUi();
-  if (state.currentUser) {
-    if (isCoachRole()) await fetchCoachDashboard();
-    else await fetchUserSessions();
+  try {
+    const { data } = await supabaseClient.auth.getUser();
+    state.currentUser = data?.user || null;
+    state.currentProfile = await resolveProfileForUser(state.currentUser, { allowCreateFallback: !!state.currentUser });
+    state.currentRole = resolveRole(state.currentProfile, state.currentUser);
+    setPlayerAppVisible(!isCoachRole());
+    updateAuthUi();
+    if (state.currentUser) {
+      if (isCoachRole()) await fetchCoachDashboard();
+      else await fetchUserSessions();
+    }
+  } catch (err) {
+    console.warn('[CrickEye] initAuth network error:', err?.message || err);
+    setPlayerAppVisible(true);
+    updateAuthUi();
   }
 }
 
@@ -4156,9 +4181,15 @@ async function startAnalysis() {
   if (startBtn) startBtn.textContent = '⏳  UPLOADING…';
 
   try {
-    // Save owner + video in Supabase first, but keep the existing local WS flow.
-    await createSupabaseSessionForLiveAnalysis(file, fileHash);
-    await markSessionStatus('processing');
+    // Save owner + video in Supabase if reachable, but allow local pipeline to proceed if Supabase fails.
+    try {
+      if (supabaseClient && state.currentUser) {
+        await createSupabaseSessionForLiveAnalysis(file, fileHash);
+        await markSessionStatus('processing');
+      }
+    } catch (supaErr) {
+      console.warn('[CrickEye] Supabase session tracking skipped or failed:', supaErr?.message || supaErr);
+    }
 
     const formData = new FormData();
     formData.append('file', file);

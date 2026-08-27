@@ -54,6 +54,23 @@ def _quiet_console() -> bool:
     return os.environ.get("CRICKEYE_QUIET", "").strip().lower() in ("1", "true", "yes")
 
 
+def get_device() -> torch.device:
+    """
+    Resolves runtime execution device.
+    Supports CRICKEYE_DEVICE='cuda' | 'cpu' | 'auto'.
+    Defaults to CUDA when available, with automatic CPU fallback.
+    """
+    pref = os.environ.get("CRICKEYE_DEVICE", "").strip().lower()
+    if pref == "cpu":
+        return torch.device("cpu")
+    if pref in ("cuda", "gpu"):
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        print("[CrickEye] CUDA requested but not available; falling back to CPU")
+        return torch.device("cpu")
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 VIDEO_PATH  = str(BASE_DIR / "assets" / "net_session_video.mp4")
 MODEL_PATH  = str(BASE_DIR / "assets" / "crickeye_best.pth")
 POSE_MODEL_PATH = str(BASE_DIR / "assets" / "yolov8n-pose.pt")
@@ -505,7 +522,9 @@ KP_KEYS = [
     'lh', 'rh', 'lk', 'rk', 'la', 'ra',
 ]
 
-def extract_all_keypoints(video_path, ws=None, loop=None):
+def extract_all_keypoints(video_path, ws=None, loop=None, device=None, keep_frames_in_memory=False):
+    if device is None:
+        device = get_device()
     pose_model   = get_pose_model()
     cap          = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -516,7 +535,7 @@ def extract_all_keypoints(video_path, ws=None, loop=None):
     orig_w       = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     orig_h       = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    print(f"[CrickEye] Video: {orig_w}x{orig_h} @ {fps:.1f}fps | {total_frames} frames")
+    print(f"[CrickEye] Video: {orig_w}x{orig_h} @ {fps:.1f}fps | {total_frames} frames (device: {device})")
     _long = max(orig_w, orig_h)
     def _imgsz_stride32(x: int, stride: int = 32) -> int:
         """YOLOv8 stride; avoids Ultralytics warning + per-frame resize spam."""
@@ -542,63 +561,85 @@ def extract_all_keypoints(video_path, ws=None, loop=None):
     )
     ws_emit(ws, loop, {
         "type": "stage", "stage": "keypoints",
-        "message": "Pass 1 - Extracting pose keypoints...",
+        "message": f"Pass 1 - Extracting pose keypoints ({device})...",
         "total_frames": total_frames, "fps": fps,
         "width": orig_w, "height": orig_h,
         "pose_imgsz": pose_imgsz,
     })
 
-    all_frames_rgb = []
+    all_frames_rgb = [] if keep_frames_in_memory else None
     all_keypoints  = []
     frame_idx      = 0
     t0             = time.time()
+    yolo_dev       = 0 if str(device).startswith("cuda") else "cpu"
 
-    while True:
-        ret, frame_bgr = cap.read()
-        if not ret:
-            break
+    with torch.inference_mode():
+        while True:
+            ret, frame_bgr = cap.read()
+            if not ret:
+                break
 
-        all_frames_rgb.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+            if keep_frames_in_memory and all_frames_rgb is not None:
+                all_frames_rgb.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
 
-        results  = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz)
-        kp_entry = {k: None for k in KP_KEYS}
-        kp_entry['pose_conf'] = 0.0
+            try:
+                results  = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz, device=yolo_dev)
+            except Exception as e:
+                err_msg = str(e).lower()
+                if ("cuda" in err_msg or "memory" in err_msg or "alloc" in err_msg) and yolo_dev != "cpu":
+                    print(f"[CrickEye] GPU warning ({e}); switching pose model to CPU.")
+                    if torch.cuda.is_available():
+                        try:
+                            torch.cuda.empty_cache()
+                        except Exception:
+                            pass
+                    yolo_dev = "cpu"
+                    results = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz, device="cpu")
+                else:
+                    raise e
 
-        if results and results[0].keypoints is not None:
-            boxes = results[0].boxes
-            if boxes is not None and len(boxes) > 0:
-                areas = ((boxes.xyxy[:, 2] - boxes.xyxy[:, 0]) *
-                         (boxes.xyxy[:, 3] - boxes.xyxy[:, 1]))
-                best  = int(areas.argmax())
-                kp_entry['pose_conf'] = float(boxes.conf[best])
-                kpts  = results[0].keypoints.xy[best]
-                confs = results[0].keypoints.conf[best]
+            kp_entry = {k: None for k in KP_KEYS}
+            kp_entry['pose_conf'] = 0.0
 
-                def get_kp(idx):
-                    x = float(kpts[idx][0])
-                    y = float(kpts[idx][1])
-                    c = float(confs[idx]) if confs is not None else 1.0
-                    return (x, y) if (x > 0 and y > 0 and c >= MIN_KEYPOINT_CONF) else None
+            if results and results[0].keypoints is not None:
+                boxes = results[0].boxes
+                if boxes is not None and len(boxes) > 0:
+                    areas = ((boxes.xyxy[:, 2] - boxes.xyxy[:, 0]) *
+                             (boxes.xyxy[:, 3] - boxes.xyxy[:, 1]))
+                    best  = int(areas.argmax())
+                    kp_entry['pose_conf'] = float(boxes.conf[best])
+                    kpts  = results[0].keypoints.xy[best]
+                    confs = results[0].keypoints.conf[best]
 
-                for i, key in enumerate(KP_KEYS):
-                    kp_entry[key] = get_kp(i)
+                    def get_kp(idx):
+                        x = float(kpts[idx][0])
+                        y = float(kpts[idx][1])
+                        c = float(confs[idx]) if confs is not None else 1.0
+                        return (x, y) if (x > 0 and y > 0 and c >= MIN_KEYPOINT_CONF) else None
 
-        all_keypoints.append(kp_entry)
-        frame_idx += 1
+                    for i, key in enumerate(KP_KEYS):
+                        kp_entry[key] = get_kp(i)
 
-        if frame_idx % 100 == 0:
-            pct     = frame_idx / total_frames * 100
-            elapsed = time.time() - t0
-            eta     = (elapsed / frame_idx) * (total_frames - frame_idx)
-            if not _quiet_console():
-                print(f"  [{pct:5.1f}%] frame {frame_idx}/{total_frames}  ETA {eta:.0f}s")
-            ws_emit(ws, loop, {
-                "type": "progress", "stage": "keypoints",
-                "frame": frame_idx, "total": total_frames,
-                "pct": round(pct, 1), "eta": round(eta),
-            })
+            all_keypoints.append(kp_entry)
+            frame_idx += 1
+
+            if frame_idx % 100 == 0:
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                pct     = frame_idx / total_frames * 100
+                elapsed = time.time() - t0
+                eta     = (elapsed / frame_idx) * (total_frames - frame_idx)
+                if not _quiet_console():
+                    print(f"  [{pct:5.1f}%] frame {frame_idx}/{total_frames}  ETA {eta:.0f}s")
+                ws_emit(ws, loop, {
+                    "type": "progress", "stage": "keypoints",
+                    "frame": frame_idx, "total": total_frames,
+                    "pct": round(pct, 1), "eta": round(eta),
+                })
 
     cap.release()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     ws_emit(ws, loop, {
         "type": "progress", "stage": "keypoints",
         "frame": total_frames, "total": total_frames,
@@ -769,14 +810,40 @@ def vote_handedness_from_keypoints(all_keypoints, pre_start, pre_end, frame_w):
 # -----------------------------------------------------------------
 
 def load_shot_classifier(checkpoint_path, device):
-    print(f"[CrickEye] Loading shot classifier: {checkpoint_path}")
-    ckpt  = torch.load(checkpoint_path, map_location=device)
+    print(f"[CrickEye] Loading shot classifier: {checkpoint_path} (device: {device})")
+    map_loc = 'cpu' if str(device) == 'cpu' else device
+    try:
+        ckpt = torch.load(checkpoint_path, map_location=map_loc, weights_only=False)
+    except Exception as e:
+        print(f"[CrickEye] Warning: map_location={map_loc} failed ({e}); falling back to CPU map_location")
+        ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+
     model = torchvision.models.video.swin3d_t(weights=None)
     model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
     model.load_state_dict(ckpt['model_state_dict'])
     model.eval().to(device)
     print("[CrickEye] Shot classifier ready")
     return model
+
+
+def extract_clip_frames_rgb(video_path: str, start_frame: int, end_frame: int):
+    """
+    Memory-efficient shot clip frame reader.
+    Reads only the required ~40 frames for a shot clip directly from the video file.
+    """
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return []
+    cap.set(cv2.CAP_PROP_POS_FRAMES, max(0, start_frame))
+    frames = []
+    num_to_read = max(1, end_frame - start_frame + 1)
+    for _ in range(num_to_read):
+        ret, frame_bgr = cap.read()
+        if not ret:
+            break
+        frames.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+    cap.release()
+    return frames
 
 
 def apply_clahe(frame_rgb):
@@ -814,10 +881,27 @@ def frames_to_tensor(frames_rgb, device):
 def classify_shot(model, frames_rgb, device):
     if len(frames_rgb) < 4:
         return 'unclear', 0.0, [0.2]*len(SHOT_CLASSES)
-    tensor = frames_to_tensor(frames_rgb, device)
-    with torch.no_grad():
-        logits = model(tensor)
-        probs  = torch.softmax(logits, dim=1)[0].cpu().numpy()
+    try:
+        tensor = frames_to_tensor(frames_rgb, device)
+        with torch.no_grad():
+            logits = model(tensor)
+            probs  = torch.softmax(logits, dim=1)[0].cpu().numpy()
+    except Exception as e:
+        err_msg = str(e).lower()
+        if ("cuda" in err_msg or "memory" in err_msg) and str(device) != "cpu":
+            print(f"[CrickEye] Warning: GPU error in shot classification ({e}); falling back to CPU.")
+            if torch.cuda.is_available():
+                try:
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
+            model_cpu = model.to("cpu")
+            tensor_cpu = frames_to_tensor(frames_rgb, "cpu")
+            with torch.no_grad():
+                logits = model_cpu(tensor_cpu)
+                probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
+        else:
+            raise e
     top = int(probs.argmax())
     return SHOT_CLASSES[top], float(probs[top]), probs.tolist()
 
@@ -2356,7 +2440,7 @@ def _session_stance_from_classifier_confirmed(stance_rows):
 # CLASSIFY ALL SHOTS
 # -----------------------------------------------------------------
 
-def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
+def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
                        fps, total_frames, orig_w, orig_h, shot_classifier, device,
                        lw_vels, rw_vels, bilateral,
                        ws=None, loop=None,
@@ -2389,7 +2473,10 @@ def classify_all_shots(all_frames_rgb, all_keypoints, shot_onsets,
 
         start = max(0, onset_frame - CLIP_PRE_FRAMES)
         end   = min(total_frames - 1, onset_frame + CLIP_POST_FRAMES)
-        clip  = all_frames_rgb[start : end + 1]
+        if isinstance(video_path_or_frames, (list, tuple)) and video_path_or_frames:
+            clip = video_path_or_frames[start : end + 1]
+        else:
+            clip = extract_clip_frames_rgb(str(video_path_or_frames), start, end)
 
         label, conf, probs = classify_shot(shot_classifier, clip, device)
         ts = f"{int(onset_frame/fps//60):02d}:{onset_frame/fps%60:05.2f}"
@@ -2615,8 +2702,17 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
     print(f"\n[CrickEye] Pass 2: rendering {total_frames} frames ...")
     t0 = time.time()
 
-    for frame_idx, frame_rgb in enumerate(all_frames_rgb):
-        out = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+    use_in_mem = isinstance(all_frames_rgb, (list, tuple)) and len(all_frames_rgb) > 0
+    cap = None if use_in_mem else cv2.VideoCapture(video_path)
+
+    for frame_idx in range(total_frames):
+        if use_in_mem:
+            frame_rgb = all_frames_rgb[frame_idx]
+            out = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+        else:
+            ret, out = cap.read()
+            if not ret or out is None:
+                break
 
         lw_v = lw_vels[frame_idx]   if frame_idx < len(lw_vels)   else 0.0
         rw_v = rw_vels[frame_idx]   if frame_idx < len(rw_vels)    else 0.0
@@ -2725,6 +2821,8 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
                 "pct": round(pct, 1), "eta": round(eta),
             })
 
+    if cap is not None:
+        cap.release()
     writer.release()
     print(f"[CrickEye] Raw output -> {output_path}")
     _reencode_for_browser(output_path, ws, loop)
@@ -3160,12 +3258,11 @@ def run_pipeline(video_path=None, output_path=None):
     print("\n" + "="*60)
     print("  CrickEye v7.0 -- CLI Mode")
     print("="*60)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = get_device()
     print(f"[CrickEye] Device: {device}\n")
 
-    shot_classifier = load_shot_classifier(MODEL_PATH, device)
-    all_frames_rgb, all_keypoints, fps, total_frames, orig_w, orig_h = \
-        extract_all_keypoints(vp)
+    _, all_keypoints, fps, total_frames, orig_w, orig_h = \
+        extract_all_keypoints(vp, device=device)
     lw_vels, rw_vels, bilateral = compute_wrist_signals(all_keypoints)
     session_shoulder_px, pixel_scale = resolve_session_shoulder_and_scale(all_keypoints)
     if session_shoulder_px:
@@ -3177,11 +3274,16 @@ def run_pipeline(video_path=None, output_path=None):
         print("[CrickEye] Camera scale: shoulder unknown → pixel_scale=1.00")
     shot_onsets = find_shot_onsets(
         lw_vels, rw_vels, bilateral, fps, pixel_scale=SWING_DETECTION_PIXEL_SCALE)
+
+    shot_classifier = load_shot_classifier(MODEL_PATH, device)
     shot_log, session_info = classify_all_shots(
-        all_frames_rgb, all_keypoints, shot_onsets,
+        vp, all_keypoints, shot_onsets,
         fps, total_frames, orig_w, orig_h, shot_classifier, device,
         lw_vels, rw_vels, bilateral,
         pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
+    del shot_classifier
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     assign_display_numbers(shot_log)
     print(
@@ -3192,7 +3294,7 @@ def run_pipeline(video_path=None, output_path=None):
         vp, shot_log, fps, orig_w, orig_h, ws=None, loop=None)
     apply_ball_aware_shot_scoring(shot_log, ball_analytics, orig_w, orig_h)
     analysis = run_session_analysis(shot_log, session_info)
-    pass2_render(vp, op, all_frames_rgb, all_keypoints, shot_log,
+    pass2_render(vp, op, None, all_keypoints, shot_log,
                  lw_vels, rw_vels, bilateral,
                  fps, total_frames, orig_w, orig_h, session_info,
                  ball_frame_overlays=ball_analytics.get('frame_overlays', []),
@@ -3207,16 +3309,14 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
     output_path, output_video_url = output_video_paths(video_path)
 
     try:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = get_device()
         ws_emit(ws, loop, {
             "type": "stage", "stage": "loading",
-            "message": f"Models loaded -- device: {device}"
+            "message": f"Pipeline ready -- device: {device}"
         })
 
-        shot_classifier = load_shot_classifier(MODEL_PATH, device)
-
-        all_frames_rgb, all_keypoints, fps, total_frames, orig_w, orig_h = \
-            extract_all_keypoints(video_path, ws, loop)
+        _, all_keypoints, fps, total_frames, orig_w, orig_h = \
+            extract_all_keypoints(video_path, ws, loop, device=device)
 
         lw_vels, rw_vels, bilateral = compute_wrist_signals(all_keypoints)
         session_shoulder_px, pixel_scale = resolve_session_shoulder_and_scale(all_keypoints)
@@ -3231,12 +3331,16 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             lw_vels, rw_vels, bilateral, fps, ws, loop,
             pixel_scale=SWING_DETECTION_PIXEL_SCALE)
 
+        shot_classifier = load_shot_classifier(MODEL_PATH, device)
         shot_log, session_info = classify_all_shots(
-            all_frames_rgb, all_keypoints, shot_onsets,
+            video_path, all_keypoints, shot_onsets,
             fps, total_frames, orig_w, orig_h, shot_classifier, device,
             lw_vels, rw_vels, bilateral,
             ws, loop,
             pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
+        del shot_classifier
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         assign_display_numbers(shot_log)
 
@@ -3251,7 +3355,7 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
         analysis = run_session_analysis(shot_log, session_info)
 
         pass2_render(video_path, output_path,
-                     all_frames_rgb, all_keypoints, shot_log,
+                     None, all_keypoints, shot_log,
                      lw_vels, rw_vels, bilateral,
                      fps, total_frames, orig_w, orig_h,
                      session_info, ws=ws, loop=loop,
