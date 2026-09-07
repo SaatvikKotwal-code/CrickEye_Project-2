@@ -24,13 +24,22 @@ Entry points:
 
 import cv2
 import csv
+import gc
 import json
 import logging
 import os
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,garbage_collection_threshold:0.8")
+os.environ.setdefault("OMP_NUM_THREADS", "2")
+os.environ.setdefault("MKL_NUM_THREADS", "2")
 import time
 import asyncio
 import numpy as np
 import torch
+if hasattr(torch, "set_num_threads"):
+    try:
+        torch.set_num_threads(min(4, os.cpu_count() or 4))
+    except Exception:
+        pass
 import torch.nn as nn
 import torchvision
 from collections import deque, defaultdict
@@ -54,21 +63,65 @@ def _quiet_console() -> bool:
     return os.environ.get("CRICKEYE_QUIET", "").strip().lower() in ("1", "true", "yes")
 
 
+_gpu_initialized = False
+
+
+def init_gpu_memory(device: torch.device):
+    """
+    Configure PyTorch CUDA cudnn benchmark and optional memory fraction for stability.
+    """
+    global _gpu_initialized
+    if _gpu_initialized or device.type != "cuda":
+        return
+    try:
+        free_m, tot_m = torch.cuda.mem_get_info(device)
+        frac_str = os.environ.get("CRICKEYE_GPU_MEM_FRACTION", "").strip()
+        if frac_str:
+            frac = float(frac_str)
+            frac = max(0.2, min(0.95, frac))
+            torch.cuda.set_per_process_memory_fraction(frac, device.index if device.index is not None else 0)
+        torch.backends.cudnn.benchmark = True
+        dev_name = torch.cuda.get_device_name(device)
+        print(f"[CrickEye] GPU Initialized: {dev_name} | VRAM: {free_m // (1024*1024)}MB free / {tot_m // (1024*1024)}MB total")
+        _gpu_initialized = True
+    except Exception as e:
+        print(f"[CrickEye] Note: GPU memory init: {e}")
+        _gpu_initialized = True
+
+
 def get_device() -> torch.device:
     """
     Resolves runtime execution device.
     Supports CRICKEYE_DEVICE='cuda' | 'cpu' | 'auto'.
-    Defaults to CUDA when available, with automatic CPU fallback.
+    Defaults to CUDA when available and sufficient VRAM exists, with automatic CPU fallback.
     """
     pref = os.environ.get("CRICKEYE_DEVICE", "").strip().lower()
     if pref == "cpu":
         return torch.device("cpu")
     if pref in ("cuda", "gpu"):
         if torch.cuda.is_available():
-            return torch.device("cuda")
+            dev = torch.device("cuda")
+            init_gpu_memory(dev)
+            return dev
         print("[CrickEye] CUDA requested but not available; falling back to CPU")
         return torch.device("cpu")
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if torch.cuda.is_available():
+        try:
+            free_mem, total_mem = torch.cuda.mem_get_info()
+            # Ensure at least 500MB free VRAM to prevent CUDA OOM
+            if free_mem >= 500 * 1024 * 1024:
+                dev = torch.device("cuda")
+                init_gpu_memory(dev)
+                return dev
+            else:
+                print(f"[CrickEye] Low GPU VRAM ({free_mem // (1024*1024)}MB free); running on CPU for stability.")
+                return torch.device("cpu")
+        except Exception:
+            dev = torch.device("cuda")
+            init_gpu_memory(dev)
+            return dev
+    return torch.device("cpu")
 
 
 VIDEO_PATH  = str(BASE_DIR / "assets" / "net_session_video.mp4")
@@ -512,6 +565,23 @@ def get_pose_model():
         print("[CrickEye] Pose model ready")
     return _pose_model
 
+
+def release_pose_model():
+    """Free the cached pose model to reclaim RAM and VRAM before later stages."""
+    global _pose_model
+    if _pose_model is not None:
+        del _pose_model
+        _pose_model = None
+    gc.collect()
+    if torch.cuda.is_available():
+        try:
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
+        except Exception:
+            pass
+    print("[CrickEye] Pose model released — memory freed for next stage")
+
 # -----------------------------------------------------------------
 # PASS 1 - KEYPOINT EXTRACTION
 # -----------------------------------------------------------------
@@ -528,14 +598,35 @@ def extract_all_keypoints(video_path, ws=None, loop=None, device=None, keep_fram
     pose_model   = get_pose_model()
     cap          = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        raise FileNotFoundError(f"Cannot open: {video_path}")
+        vp = Path(video_path)
+        if not vp.exists():
+            raise FileNotFoundError(f"Video file does not exist: {video_path}")
+        fsize = vp.stat().st_size
+        if fsize == 0:
+            raise FileNotFoundError(
+                f"Video file is empty (0 bytes): {video_path}\n"
+                "The recording may not have captured any data. Please re-record or upload a valid video."
+            )
+        raise FileNotFoundError(
+            f"Cannot open video: {video_path} (size={fsize:,} bytes, ext={vp.suffix})\n"
+            "OpenCV could not decode this file. Possible causes:\n"
+            "  - Unsupported codec (e.g. VP9 WebM on some systems)\n"
+            "  - Corrupted or incomplete file\n"
+            "Try uploading an MP4 (H.264) file instead."
+        )
 
     fps          = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    orig_w       = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    orig_h       = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    raw_frames   = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    if raw_frames and raw_frames > 0 and raw_frames < 1e8:
+        total_frames = int(raw_frames)
+    else:
+        # Browser-recorded WebM streams lack container frame headers; estimate until stream end
+        total_frames = max(30, int(fps * 5))
 
-    print(f"[CrickEye] Video: {orig_w}x{orig_h} @ {fps:.1f}fps | {total_frames} frames (device: {device})")
+    orig_w       = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
+    orig_h       = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
+
+    print(f"[CrickEye] Video: {orig_w}x{orig_h} @ {fps:.1f}fps | est. {total_frames} frames (device: {device})")
     _long = max(orig_w, orig_h)
     def _imgsz_stride32(x: int, stride: int = 32) -> int:
         """YOLOv8 stride; avoids Ultralytics warning + per-frame resize spam."""
@@ -545,18 +636,25 @@ def extract_all_keypoints(video_path, ws=None, loop=None, device=None, keep_fram
     _zoomed_pose = os.environ.get("CRICKEYE_ZOOMED_POSE", "").strip().lower() in (
         "1", "true", "yes",
     )
+    yolo_dev = 0 if str(device).startswith("cuda") else "cpu"
     if _pose_imgsz_env:
         pose_imgsz = _imgsz_stride32(max(320, min(1536, int(_pose_imgsz_env))))
     elif _zoomed_pose:
         # Optional: larger imgsz for tiny batters in frame (changes wrist tracks vs default).
         pose_imgsz = _imgsz_stride32(int(max(640, min(1280, round(_long * 0.72)))))
     else:
-        # Default: match original pipeline (Ultralytics default 640) so swing detection
-        # / classifier clip alignment stays stable.
-        pose_imgsz = 640
+        try:
+            import psutil
+            vm = psutil.virtual_memory()
+            if yolo_dev == "cpu" and vm.available < 3 * 1024 * 1024 * 1024:
+                pose_imgsz = 480
+            else:
+                pose_imgsz = 640
+        except Exception:
+            pose_imgsz = 640
     print(
         f"[CrickEye] Pose inference imgsz={pose_imgsz}"
-        + (" (CRICKEYE_ZOOMED_POSE=1 or POSE_IMGSZ)" if pose_imgsz != 640 else "")
+        + (" (CRICKEYE_ZOOMED_POSE=1 or POSE_IMGSZ)" if pose_imgsz not in (640, 480) else "")
         + " — set POSE_IMGSZ or CRICKEYE_ZOOMED_POSE=1 for zoomed subjects",
     )
     ws_emit(ws, loop, {
@@ -571,73 +669,155 @@ def extract_all_keypoints(video_path, ws=None, loop=None, device=None, keep_fram
     all_keypoints  = []
     frame_idx      = 0
     t0             = time.time()
-    yolo_dev       = 0 if str(device).startswith("cuda") else "cpu"
 
     with torch.inference_mode():
         while True:
-            ret, frame_bgr = cap.read()
-            if not ret:
-                break
-
-            if keep_frames_in_memory and all_frames_rgb is not None:
-                all_frames_rgb.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
-
-            try:
-                results  = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz, device=yolo_dev)
-            except Exception as e:
-                err_msg = str(e).lower()
-                if ("cuda" in err_msg or "memory" in err_msg or "alloc" in err_msg) and yolo_dev != "cpu":
-                    print(f"[CrickEye] GPU warning ({e}); switching pose model to CPU.")
+            ret = False
+            frame_bgr = None
+            for attempt in range(3):
+                try:
+                    ret, frame_bgr = cap.read()
+                    if ret and frame_bgr is not None and frame_bgr.size > 0:
+                        break
+                except (cv2.error, Exception):
+                    gc.collect()
                     if torch.cuda.is_available():
                         try:
                             torch.cuda.empty_cache()
                         except Exception:
                             pass
+                    time.sleep(0.08 * (attempt + 1))
+
+            if not ret or frame_bgr is None or frame_bgr.size == 0:
+                break
+
+            if keep_frames_in_memory and all_frames_rgb is not None:
+                all_frames_rgb.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+
+            results = None
+            try:
+                results = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz, device=yolo_dev)
+            except (MemoryError, Exception) as e:
+                err_msg = str(e).lower()
+                is_cpu_alloc = "alloc_cpu" in err_msg or "defaultcpuallocator" in err_msg or "cannot allocate" in err_msg or "not enough memory" in err_msg
+                is_cuda_oom = "cuda" in err_msg and ("out of memory" in err_msg or "memory" in err_msg)
+                gc.collect()
+                if torch.cuda.is_available():
+                    try:
+                        torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+                time.sleep(0.05)
+
+                if is_cpu_alloc and torch.cuda.is_available() and yolo_dev == "cpu":
+                    # CPU commit limit reached on CPU — recover immediately by switching to CUDA GPU
+                    print("[CrickEye] CPU allocator memory limit reached; switching pose inference to CUDA GPU.")
+                    yolo_dev = 0
+                    try:
+                        results = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz, device=yolo_dev)
+                    except Exception:
+                        h, w = frame_bgr.shape[:2]
+                        small_frame = cv2.resize(frame_bgr, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
+                        try:
+                            results = pose_model(small_frame, verbose=False, imgsz=320, device=yolo_dev)
+                        except Exception:
+                            results = None
+                elif is_cpu_alloc and yolo_dev != "cpu":
+                    fallback_sz = max(320, pose_imgsz // 2) if pose_imgsz > 320 else 320
+                    if fallback_sz < pose_imgsz:
+                        print(f"[CrickEye] CPU commit memory low; reducing pose imgsz {pose_imgsz}→{fallback_sz}")
+                        pose_imgsz = fallback_sz
+                    try:
+                        results = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz, device=yolo_dev)
+                    except Exception:
+                        h, w = frame_bgr.shape[:2]
+                        small_frame = cv2.resize(frame_bgr, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
+                        try:
+                            results = pose_model(small_frame, verbose=False, imgsz=320, device=yolo_dev)
+                        except Exception:
+                            results = None
+                elif ("cuda" in err_msg or is_cuda_oom) and yolo_dev != "cpu":
+                    print(f"[CrickEye] GPU/CUDA error ({e}); switching pose model to CPU.")
                     yolo_dev = "cpu"
-                    results = pose_model(frame_bgr, verbose=False, imgsz=pose_imgsz, device="cpu")
+                    pose_imgsz = 384
+                    try:
+                        results = pose_model(frame_bgr, verbose=False, imgsz=384, device="cpu")
+                    except Exception:
+                        try:
+                            results = pose_model(frame_bgr, verbose=False, imgsz=320, device="cpu")
+                        except Exception:
+                            results = None
+                elif yolo_dev == "cpu":
+                    fallback_sz = max(320, pose_imgsz // 2)
+                    pose_imgsz = fallback_sz
+                    print(f"[CrickEye] CPU memory low — downscaling frame and reducing imgsz to {fallback_sz}")
+                    try:
+                        h, w = frame_bgr.shape[:2]
+                        small_frame = cv2.resize(frame_bgr, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
+                        results = pose_model(small_frame, verbose=False, imgsz=fallback_sz, device="cpu")
+                    except Exception as e2:
+                        print(f"[CrickEye] Warning: Pose inference skipped frame {frame_idx} ({e2})")
+                        results = None
                 else:
-                    raise e
+                    print(f"[CrickEye] Warning: Pose inference skipped frame {frame_idx} ({e})")
+                    results = None
 
             kp_entry = {k: None for k in KP_KEYS}
             kp_entry['pose_conf'] = 0.0
 
-            if results and results[0].keypoints is not None:
-                boxes = results[0].boxes
-                if boxes is not None and len(boxes) > 0:
-                    areas = ((boxes.xyxy[:, 2] - boxes.xyxy[:, 0]) *
-                             (boxes.xyxy[:, 3] - boxes.xyxy[:, 1]))
-                    best  = int(areas.argmax())
-                    kp_entry['pose_conf'] = float(boxes.conf[best])
-                    kpts  = results[0].keypoints.xy[best]
-                    confs = results[0].keypoints.conf[best]
+            try:
+                if results and len(results) > 0 and results[0].keypoints is not None:
+                    boxes = results[0].boxes
+                    if boxes is not None and len(boxes) > 0:
+                        areas = ((boxes.xyxy[:, 2] - boxes.xyxy[:, 0]) *
+                                 (boxes.xyxy[:, 3] - boxes.xyxy[:, 1]))
+                        best  = int(areas.argmax())
+                        kp_entry['pose_conf'] = float(boxes.conf[best])
+                        kpts  = results[0].keypoints.xy[best]
+                        confs = results[0].keypoints.conf[best]
 
-                    def get_kp(idx):
-                        x = float(kpts[idx][0])
-                        y = float(kpts[idx][1])
-                        c = float(confs[idx]) if confs is not None else 1.0
-                        return (x, y) if (x > 0 and y > 0 and c >= MIN_KEYPOINT_CONF) else None
+                        def get_kp(idx):
+                            x = float(kpts[idx][0])
+                            y = float(kpts[idx][1])
+                            c = float(confs[idx]) if confs is not None else 1.0
+                            return (x, y) if (x > 0 and y > 0 and c >= MIN_KEYPOINT_CONF) else None
 
-                    for i, key in enumerate(KP_KEYS):
-                        kp_entry[key] = get_kp(i)
+                        for i, key in enumerate(KP_KEYS):
+                            kp_entry[key] = get_kp(i)
+            except Exception as e_box:
+                print(f"[CrickEye] Warning: Keypoint box parsing error on frame {frame_idx} ({e_box})")
 
             all_keypoints.append(kp_entry)
             frame_idx += 1
 
-            if frame_idx % 100 == 0:
+            # Free results and frame immediately to release C++/Python memory
+            del results
+            del frame_bgr
+
+            if frame_idx % 60 == 0:
                 if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                pct     = frame_idx / total_frames * 100
-                elapsed = time.time() - t0
-                eta     = (elapsed / frame_idx) * (total_frames - frame_idx)
+                    try:
+                        if torch.cuda.memory_reserved() > 1024 * 1024 * 1024:
+                            torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+                gc.collect()  # Periodic RAM cleanup
+
+            denom   = max(frame_idx, total_frames)
+            pct     = min(99.0, (frame_idx / denom) * 100)
+            elapsed = time.time() - t0
+            eta     = max(0.0, (elapsed / frame_idx) * (denom - frame_idx))
+            if frame_idx % 25 == 0:
                 if not _quiet_console():
-                    print(f"  [{pct:5.1f}%] frame {frame_idx}/{total_frames}  ETA {eta:.0f}s")
+                    print(f"  [{pct:5.1f}%] frame {frame_idx}/{denom}  ETA {eta:.0f}s")
                 ws_emit(ws, loop, {
                     "type": "progress", "stage": "keypoints",
-                    "frame": frame_idx, "total": total_frames,
+                    "frame": frame_idx, "total": denom,
                     "pct": round(pct, 1), "eta": round(eta),
                 })
 
     cap.release()
+    total_frames = frame_idx
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     ws_emit(ws, loop, {
@@ -821,29 +1001,98 @@ def load_shot_classifier(checkpoint_path, device):
     model = torchvision.models.video.swin3d_t(weights=None)
     model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
     model.load_state_dict(ckpt['model_state_dict'])
-    model.eval().to(device)
-    print("[CrickEye] Shot classifier ready")
+    del ckpt
+    gc.collect()
+
+    target_dev = device
+    if str(device).startswith("cuda"):
+        try:
+            torch.cuda.empty_cache()
+            model.eval().to(device)
+        except Exception as e:
+            print(f"[CrickEye] Warning: GPU allocation failed for shot classifier ({e}); falling back to CPU.")
+            target_dev = torch.device("cpu")
+            model.eval().to(target_dev)
+    else:
+        model.eval()
+
+    print(f"[CrickEye] Shot classifier ready on {target_dev}")
     return model
 
 
 def extract_clip_frames_rgb(video_path: str, start_frame: int, end_frame: int):
     """
-    Memory-efficient shot clip frame reader.
-    Reads only the required ~40 frames for a shot clip directly from the video file.
+    Ultra-low-memory shot clip frame reader.
+    Reads only needed frames, immediately resizes to (IMG_SIZE, IMG_SIZE), and applies CLAHE.
+    Never holds multiple full-resolution (e.g. 1280x720) frames in RAM simultaneously.
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         return []
+
+    T = max(1, end_frame - start_frame + 1)
+    scale = T / 40.0
+    z0_end = max(1, int(14 * scale))
+    z1_start = z0_end
+    z1_end = max(z1_start + 1, int(27 * scale))
+    z2_start = z1_end
+    early = np.linspace(0, z0_end, 5, dtype=int)
+    mid   = np.linspace(z1_start, z1_end, 8, dtype=int)
+    late  = np.linspace(z2_start, T - 1, 3, dtype=int)
+    indices = sorted(dict.fromkeys(np.concatenate([early, mid, late]).tolist()))[:NUM_FRAMES]
+    while len(indices) < NUM_FRAMES:
+        indices.append(T - 1)
+
+    needed_set = set(indices)
+    max_needed = max(needed_set) if needed_set else 0
+
     cap.set(cv2.CAP_PROP_POS_FRAMES, max(0, start_frame))
-    frames = []
-    num_to_read = max(1, end_frame - start_frame + 1)
-    for _ in range(num_to_read):
-        ret, frame_bgr = cap.read()
-        if not ret:
+
+    collected = {}
+    last_valid_small = None
+
+    for rel_idx in range(T):
+        if rel_idx > max_needed:
             break
-        frames.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+
+        ret = False
+        frame_bgr = None
+        for attempt in range(3):
+            try:
+                ret, frame_bgr = cap.read()
+                if ret and frame_bgr is not None and frame_bgr.size > 0:
+                    break
+            except Exception:
+                gc.collect()
+                time.sleep(0.02)
+
+        if not ret or frame_bgr is None:
+            break
+
+        if rel_idx in needed_set:
+            try:
+                small = cv2.resize(frame_bgr, (IMG_SIZE, IMG_SIZE), interpolation=cv2.INTER_AREA)
+                small_rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+                small_clahe = apply_clahe(small_rgb)
+                collected[rel_idx] = small_clahe
+                last_valid_small = small_clahe
+            except Exception:
+                pass
+        del frame_bgr
+
     cap.release()
-    return frames
+    gc.collect()
+
+    result = []
+    for idx in indices:
+        if idx in collected:
+            result.append(collected[idx])
+        elif last_valid_small is not None:
+            result.append(last_valid_small)
+        else:
+            result.append(np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.uint8))
+
+    return result
 
 
 def apply_clahe(frame_rgb):
@@ -854,54 +1103,81 @@ def apply_clahe(frame_rgb):
 
 
 def frames_to_tensor(frames_rgb, device):
-    T = len(frames_rgb)
-    scale = T / 40.0
-    z0_end = max(1, int(14*scale))
-    z1_start = z0_end
-    z1_end = max(z1_start+1, int(27*scale))
-    z2_start = z1_end
-    early = np.linspace(0, z0_end, 5, dtype=int)
-    mid   = np.linspace(z1_start, z1_end, 8, dtype=int)
-    late  = np.linspace(z2_start, T-1, 3, dtype=int)
-    indices = sorted(dict.fromkeys(np.concatenate([early, mid, late]).tolist()))[:NUM_FRAMES]
-    while len(indices) < NUM_FRAMES: indices.append(T-1)
+    if not frames_rgb:
+        return torch.zeros((1, 3, NUM_FRAMES, IMG_SIZE, IMG_SIZE), dtype=torch.float32, device=device)
+
+    # If frames are already (IMG_SIZE, IMG_SIZE) and pre-processed by extract_clip_frames_rgb:
+    is_preprocessed = (
+        len(frames_rgb) == NUM_FRAMES and
+        frames_rgb[0].shape[0] == IMG_SIZE and
+        frames_rgb[0].shape[1] == IMG_SIZE
+    )
+
+    if is_preprocessed:
+        proc = frames_rgb
+    else:
+        T = len(frames_rgb)
+        scale = T / 40.0
+        z0_end = max(1, int(14 * scale))
+        z1_start = z0_end
+        z1_end = max(z1_start + 1, int(27 * scale))
+        z2_start = z1_end
+        early = np.linspace(0, z0_end, 5, dtype=int)
+        mid   = np.linspace(z1_start, z1_end, 8, dtype=int)
+        late  = np.linspace(z2_start, T - 1, 3, dtype=int)
+        indices = sorted(dict.fromkeys(np.concatenate([early, mid, late]).tolist()))[:NUM_FRAMES]
+        while len(indices) < NUM_FRAMES:
+            indices.append(T - 1)
+
+        proc = []
+        for i in indices:
+            f = cv2.resize(frames_rgb[i], (IMG_SIZE, IMG_SIZE), interpolation=cv2.INTER_AREA)
+            proc.append(apply_clahe(f))
 
     mean_arr = np.array(MEAN, dtype=np.float32)
     std_arr  = np.array(STD,  dtype=np.float32)
-    proc = []
-    for i in indices:
-        f = cv2.resize(frames_rgb[i], (IMG_SIZE, IMG_SIZE))
-        proc.append(apply_clahe(f))
-    arr = np.stack(proc, axis=0).astype(np.float32) / 255.0
-    arr = (arr - mean_arr) / std_arr
-    arr = arr.transpose(3, 0, 1, 2)
+    arr = np.empty((NUM_FRAMES, IMG_SIZE, IMG_SIZE, 3), dtype=np.float32)
+    for i, f in enumerate(proc[:NUM_FRAMES]):
+        np.divide(f, 255.0, out=arr[i])
+        np.subtract(arr[i], mean_arr, out=arr[i])
+        np.divide(arr[i], std_arr, out=arr[i])
+    arr = np.ascontiguousarray(arr.transpose(3, 0, 1, 2))
     return torch.from_numpy(arr).unsqueeze(0).to(device)
 
 
 def classify_shot(model, frames_rgb, device):
-    if len(frames_rgb) < 4:
+    if len(frames_rgb) < 4 or model is None:
         return 'unclear', 0.0, [0.2]*len(SHOT_CLASSES)
     try:
         tensor = frames_to_tensor(frames_rgb, device)
-        with torch.no_grad():
+        with torch.inference_mode():
             logits = model(tensor)
             probs  = torch.softmax(logits, dim=1)[0].cpu().numpy()
+        del tensor, logits
     except Exception as e:
-        err_msg = str(e).lower()
-        if ("cuda" in err_msg or "memory" in err_msg) and str(device) != "cpu":
-            print(f"[CrickEye] Warning: GPU error in shot classification ({e}); falling back to CPU.")
-            if torch.cuda.is_available():
-                try:
-                    torch.cuda.empty_cache()
-                except Exception:
-                    pass
-            model_cpu = model.to("cpu")
+        print(f"[CrickEye] Warning: Shot classification error ({e}); attempting clean retry.")
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
+        gc.collect()
+        try:
             tensor_cpu = frames_to_tensor(frames_rgb, "cpu")
-            with torch.no_grad():
-                logits = model_cpu(tensor_cpu)
-                probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
-        else:
-            raise e
+            if next(model.parameters()).device.type == "cuda":
+                tensor_gpu = tensor_cpu.to(device)
+                with torch.inference_mode():
+                    logits = model(tensor_gpu)
+                    probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
+                del tensor_gpu, tensor_cpu, logits
+            else:
+                with torch.inference_mode():
+                    logits = model(tensor_cpu)
+                    probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
+                del tensor_cpu, logits
+        except Exception as e2:
+            print(f"[CrickEye] Warning: Shot classification recovery failed ({e2}); marking unclear.")
+            return 'unclear', 0.0, [0.2]*len(SHOT_CLASSES)
     top = int(probs.argmax())
     return SHOT_CLASSES[top], float(probs[top]), probs.tolist()
 
@@ -2479,6 +2755,7 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
             clip = extract_clip_frames_rgb(str(video_path_or_frames), start, end)
 
         label, conf, probs = classify_shot(shot_classifier, clip, device)
+        del clip
         ts = f"{int(onset_frame/fps//60):02d}:{onset_frame/fps%60:05.2f}"
 
         stance_rows.append((shot_dom, shot_conf, conf))
@@ -2532,6 +2809,13 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
               f"headQ={_hq_s}  "
               f"sym={_sym_s}  "
               f"score={biomech['shot_score']}/10  {flag_str}")
+
+        ws_emit(ws, loop, {
+            "type": "stage", "stage": "classifying",
+            "message": f"Classified shot {i+1}/{len(shot_onsets)}: {label.replace('_', ' ').upper()} ({round(conf*100)}%)",
+            "current_shot": i + 1,
+            "total_shots": len(shot_onsets),
+        })
 
     # ── Post-hoc: compute session-relative swing intensity percentiles ──
     raw_swings = [e.get('swing_raw_p90', 0) for e in shot_log if e.get('swing_raw_p90')]
@@ -2809,7 +3093,10 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
             for _ in range(slow_factor - 1):
                 writer.write(out)
 
-        if frame_idx % max(1, int(fps*5)) == 0 and frame_idx > 0:
+        del out
+
+        # Smooth progress reporting every ~0.5s of video
+        if frame_idx % max(1, int(fps * 0.5)) == 0 and frame_idx > 0:
             pct     = frame_idx / total_frames * 100
             elapsed = time.time() - t0
             eta     = (elapsed / frame_idx) * (total_frames - frame_idx)
@@ -2824,6 +3111,7 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
     if cap is not None:
         cap.release()
     writer.release()
+    gc.collect()
     print(f"[CrickEye] Raw output -> {output_path}")
     _reencode_for_browser(output_path, ws, loop)
 
@@ -2852,9 +3140,11 @@ def _reencode_for_browser(output_path: str, ws=None, loop=None):
         return
 
     tmp_path = output_path.replace(".mp4", "_h264.mp4")
+    preset = os.getenv("CRICKEYE_FFMPEG_PRESET", "veryfast").strip()
     cmd = [
         ffmpeg_bin, "-y", "-i", output_path,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:v", "libx264", "-preset", preset, "-crf", "23",
+        "-tune", "fastdecode",
         "-movflags", "+faststart", "-pix_fmt", "yuv420p", "-an",
         tmp_path
     ]
@@ -3233,7 +3523,8 @@ def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_
 # -----------------------------------------------------------------
 
 def _run_ball_analytics_optional(video_path: str, shot_log, fps: float,
-                                 frame_w: int, frame_h: int, ws=None, loop=None):
+                                 frame_w: int, frame_h: int, ws=None, loop=None,
+                                 device=None):
     """YOLO ball track + speed/length; failures are non-fatal."""
     v = os.getenv('BALL_ANALYTICS_ENABLED', '1').strip().lower()
     if v in ('0', 'false', 'no', 'off'):
@@ -3241,7 +3532,7 @@ def _run_ball_analytics_optional(video_path: str, shot_log, fps: float,
     try:
         from ball_analytics import run_ball_analytics
         return run_ball_analytics(
-            video_path, shot_log, fps, frame_w, frame_h, ws=ws, loop=loop)
+            video_path, shot_log, fps, frame_w, frame_h, ws=ws, loop=loop, device=device)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -3263,6 +3554,7 @@ def run_pipeline(video_path=None, output_path=None):
 
     _, all_keypoints, fps, total_frames, orig_w, orig_h = \
         extract_all_keypoints(vp, device=device)
+    release_pose_model()  # Free pose model RAM before subsequent stages
     lw_vels, rw_vels, bilateral = compute_wrist_signals(all_keypoints)
     session_shoulder_px, pixel_scale = resolve_session_shoulder_and_scale(all_keypoints)
     if session_shoulder_px:
@@ -3275,15 +3567,28 @@ def run_pipeline(video_path=None, output_path=None):
     shot_onsets = find_shot_onsets(
         lw_vels, rw_vels, bilateral, fps, pixel_scale=SWING_DETECTION_PIXEL_SCALE)
 
-    shot_classifier = load_shot_classifier(MODEL_PATH, device)
-    shot_log, session_info = classify_all_shots(
-        vp, all_keypoints, shot_onsets,
-        fps, total_frames, orig_w, orig_h, shot_classifier, device,
-        lw_vels, rw_vels, bilateral,
-        pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
-    del shot_classifier
+    if len(shot_onsets) > 0:
+        shot_classifier = load_shot_classifier(MODEL_PATH, device)
+        shot_log, session_info = classify_all_shots(
+            vp, all_keypoints, shot_onsets,
+            fps, total_frames, orig_w, orig_h, shot_classifier, device,
+            lw_vels, rw_vels, bilateral,
+            pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
+        del shot_classifier
+    else:
+        shot_log, session_info = classify_all_shots(
+            vp, all_keypoints, shot_onsets,
+            fps, total_frames, orig_w, orig_h, None, device,
+            lw_vels, rw_vels, bilateral,
+            pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
+    gc.collect()  # Reclaim classifier memory before empty_cache
     if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+        try:
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
+        except Exception:
+            pass
 
     assign_display_numbers(shot_log)
     print(
@@ -3291,7 +3596,7 @@ def run_pipeline(video_path=None, output_path=None):
         "(often the longest step — watch for [ball …%] lines).\n"
     )
     ball_analytics = _run_ball_analytics_optional(
-        vp, shot_log, fps, orig_w, orig_h, ws=None, loop=None)
+        vp, shot_log, fps, orig_w, orig_h, ws=None, loop=None, device=device)
     apply_ball_aware_shot_scoring(shot_log, ball_analytics, orig_w, orig_h)
     analysis = run_session_analysis(shot_log, session_info)
     pass2_render(vp, op, None, all_keypoints, shot_log,
@@ -3317,6 +3622,7 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
 
         _, all_keypoints, fps, total_frames, orig_w, orig_h = \
             extract_all_keypoints(video_path, ws, loop, device=device)
+        release_pose_model()  # Free pose model RAM before subsequent stages
 
         lw_vels, rw_vels, bilateral = compute_wrist_signals(all_keypoints)
         session_shoulder_px, pixel_scale = resolve_session_shoulder_and_scale(all_keypoints)
@@ -3331,51 +3637,41 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             lw_vels, rw_vels, bilateral, fps, ws, loop,
             pixel_scale=SWING_DETECTION_PIXEL_SCALE)
 
-        shot_classifier = load_shot_classifier(MODEL_PATH, device)
-        shot_log, session_info = classify_all_shots(
-            video_path, all_keypoints, shot_onsets,
-            fps, total_frames, orig_w, orig_h, shot_classifier, device,
-            lw_vels, rw_vels, bilateral,
-            ws, loop,
-            pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
-        del shot_classifier
+        if len(shot_onsets) > 0:
+            shot_classifier = load_shot_classifier(MODEL_PATH, device)
+            shot_log, session_info = classify_all_shots(
+                video_path, all_keypoints, shot_onsets,
+                fps, total_frames, orig_w, orig_h, shot_classifier, device,
+                lw_vels, rw_vels, bilateral,
+                ws, loop,
+                pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
+            del shot_classifier
+        else:
+            shot_log, session_info = classify_all_shots(
+                video_path, all_keypoints, shot_onsets,
+                fps, total_frames, orig_w, orig_h, None, device,
+                lw_vels, rw_vels, bilateral,
+                ws, loop,
+                pixel_scale=pixel_scale, session_shoulder_px=session_shoulder_px)
+        gc.collect()  # Reclaim classifier memory before empty_cache
         if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+            try:
+                torch.cuda.empty_cache()
+                if hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+            except Exception:
+                pass
 
         assign_display_numbers(shot_log)
 
-        print(
-            "\n[CrickEye] Ball analytics: running YOLO track() on the full video "
-            "(often the longest step — progress prints as [ball …%] until Pass 2 starts).\n"
-        )
-
-        ball_analytics = _run_ball_analytics_optional(
-            video_path, shot_log, fps, orig_w, orig_h, ws=ws, loop=loop)
-        apply_ball_aware_shot_scoring(shot_log, ball_analytics, orig_w, orig_h)
-        analysis = run_session_analysis(shot_log, session_info)
-
-        pass2_render(video_path, output_path,
-                     None, all_keypoints, shot_log,
-                     lw_vels, rw_vels, bilateral,
-                     fps, total_frames, orig_w, orig_h,
-                     session_info, ws=ws, loop=loop,
-                     ball_frame_overlays=ball_analytics.get('frame_overlays', []),
-                     ball_trajectories=ball_analytics.get('video_trajectories', []))
-
-        save_csv(shot_log, CSV_PATH, session_info['handedness'], session_info['conf'])
-        save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH,
-                  ball_analytics=ball_analytics)
-        print_summary(shot_log, session_info, analysis)
-
-        confirmed_shots = [e for e in shot_log if e['conf'] >= CONF_THRESHOLD]
-
-        for e in confirmed_shots:
-            ws_emit(ws, loop, {
+        def _make_shot_message(e, early=False):
+            disp_num = e.get('_display_num') or e.get('shot_num')
+            return {
                 "type"                 : "shot",
-                "shot_num"             : e['_display_num'],
+                "shot_num"             : disp_num,
                 "label"                : e['label'],
                 "conf"                 : round(e['conf'], 4),
-                "confirmed"            : True,
+                "confirmed"            : e['conf'] >= CONF_THRESHOLD,
                 "timestamp"            : e['timestamp'],
                 "peak_frame"           : e['peak_frame'],
                 "onset_score"          : e['onset_score'],
@@ -3418,7 +3714,42 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
                 "data_quality_note"    : e.get('data_quality_note'),
                 "head_confidence"      : e.get('head_confidence'),
                 "probs": {cls: round(p, 4) for cls, p in zip(SHOT_CLASSES, e['probs'])},
-            })
+                "early_classified"     : early,
+            }
+
+        # ── IMMEDIATE STREAMING: Emit classified shots right now so the user sees them during processing ──
+        early_confirmed = [e for e in shot_log if e['conf'] >= CONF_THRESHOLD]
+        for e in early_confirmed:
+            ws_emit(ws, loop, _make_shot_message(e, early=True))
+
+        print(
+            "\n[CrickEye] Ball analytics: running YOLO track() on the full video "
+            "(often the longest step — progress prints as [ball …%] until Pass 2 starts).\n"
+        )
+
+        ball_analytics = _run_ball_analytics_optional(
+            video_path, shot_log, fps, orig_w, orig_h, ws=ws, loop=loop, device=device)
+        apply_ball_aware_shot_scoring(shot_log, ball_analytics, orig_w, orig_h)
+        analysis = run_session_analysis(shot_log, session_info)
+
+        pass2_render(video_path, output_path,
+                     None, all_keypoints, shot_log,
+                     lw_vels, rw_vels, bilateral,
+                     fps, total_frames, orig_w, orig_h,
+                     session_info, ws=ws, loop=loop,
+                     ball_frame_overlays=ball_analytics.get('frame_overlays', []),
+                     ball_trajectories=ball_analytics.get('video_trajectories', []))
+
+        save_csv(shot_log, CSV_PATH, session_info['handedness'], session_info['conf'])
+        save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH,
+                  ball_analytics=ball_analytics)
+        print_summary(shot_log, session_info, analysis)
+
+        confirmed_shots = [e for e in shot_log if e['conf'] >= CONF_THRESHOLD]
+
+        # Emit final shots with ball-aware scores
+        for e in confirmed_shots:
+            ws_emit(ws, loop, _make_shot_message(e, early=False))
 
         ws_emit(ws, loop, {
             "type":       "session",

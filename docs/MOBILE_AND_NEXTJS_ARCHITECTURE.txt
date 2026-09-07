@@ -1,0 +1,436 @@
+================================================================================
+CRICKEYE — TECHNICAL ARCHITECTURE & SYSTEM SPECIFICATION
+Mobile & Next.js System Architecture and Technical Specification
+AI-Powered Cricket Biomechanics and Delivery Tracking Platform
+================================================================================
+
+DOCUMENT METADATA
+--------------------------------------------------------------------------------
+Document Version     : 1.0
+Target Platforms     : React Native (iOS / Android), Next.js Web
+Primary Capture      : 60-120 FPS mobile video capture
+Communication        : Wi-Fi LAN / Cloudflare Tunnel
+Core AI              : FastAPI + PyTorch + YOLOv8: Pose + Ball Tracking
+Identity & Storage   : Supabase Auth + PostgreSQL + Object Storage
+--------------------------------------------------------------------------------
+
+
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+CrickEye is an automated biomechanical analysis and delivery-tracking platform
+designed for cricket batting nets and coaching academies. The platform uses
+high-frame-rate mobile video capture and computer vision to analyze batting
+technique and ball movement. Key analytical outputs include pose estimation,
+joint velocity, bat angle, and ball trajectory.
+
+The system utilizes a unified cross-platform mobile capture approach using a
+React Native application powered by VisionCamera and native C++ JSI modules.
+A Next.js web application provides the primary analytics and coaching review
+interface.
+
+A central FastAPI computer-vision engine processes uploaded video, while a
+Node.js/Express service provides LLM-based coaching insights and Supabase
+administration. Supabase supplies authentication, PostgreSQL persistence,
+Row-Level Security, and object storage.
+
+
+2. ARCHITECTURE PRINCIPLES AND CONSTRAINTS
+--------------------------------------------------------------------------------
+2.1 Core Principles:
+  * Native-first mobile camera access for high-performance capture via VisionCamera JSI.
+  * Wireless-only communication during field operation.
+  * Centralized AI processing rather than duplicating heavy inference on clients.
+  * Shared backend services for React Native mobile capture and Next.js web presentation.
+  * Role-based Player/Coach access with PostgreSQL Row-Level Security (RLS).
+  * Real-time processing telemetry through WebSockets.
+  * Range-based video playback through HTTP 206 Partial Content.
+
+2.2 Explicit Constraints:
+  * No Capacitor, Cordova, or PhoneGap wrappers.
+  * No USB tethering or USB-dependent production communication.
+  * Wireless transport through Wi-Fi LAN and Cloudflare Tunnel.
+  * Stable 60 FPS minimum capture; 120 FPS preferred where supported.
+
+
+3. SYSTEM ARCHITECTURE
+--------------------------------------------------------------------------------
+The platform is organized into five major architectural layers:
+
+  [ Mobile Ingestion Layer: React Native (VisionCamera + Native JSI) ]
+                                |
+                                v
+               [ Wireless Transport Layer: Wi-Fi LAN / Cloudflare Tunnel ]
+                                |
+                                v
+  [ CrickEye Processing Layer: FastAPI CV Engine | Node.js LLM & Supabase Service ]
+                                |
+                                v
+     [ Persistence & Identity: Supabase Auth | PostgreSQL + RLS | Object Storage ]
+                                |
+                                v
+  [ Next.js Web Application: App Router | Canvas Biomechanics | Player/Coach Dashboard ]
+
+3.1 Component Responsibilities:
+
+  * React Native:
+      - Technology: VisionCamera, native modules, C++ JSI
+      - Responsibility: Cross-platform camera capture (60-120 FPS), background
+        upload, WebSocket telemetry, analytics review.
+
+  * FastAPI:
+      - Technology: Python, Uvicorn, PyTorch, OpenCV
+      - Responsibility: Video ingestion, HTTP 206 streaming, WebSocket
+        orchestration, CV/AI analysis pipeline.
+
+  * Node.js:
+      - Technology: Express
+      - Responsibility: LLM coach insight generation and Supabase service administration.
+
+  * Supabase:
+      - Technology: Auth (JWT), PostgreSQL + RLS, Object Storage
+      - Responsibility: Identity, relational persistence, RLS policies, raw and
+        annotated video + JSON storage.
+
+  * Next.js:
+      - Technology: React 18, TypeScript, App Router
+      - Responsibility: Analytics dashboard, session review, 2D biomechanics
+        visualization, coach portal.
+
+
+4. MOBILE INGESTION SPECIFICATION (REACT NATIVE)
+--------------------------------------------------------------------------------
+Target audience: Cross-platform players and coaches who want high-performance
+capture and analytics review in one application.
+
+  * Direct Hardware Access:
+    Uses `react-native-vision-camera` with native C++ JSI frame processing,
+    bypassing any WebView DOM overhead.
+
+  * High Frame-Rate Recording:
+    Target capture of 1080p at 60 FPS, or 720p at 120 FPS on supported hardware
+    with hardware audio/video multiplexing.
+
+  * Exposure Control:
+    Manual exposure locking to reduce lighting flicker from net floodlights
+    or changing sunlight.
+
+  * Non-blocking Uploads:
+    Background file streaming through native filesystem bridges over Wi-Fi LAN
+    or remote HTTPS (chunked streaming).
+
+  * Real-Time Telemetry:
+    Native WebSocket connectivity for real-time pipeline telemetry and progress
+    monitoring.
+
+  * Secure Persistence:
+    Supabase JavaScript SDK backed by hardware-encrypted secure storage
+    (Android Keystore / iOS Keychain).
+
+
+5. PHYSICAL CRICKET NET SETUP
+--------------------------------------------------------------------------------
+The physical capture setup directly affects pose, bat-angle, joint-velocity,
+and ball-trajectory measurements:
+
+  Parameter             Recommended Specification       Reason
+  ------------------------------------------------------------------------------
+  Camera Angle          Side-on (90 deg) or             Provides visibility of stance,
+                        45 deg front-offside            backlift, elbow elevation & follow-through.
+  Distance from Batter  4.0 - 6.0 meters                Keeps full body and bat-swing arc in frame.
+  Tripod Height         1.2 - 1.5 meters (chest height) Reduces perspective distortion in joint angles.
+  Frame Rate            60 FPS minimum; 120 FPS pref.   Reduces motion blur during fast bat swings.
+  Exposure              Locked manual; fast shutter     Reduces pose keypoint jitter from motion blur.
+                        (1/500s or faster)
+
+
+6. WIRELESS COMMUNICATION ARCHITECTURE
+--------------------------------------------------------------------------------
+CrickEye is designed for wireless operation. During field use, the capture
+device communicates with the processing server over a local Wi-Fi network or
+through a Cloudflare Tunnel for remote access.
+
+6.1 Local LAN:
+  * Capture phone and processing server connect to the same Wi-Fi 6 router or mobile hotspot.
+  * Communication uses private IP addressing such as `192.168.x.x`.
+  * Targets ultra-low local signaling latency and high LAN transfer throughput.
+
+6.2 Remote / Outdoor Operation:
+  * Processing server runs at academy clubhouse or cloud instance.
+  * Cloudflare Tunnel exposes the required services without conventional port forwarding.
+  * Mobile devices use 4G/5G to upload video and receive WebSocket analysis progress.
+
+6.3 Communication Protocols:
+  * Video Ingestion : HTTP/1.1 or HTTP/2 multipart upload (POST /upload; chunked MP4).
+  * Telemetry       : WebSocket (/ws; progress, frame, processing FPS, recovery).
+  * Video Playback  : HTTP 206 Partial Content (/uploads/{path}; frame-accurate seeking).
+  * AI Coach Insights: REST JSON (/llm-insights; structured session metrics to LLM).
+
+
+7. END-TO-END SESSION WORKFLOW
+--------------------------------------------------------------------------------
+  1. Player records a batting delivery at 60-120 FPS using the React Native app.
+  2. Mobile application saves the recording locally using hardware encoding.
+  3. MP4 is uploaded wirelessly to the FastAPI ingestion endpoint (POST /upload).
+  4. FastAPI creates/returns a session identifier and video path.
+  5. Mobile opens a WebSocket (/ws) and sends the analysis-start action.
+  6. FastAPI activates the analysis pipeline in a background worker.
+  7. YOLOv8-Pose, biomechanics processing, and ball tracking analyze all frames.
+  8. Progress is streamed in real-time to the mobile application and Next.js dashboard.
+  9. Annotated video (H.264 faststart) and metrics JSON are generated.
+ 10. Session status and results are stored in PostgreSQL.
+ 11. Next.js requests LLM insights from the Node.js service (POST /llm-insights).
+ 12. Gemini-based coaching feedback is returned and displayed with analytics.
+
+
+8. AI AND COMPUTER VISION PIPELINE
+--------------------------------------------------------------------------------
+8.1 Pipeline Flow:
+
+  [ Recorded MP4 ]
+         |
+         v
+  [ Frame Extraction / Video Reader (cv2.VideoCapture) ]
+         |
+         +---------------------------------------+
+         |                                       |
+         v                                       v
+  [ YOLOv8-Pose Detection ]               [ Ball Tracking Engine ]
+         |                                       |
+         v                                       v
+  [ Pose Keypoints Extraction ]           - Ball Release
+         |                                - Ball Trajectory
+         v                                - Bounce Zone (Pitch Map)
+  [ Biomechanical Calculations ]          - Line / Length Classification
+   - Joint Angles                                |
+   - Joint Velocity                              |
+   - Head Stability                              |
+   - Elbow Elevation                             |
+   - Bat Angle & Bat Speed                       |
+         |                                       |
+         +-------------------+-------------------+
+                             |
+                             v
+  [ Session Metrics JSON + Annotated Video (H.264) + PostgreSQL Session ]
+
+8.2 Analysis Outputs:
+  * Pose keypoints for shoulders, elbows, wrists, hips, knees, and ankles.
+  * Joint-angle and movement measurements.
+  * Bat angle and bat-speed related metrics.
+  * Head stability and elbow elevation indicators.
+  * Ball release, trajectory, and bounce-zone information.
+  * Shot/event classifications (Drive, Cut, Pull, Defense, etc.).
+
+
+9. NEXT.JS WEB APPLICATION
+--------------------------------------------------------------------------------
+The Next.js web application is the primary analytics, management, and review
+hub for players, coaches, and academy administrators.
+
+9.1 Routes:
+  * /auth/login               : Secure authentication.
+  * /auth/signup              : Account creation with Player/Coach role selection.
+  * /dashboard                : Role-adaptive landing dashboard.
+  * /dashboard/sessions/[id]  : Interactive session analyzer.
+
+9.2 Player Dashboard:
+  * Recent session scores.
+  * Personal-best bat speed.
+  * Consistency trends.
+  * Shot-distribution radar visualization.
+
+9.3 Coach Dashboard:
+  * Academy roster overview.
+  * Multi-player session queue.
+  * Flagged technical errors (collapsed elbow, early head fall, etc.).
+
+9.4 Interactive Session Analyzer:
+  * Synchronized video player with frame-by-frame scrubbing.
+  * HTML5 Canvas 2D biomechanical skeleton overlay.
+  * Ball trajectory visualizer with pitch map, bounce zone, line, and length.
+  * Gemini-powered AI Coach Insights and personalized drill generation.
+
+
+10. BIOMECHANICAL VISUALIZATION ENGINE
+--------------------------------------------------------------------------------
+  * Synchronizes the Canvas overlay with the HTML5 video timecode.
+  * Maps joint keypoints to normalized (x, y) coordinates.
+  * Renders shoulders, elbows, wrists, hips, knees, and ankles.
+  * Uses technique-compliance color coding:
+
+  Indicator      Meaning
+  ------------------------------------------------------------------------------
+  GREEN          Biomechanically optimal (e.g., high elbow on drive, stable head).
+  AMBER / RED    Technical defect (e.g., reaching, loss of balance, closed face).
+
+
+11. AUTHENTICATION, AUTHORIZATION, AND DATA GOVERNANCE
+--------------------------------------------------------------------------------
+11.1 Authentication:
+  * Supabase Auth with JWT.
+  * TLS/HTTPS for token transmission.
+  * Mobile client stores refresh tokens in hardware-encrypted secure storage (Keystore/Keychain).
+
+11.2 Row-Level Security (RLS) Matrix:
+
+  Table      Operation   Player Role         Coach Role
+  ------------------------------------------------------------------------------
+  profiles   SELECT      Own profile only    All player profiles + own profile
+  profiles   UPDATE      Own profile only    Coach-specific settings
+  sessions   SELECT      Own sessions only   All assigned player sessions
+  sessions   INSERT      Own sessions only   Allowed on behalf of player
+  sessions   UPDATE      Own sessions only   Coach remarks / flags allowed
+  sessions   DELETE      Own sessions only   Restricted to owner / admin
+
+
+12. STORAGE MODEL
+--------------------------------------------------------------------------------
+  * Raw MP4 recordings are stored in Supabase Object Storage.
+  * Annotated output videos are stored alongside source recordings.
+  * Structured metrics and analysis results are stored as JSON data (including JSONB session results).
+  * PostgreSQL stores profiles, sessions, and access-controlled application data.
+
+
+13. API AND SERVICE CONTRACT
+--------------------------------------------------------------------------------
+  Service    Endpoint         Protocol    Purpose
+  ------------------------------------------------------------------------------
+  FastAPI    /upload          POST        Receive chunked MP4 upload.
+  FastAPI    /ws              WebSocket   Start and monitor real-time analysis.
+  FastAPI    /uploads/{path}  HTTP 206    HTTP range-based video streaming.
+  Node.js    /llm-insights    POST        Generate coaching feedback from session metrics.
+
+13.1 Example WebSocket Messages:
+
+  Start:
+    { "action": "start", "video_path": "uploads/session_123/video.mp4" }
+
+  Progress:
+    { "type": "progress", "stage": "rendering", "frame": 120, "total": 240, "pct": 50.0, "eta": 8 }
+
+  Complete:
+    { "type": "complete", "total_shots": 3, "confirmed": 3, "output_video": "/assets/analysed_123.mp4", "results": { ... } }
+
+
+14. RECOMMENDED REPOSITORY STRUCTURE
+--------------------------------------------------------------------------------
+  CrickEye/
+  ├── mobile/           # React Native client (VisionCamera + JSI)
+  ├── web/              # Next.js Application (App Router, Tailwind/CSS, Canvas)
+  ├── backend/
+  │   ├── fastapi/      # CV ingestion and orchestration (main.py)
+  │   └── node/         # LLM insights / Supabase service
+  ├── ai/               # Pose, biomechanics, ball analytics
+  ├── database/         # SQL, migrations, policies (Supabase RLS)
+  ├── docs/             # Architecture and project documentation
+  ├── tests/            # Test suites
+  ├── docker/           # Container definitions
+  ├── .env.example
+  ├── docker-compose.yml
+  └── README.md
+
+
+15. DEPLOYMENT TOPOLOGY
+--------------------------------------------------------------------------------
+15.1 Local Practice Nets:
+  [ React Native Phone ] ---Wi-Fi---> [ Wi-Fi 6 Router / Hotspot ]
+                                                |
+                   +----------------------------+----------------------------+
+                   |                            |                            |
+                   v                            v                            v
+          [ FastAPI :8000 ]             [ Node.js :8080 ]            [ Next.js :3000 ]
+
+15.2 Remote / Outdoor Grounds:
+  [ React Native Phone (4G/5G) ] ---> [ Cloudflare Tunnel ]
+                                                |
+                                                v
+               [ Academy / Cloud Server (FastAPI, Node.js, Next.js) ]
+                                                |
+                                                v
+                   [ Supabase (Storage / PostgreSQL / Auth) ]
+
+
+16. ENGINEERING ROADMAP
+--------------------------------------------------------------------------------
+  Phase      Planned Work                                                  Schedule
+  ----------------------------------------------------------------------------------------
+  Phase 1    Wireless endpoint hardening: Cloudflare Tunnel & LAN discov.  2026-09-01 to 2026-09-12
+  Phase 2    React Native VisionCamera; C++ frame processing; reconnect    2026-09-13 to 2026-10-05
+  Phase 3    Next.js App Router; Supabase RLS/Auth; Canvas; Gemini Card   2026-10-06 to 2026-10-27
+  Phase 4    Cricket net field testing; production deploy & benchmarks     2026-10-28 to 2026-11-10
+
+
+17. TECHNOLOGY DECISION MATRIX
+--------------------------------------------------------------------------------
+  Layer            Selected Technology             Alternative Rejected    Rationale
+  ----------------------------------------------------------------------------------------
+  Mobile Capture   React Native (VisionCamera+JSI) Capacitor / Cordova     Direct native camera access,
+                                                                           high FPS, no WebView lag.
+  Data Transport   Wi-Fi LAN + Cloudflare Tunnel   USB / ADB tethering     Wireless operation and flexible
+                                                                           tripod placement in nets.
+  Web Presentation Next.js App Router + TypeScript Traditional SPA         Unified dashboard, server-
+                                                                           side auth and fast routing.
+  AI Inference     FastAPI + PyTorch               In-browser WASM         Centralized heavy CV compute
+                                                                           prevents mobile device drain.
+  Database & Auth  Supabase (PostgreSQL + RLS)     Firebase / MongoDB      Strict relational model and
+                                                                           granular Player/Coach RLS.
+
+
+18. OPERATIONAL REQUIREMENTS
+--------------------------------------------------------------------------------
+  * Camera must remain stable on a tripod during capture.
+  * Exposure should be locked where supported.
+  * Fast shutter settings (1/500s+) should be used for high-speed batting footage.
+  * The capture device should have sufficient local storage for offline buffering.
+  * The Wi-Fi network should be tested before a practice session.
+  * The processing server must have the required Python, PyTorch, and model runtime environment.
+  * Remote operation requires a functioning Cloudflare Tunnel configuration.
+
+
+19. RISKS AND MITIGATIONS
+--------------------------------------------------------------------------------
+  Risk                     Impact                     Mitigation
+  ------------------------------------------------------------------------------
+  Motion blur              Pose & ball tracking error Use 60-120 FPS, fast shutter / locked exposure.
+  Wi-Fi fluctuation        Upload interruption        Local buffering and background retry handling.
+  Long recording           Thermal / battery pressure Hardware codec and controlled capture settings.
+  Poor camera placement    Incorrect biomechanics     Follow 4-6m distance, 1.2-1.5m height tripod guidelines.
+  Connectivity failure     No live telemetry          Use LAN mode when possible + auto-reconnect.
+  Unauthorized data access Privacy / security risk    JWT authentication + PostgreSQL RLS policies.
+
+
+20. ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  * A supported mobile device running React Native can capture footage at target frame rate.
+  * Video can be uploaded without USB tethering.
+  * The system can create a processing session and report its status.
+  * The FastAPI pipeline can process supported video and produce analysis output.
+  * Progress can be delivered over WebSocket in real time.
+  * The Next.js application can play source/annotated video and display overlays.
+  * Player and Coach access follows the defined RLS rules.
+  * LLM coaching insights can be requested from structured session metrics.
+  * The system works over local Wi-Fi and supports remote operation via Cloudflare Tunnel.
+
+
+21. CONCLUSION
+--------------------------------------------------------------------------------
+CrickEye is specified as a wireless, multi-client cricket biomechanics platform.
+Its architecture separates high-performance mobile capture from centralized
+computer-vision processing and web-based analytics. React Native provides the
+cross-platform mobile capture layer, Next.js provides the analytics and coaching
+interface, FastAPI hosts the computer-vision pipeline, Node.js provides LLM coach
+insights, and Supabase provides identity, relational persistence, storage, and
+row-level access control.
+
+The architecture intentionally excludes Capacitor/Cordova-style wrappers and
+USB-dependent production communication. This preserves direct native camera access
+and supports practical camera placement in cricket nets.
+
+
+22. SOURCE BASIS AND DOCUMENTATION NOTE
+--------------------------------------------------------------------------------
+This document is a formalized and reorganized version of the supplied CrickEye
+Mobile & Next.js System Architecture & Specification. It preserves the supplied
+technologies, constraints, interfaces, physical setup guidance, security model,
+deployment scenarios, roadmap, and technology rationale while focusing mobile
+capture purely on the cross-platform React Native stack.
+================================================================================

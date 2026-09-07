@@ -14,7 +14,7 @@ const BallAnalytics = (() => {
   let deliveries = [];
   let fps = 30;
   let calibration = null;
-  let showCalib = true;
+  let showCalib = false;
   let showTrail = true;
   let togglesWired = false;
   let pitchMapPulseRaf = null;
@@ -1015,20 +1015,7 @@ const BallAnalytics = (() => {
       });
     }
 
-    if (showCalib && calibration && calibration.axis_a_norm && calibration.axis_b_norm) {
-      const ax = calibration.axis_a_norm[0] * r.vw * r.scale + r.ox;
-      const ay = calibration.axis_a_norm[1] * r.vh * r.scale + r.oy;
-      const bx = calibration.axis_b_norm[0] * r.vw * r.scale + r.ox;
-      const by = calibration.axis_b_norm[1] * r.vh * r.scale + r.oy;
-      octx.setLineDash([8, 5]);
-      octx.strokeStyle = 'rgba(168, 85, 247, 0.75)';
-      octx.lineWidth = 2;
-      octx.beginPath();
-      octx.moveTo(ax, ay);
-      octx.lineTo(bx, by);
-      octx.stroke();
-      octx.setLineDash([]);
-    }
+    // (Calibration axis overlay removed)
   }
 
   return {

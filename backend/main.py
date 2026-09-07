@@ -21,6 +21,7 @@ import json
 import logging
 import mimetypes
 import os
+import subprocess
 import sys
 import uuid
 from pathlib import Path
@@ -30,7 +31,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse, Response
+from fastapi.responses import FileResponse, StreamingResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 # ── Suppress Windows WinError 10054 noise ────────────────────────────────────
@@ -43,6 +44,7 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 
 # Load backend/.env so SUPABASE_* (and other vars) are available to FastAPI.
 load_dotenv(BASE_DIR / "backend" / ".env")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,garbage_collection_threshold:0.8")
 
 sys.path.insert(0, str(BASE_DIR))
 
@@ -109,6 +111,91 @@ async def public_config():
     }
 
 
+@app.post("/llm-insights")
+async def llm_insights_proxy(request: Request):
+    """
+    Forwards LLM insight requests to the Node backend on port 8080 if running,
+    or falls back gracefully so the client UI remains functional.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    def _call_node():
+        import urllib.request
+        node_port = int(os.getenv("PORT", "8080"))
+        url = f"http://127.0.0.1:{node_port}/llm-insights"
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    loop = asyncio.get_event_loop()
+    try:
+        data = await loop.run_in_executor(None, _call_node)
+        return data
+    except Exception as err:
+        return {"ok": True, "llm_insights": None, "fallback_used": True, "error": str(err)}
+
+
+# ── WebM → MP4 conversion helper ──────────────────────────────────────────────
+
+def _get_ffmpeg_exe() -> str:
+    """Return path to a usable ffmpeg binary (bundled via imageio-ffmpeg or system PATH)."""
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pass
+    # Fallback: system ffmpeg
+    import shutil
+    path = shutil.which("ffmpeg")
+    if path:
+        return path
+    raise FileNotFoundError(
+        "ffmpeg not found. Install imageio-ffmpeg (`pip install imageio-ffmpeg`) "
+        "or add ffmpeg to your system PATH."
+    )
+
+
+def _convert_webm_to_mp4(src: Path) -> Path:
+    """
+    Convert a .webm file to .mp4 (H.264) so OpenCV can reliably read it.
+    Returns the path to the new .mp4 file.  Raises on failure.
+    """
+    dst = src.with_suffix(".mp4")
+    ffmpeg = _get_ffmpeg_exe()
+    cmd = [
+        ffmpeg,
+        "-y",                   # overwrite output
+        "-i", str(src),         # input
+        "-c:v", "libx264",      # H.264 video codec
+        "-preset", "ultrafast", # fast encoding (quality is fine for analysis)
+        "-pix_fmt", "yuv420p",  # broad compatibility
+        "-an",                  # drop audio (not needed for cricket analysis)
+        str(dst),
+    ]
+    print(f"[CrickEye] Converting WebM -> MP4: {src.name} -> {dst.name}")
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if result.returncode != 0 or not dst.exists() or dst.stat().st_size == 0:
+        stderr_tail = (result.stderr or "")[-500:]
+        raise RuntimeError(
+            f"WebM -> MP4 conversion failed (exit {result.returncode}): {stderr_tail}"
+        )
+    print(f"[CrickEye] Conversion done: {dst.stat().st_size:,} bytes")
+    # Remove the original .webm to save disk space
+    try:
+        src.unlink()
+    except OSError:
+        pass
+    return dst
+
+
 # ── File upload endpoint ───────────────────────────────────────────────────────
 
 @app.post("/upload")
@@ -130,12 +217,41 @@ async def upload_video(file: UploadFile = File(...)):
                 break
             out.write(chunk)
 
-    relative_path = str(dest.relative_to(BASE_DIR))
+    file_size = dest.stat().st_size
+
+    # ── Guard: reject empty (0-byte) uploads ──────────────────────────────
+    if file_size == 0:
+        # Clean up the empty file and directory
+        try:
+            dest.unlink()
+            session_dir.rmdir()
+        except OSError:
+            pass
+        print(f"[CrickEye Upload] REJECTED empty file: session={session_id}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": "The uploaded video file is empty (0 bytes). "
+                     "If using the webcam, please ensure the recording completes before submitting."},
+        )
 
     print(
         f"[CrickEye Upload] session={session_id}  file={dest}  "
-        f"size={dest.stat().st_size:,} bytes"
+        f"size={file_size:,} bytes"
     )
+
+    # ── Convert .webm → .mp4 for reliable OpenCV processing ───────────────
+    if ext.lower() == ".webm":
+        try:
+            dest = _convert_webm_to_mp4(dest)
+        except Exception as conv_err:
+            print(f"[CrickEye Upload] WebM conversion failed: {conv_err}")
+            return JSONResponse(
+                status_code=422,
+                content={"error": f"Could not convert WebM video to MP4: {conv_err}. "
+                         "Try uploading an MP4 file instead."},
+            )
+
+    relative_path = str(dest.relative_to(BASE_DIR))
 
     return {"session_id": session_id, "video_path": relative_path}
 

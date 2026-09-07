@@ -1,6 +1,9 @@
 import json
+import os
 import sys
 from pathlib import Path
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128,garbage_collection_threshold:0.8")
 
 # Ensure project root is importable.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent

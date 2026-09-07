@@ -2541,23 +2541,470 @@ body {
 .proc-stats { display: flex; gap: 24px; }
 .proc-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .proc-stat-val { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: #F1F5F9; }
-.proc-stat-lbl { font-family: var(--font-mono); font-size: 0.48rem; color: #64748B; letter-spacing: 0.14em; }
 .error-text { color: #EF4444 !important; }
 
-/* ── Start panel ── */
+/* ── Live Shot Cards in Processing Overlay ── */
+.proc-live-shots {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.proc-shot-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-left: 4px solid #06B6D4;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  animation: procShotPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+}
+@keyframes procShotPop {
+  0% { opacity: 0; transform: translateY(10px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.proc-shot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.proc-shot-pill {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #06B6D4;
+  background: rgba(6, 182, 212, 0.14);
+}
+.proc-shot-conf {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #10B981;
+  font-weight: 700;
+}
+.proc-shot-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.proc-shot-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.proc-shot-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+.proc-tag-speed {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #FBBF24;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.proc-tag-stance {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #CBD5E1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.proc-tag-score {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34D399;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.ctrl-btn--accent {
+  background: rgba(6, 182, 212, 0.15) !important;
+  border-color: rgba(6, 182, 212, 0.45) !important;
+  color: #06B6D4 !important;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ctrl-btn--accent:hover {
+  background: rgba(6, 182, 212, 0.28) !important;
+  border-color: #06B6D4 !important;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.35);
+}
+
+/* ── Start panel & Capture Modal ── */
 #startPanel {
   position: absolute; inset: 0; z-index: 15;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   background: rgba(8,12,20,.97);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
-.start-title  { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; color: #F1F5F9; letter-spacing: 0.04em; }
+.start-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+}
+.start-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.start-title  { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: #F1F5F9; letter-spacing: 0.04em; }
+
+.start-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 4px;
+  width: 100%;
+  max-width: 320px;
+}
+.start-tab {
+  flex: 1;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #94A3B8;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.start-tab:hover {
+  color: #F1F5F9;
+  background: rgba(255, 255, 255, 0.06);
+}
+.start-tab.active {
+  background: #06B6D4;
+  color: #080C14;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+}
+
+.start-tab-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+}
+
 .start-form   { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; }
 .start-input  { width: 100%; padding: 10px 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(6,182,212,.2); border-radius: 10px; color: #F1F5F9; font-family: var(--font-mono); font-size: 0.7rem; outline: none; transition: border-color .2s; box-sizing: border-box; }
 .start-input:focus       { border-color: #06B6D4; }
 .start-input::placeholder{ color: #334155; }
-.start-btn { padding: 12px; background: rgba(6,182,212,.1); border: 1px solid rgba(6,182,212,.4); border-radius: 10px; color: #06B6D4; font-family: var(--font-display); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.08em; cursor: pointer; transition: all .2s; }
+.start-btn { width: 100%; padding: 11px; background: rgba(6,182,212,.1); border: 1px solid rgba(6,182,212,.4); border-radius: 10px; color: #06B6D4; font-family: var(--font-display); font-size: 0.88rem; font-weight: 700; letter-spacing: 0.08em; cursor: pointer; transition: all .2s; }
 .start-btn:hover     { background: rgba(6,182,212,.18); border-color: #06B6D4; box-shadow: 0 0 20px rgba(6,182,212,.2); }
 .start-btn:disabled  { opacity: .4; cursor: not-allowed; }
+
+/* ── Live Webcam Viewport & Overlays ── */
+.webcam-viewport-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 230px;
+  background: #020617;
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#webcamLivePreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.webcam-alignment-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.guide-box {
+  border: 1px dashed rgba(6, 182, 212, 0.45);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: rgba(6, 182, 212, 0.75);
+  letter-spacing: 0.1em;
+  background: rgba(6, 182, 212, 0.04);
+}
+.guide-head {
+  width: 65px;
+  height: 38px;
+  margin: 0 auto;
+}
+.guide-crease {
+  width: 85%;
+  height: 20px;
+  margin: 0 auto;
+  border-color: rgba(16, 185, 129, 0.5);
+  color: rgba(16, 185, 129, 0.8);
+  background: rgba(16, 185, 129, 0.04);
+}
+.guide-center-axis {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  border-left: 1px dotted rgba(6, 182, 212, 0.25);
+}
+.webcam-rec-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #EF4444;
+  backdrop-filter: blur(4px);
+  z-index: 5;
+}
+.rec-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 8px #EF4444;
+  animation: pulseRecDot 0.8s infinite alternate;
+}
+@keyframes pulseRecDot {
+  0% { opacity: 0.3; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+.webcam-countdown-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 20, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  z-index: 10;
+  animation: fadeIn 0.2s ease;
+}
+.webcam-countdown-num {
+  font-family: var(--font-display);
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #06B6D4;
+  text-shadow: 0 0 24px rgba(6, 182, 212, 0.8);
+  line-height: 1;
+}
+.webcam-countdown-sub {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #E2E8F0;
+  letter-spacing: 0.12em;
+}
+.webcam-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.webcam-device-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 170px;
+}
+.webcam-select {
+  flex: 1;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #F1F5F9;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  outline: none;
+  cursor: pointer;
+}
+.webcam-select option {
+  background: #0F172A;
+  color: #F1F5F9;
+}
+.webcam-tool-btn {
+  padding: 5px 8px;
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 8px;
+  color: #06B6D4;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.webcam-tool-btn:hover {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: #06B6D4;
+}
+.webcam-durations {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.webcam-dur-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: #94A3B8;
+  margin-right: 2px;
+}
+.webcam-dur-btn {
+  padding: 4px 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #CBD5E1;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.webcam-dur-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+.webcam-dur-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10B981;
+  color: #10B981;
+}
+.webcam-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.start-btn--record {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(16, 185, 129, 0.25) 100%) !important;
+  border-color: #06B6D4 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+  font-size: 0.84rem !important;
+}
+.start-btn--record:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.4) 0%, rgba(16, 185, 129, 0.4) 100%) !important;
+  box-shadow: 0 0 24px rgba(6, 182, 212, 0.5);
+}
+.webcam-secondary-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.webcam-manual-btn,
+.webcam-cancel-btn,
+.webcam-retake-btn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #94A3B8;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.webcam-manual-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+.webcam-cancel-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+.webcam-cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+.webcam-preview-recorded {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+#webcamRecordedPreview {
+  width: 100%;
+  max-height: 160px;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.recorded-title {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: #10B981;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+.recorded-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.webcam-info-badge {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: #64748B;
+  letter-spacing: 0.06em;
+}
+
 .ws-status { font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.1em; display: flex; align-items: center; gap: 6px; color: #94A3B8; }
 .ws-dot { width: 6px; height: 6px; border-radius: 50%; }
 .ws-dot.connected    { background: #10B981; box-shadow: 0 0 6px #10B981; }

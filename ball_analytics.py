@@ -8,10 +8,12 @@ explicit reliability scores — see readme.md "Ball Analytics Module".
 from __future__ import annotations
 
 import asyncio
+import gc
 import json
 import logging
 import math
 import os
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128,garbage_collection_threshold:0.8")
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -975,6 +977,7 @@ def run_ball_analytics(
     frame_h: int,
     ws=None,
     loop=None,
+    device: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     Full ball pipeline. Never raises — returns error object on failure.
@@ -1051,7 +1054,8 @@ def run_ball_analytics(
     if cv2 is not None:
         _cap = cv2.VideoCapture(str(video_path))
         if _cap.isOpened():
-            total_video_frames = int(_cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
+            raw_f = _cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            total_video_frames = int(raw_f) if raw_f and raw_f > 0 and raw_f < 1e8 else 0
             _cap.release()
 
     _emit(
@@ -1068,6 +1072,7 @@ def run_ball_analytics(
         },
     )
 
+    model = None
     try:
         os.environ.setdefault("YOLO_VERBOSE", "false")
         from ultralytics import YOLO
@@ -1080,6 +1085,9 @@ def run_ball_analytics(
         out["error"] = f"YOLO load failed: {e}"
         out["enabled"] = False
         return out
+
+    # Force garbage collection before inference to reclaim memory from earlier stages
+    gc.collect()
 
     # predict = per-frame detect (matches standalone scripts); track = ByteTrack IDs (can diverge).
     yolo_mode = _senv("BALL_YOLO_MODE", "predict").strip().lower()
@@ -1106,13 +1114,52 @@ def run_ball_analytics(
     except ImportError:
         has_torch = False
 
-    dev_pref = _senv("CRICKEYE_DEVICE", "").strip().lower()
-    if dev_pref == "cpu":
-        yolo_device = "cpu"
-    elif dev_pref in ("cuda", "gpu"):
-        yolo_device = 0 if (has_torch and torch.cuda.is_available()) else "cpu"
+    if has_torch and torch.cuda.is_available():
+        gc.collect()
+        try:
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
+        except Exception:
+            pass
+
+    if device is not None:
+        if str(device) == "cpu":
+            yolo_device = "cpu"
+        elif "cuda" in str(device):
+            if has_torch and torch.cuda.is_available():
+                try:
+                    free_mem, _ = torch.cuda.mem_get_info()
+                    if free_mem >= 500 * 1024 * 1024:
+                        yolo_device = 0
+                    else:
+                        print(f"[ball_analytics] Low GPU VRAM ({free_mem // (1024*1024)}MB free); running ball tracking on CPU.")
+                        yolo_device = "cpu"
+                except Exception:
+                    yolo_device = 0
+            else:
+                yolo_device = "cpu"
+        else:
+            yolo_device = device
     else:
-        yolo_device = 0 if (has_torch and torch.cuda.is_available()) else "cpu"
+        dev_pref = _senv("CRICKEYE_DEVICE", "").strip().lower()
+        if dev_pref == "cpu":
+            yolo_device = "cpu"
+        elif dev_pref in ("cuda", "gpu"):
+            yolo_device = 0 if (has_torch and torch.cuda.is_available()) else "cpu"
+        else:
+            if has_torch and torch.cuda.is_available():
+                try:
+                    free_mem, _ = torch.cuda.mem_get_info()
+                    yolo_device = 0 if free_mem >= 500 * 1024 * 1024 else "cpu"
+                except Exception:
+                    yolo_device = 0
+            else:
+                yolo_device = "cpu"
+
+    progress_every = max(1, _ienv("BALL_TRACK_PROGRESS_EVERY", 25))
+    t_track0 = time.time()
+    max_ri = -1
 
     try:
         if yolo_mode == "track":
@@ -1147,48 +1194,73 @@ def run_ball_analytics(
                     f"imgsz={predict_imgsz} device={yolo_device} (same family as model.predict(save=True) workflows)"
                 )
 
-        progress_every = max(1, _ienv("BALL_TRACK_PROGRESS_EVERY", 25))
-        t_track0 = time.time()
-        max_ri = -1
-        for ri, r in enumerate(results):
-            # Stream order matches sequential decode (same indexing as Pass 2 / all_frames_rgb).
-            fi = int(ri)
-            max_ri = fi
-            if has_torch and torch.cuda.is_available() and fi % 100 == 0:
-                torch.cuda.empty_cache()
-            if total_video_frames > 0 and fi > 0 and fi % progress_every == 0:
-                elapsed = time.time() - t_track0
-                pct = fi / total_video_frames * 100.0
-                eta = (elapsed / fi) * (total_video_frames - fi) if fi else 0.0
-                _emit(
-                    ws,
-                    loop,
-                    {
-                        "type": "progress",
-                        "stage": "ball_tracking",
-                        "frame": fi,
-                        "total": total_video_frames,
-                        "pct": round(pct, 1),
-                        "eta": round(eta),
-                    },
-                )
-                if not _quiet_console():
-                    print(
-                        f"  [ball {pct:5.1f}%] frame {fi}/{total_video_frames}  ETA {eta:.0f}s"
+        try:
+            for ri, r in enumerate(results):
+                # Stream order matches sequential decode (same indexing as Pass 2 / all_frames_rgb).
+                fi = int(ri)
+                max_ri = fi
+                if has_torch and torch.cuda.is_available() and fi % 60 == 0:
+                    try:
+                        if torch.cuda.memory_reserved() > 1024 * 1024 * 1024:
+                            torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+                if fi % 25 == 0:
+                    gc.collect()  # Periodic RAM cleanup during long inference
+                if total_video_frames > 0 and fi > 0 and fi % progress_every == 0:
+                    elapsed = time.time() - t_track0
+                    pct = fi / total_video_frames * 100.0
+                    eta = (elapsed / fi) * (total_video_frames - fi) if fi else 0.0
+                    _emit(
+                        ws,
+                        loop,
+                        {
+                            "type": "progress",
+                            "stage": "ball_tracking",
+                            "frame": fi,
+                            "total": total_video_frames,
+                            "pct": round(pct, 1),
+                            "eta": round(eta),
+                        },
                     )
-            elif total_video_frames <= 0 and fi > 0 and fi % progress_every == 0:
-                elapsed = time.time() - t_track0
-                if not _quiet_console():
-                    print(f"  [ball] frame {fi}  elapsed {elapsed:.0f}s")
+                    if not _quiet_console():
+                        print(
+                            f"  [ball {pct:5.1f}%] frame {fi}/{total_video_frames}  ETA {eta:.0f}s"
+                        )
+                elif total_video_frames <= 0 and fi > 0 and fi % progress_every == 0:
+                    elapsed = time.time() - t_track0
+                    if not _quiet_console():
+                        print(f"  [ball] frame {fi}  elapsed {elapsed:.0f}s")
 
-            if r.boxes is None or len(r.boxes) == 0:
-                continue
-            xyxy = r.boxes.xyxy.cpu().numpy()
-            confs = r.boxes.conf.cpu().numpy()
+                if r.boxes is None or len(r.boxes) == 0:
+                    continue
+                xyxy = r.boxes.xyxy.cpu().numpy()
+                confs = r.boxes.conf.cpu().numpy()
 
-            if yolo_mode == "track":
-                ids = r.boxes.id
-                if ids is None:
+                if yolo_mode == "track":
+                    ids = r.boxes.id
+                    if ids is None:
+                        jb = int(np.argmax(confs))
+                        x1, y1, x2, y2 = xyxy[jb]
+                        cx = (x1 + x2) / 2.0
+                        cy = (y1 + y2) / 2.0
+                        w = float(x2 - x1)
+                        h = float(y2 - y1)
+                        tracks[0].append((fi, cx, cy, w, h, float(confs[jb])))
+                        continue
+                    ids = ids.cpu().numpy().astype(int)
+                    for j in range(len(xyxy)):
+                        x1, y1, x2, y2 = xyxy[j]
+                        cx = (x1 + x2) / 2.0
+                        cy = (y1 + y2) / 2.0
+                        w = x2 - x1
+                        h = y2 - y1
+                        tid = int(ids[j])
+                        c = float(confs[j])
+                        tracks[tid].append((fi, cx, cy, w, h, c))
+                else:
+                    # Single-ball net: one best detection per frame → synthetic track 0;
+                    # segment_deliveries splits on frame gaps between deliveries.
                     jb = int(np.argmax(confs))
                     x1, y1, x2, y2 = xyxy[jb]
                     cx = (x1 + x2) / 2.0
@@ -1196,27 +1268,91 @@ def run_ball_analytics(
                     w = float(x2 - x1)
                     h = float(y2 - y1)
                     tracks[0].append((fi, cx, cy, w, h, float(confs[jb])))
-                    continue
-                ids = ids.cpu().numpy().astype(int)
-                for j in range(len(xyxy)):
-                    x1, y1, x2, y2 = xyxy[j]
-                    cx = (x1 + x2) / 2.0
-                    cy = (y1 + y2) / 2.0
-                    w = x2 - x1
-                    h = y2 - y1
-                    tid = int(ids[j])
-                    c = float(confs[j])
-                    tracks[tid].append((fi, cx, cy, w, h, c))
+
+                del r
+
+        except Exception as iter_e:
+            err_msg = str(iter_e).lower()
+            is_cuda_err = ("cuda" in err_msg or "out of memory" in err_msg) and yolo_device != "cpu"
+            if is_cuda_err:
+                print(f"[ball_analytics] GPU/CUDA error during ball stream ({iter_e}); retrying remaining on CPU...")
+                if has_torch and torch.cuda.is_available():
+                    try:
+                        torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+                try:
+                    if hasattr(model, "model") and model.model is not None:
+                        model.model.to("cpu")
+                except Exception:
+                    pass
+                yolo_device = "cpu"
+                tracks.clear()
+                # Full clean fallback on CPU
+                if yolo_mode == "track":
+                    results = model.track(
+                        source=str(video_path),
+                        stream=True,
+                        conf=internal_conf,
+                        iou=0.3,
+                        imgsz=min(track_imgsz, 640),
+                        persist=True,
+                        verbose=False,
+                        device="cpu",
+                    )
+                else:
+                    results = model.predict(
+                        source=str(video_path),
+                        stream=True,
+                        conf=predict_conf,
+                        iou=predict_iou,
+                        imgsz=predict_imgsz,
+                        verbose=False,
+                        device="cpu",
+                    )
+                for ri, r in enumerate(results):
+                    fi = int(ri)
+                    max_ri = fi
+                    if fi % 25 == 0:
+                        gc.collect()
+                    if total_video_frames > 0 and fi > 0 and fi % progress_every == 0:
+                        elapsed = time.time() - t_track0
+                        pct = fi / total_video_frames * 100.0
+                        eta = (elapsed / fi) * (total_video_frames - fi) if fi else 0.0
+                        _emit(
+                            ws,
+                            loop,
+                            {
+                                "type": "progress",
+                                "stage": "ball_tracking",
+                                "frame": fi,
+                                "total": total_video_frames,
+                                "pct": round(pct, 1),
+                                "eta": round(eta),
+                            },
+                        )
+                    if r.boxes is None or len(r.boxes) == 0:
+                        continue
+                    xyxy = r.boxes.xyxy.cpu().numpy()
+                    confs = r.boxes.conf.cpu().numpy()
+                    if yolo_mode == "track":
+                        ids = r.boxes.id
+                        if ids is None:
+                            jb = int(np.argmax(confs))
+                            x1, y1, x2, y2 = xyxy[jb]
+                            tracks[0].append((fi, (x1 + x2) / 2.0, (y1 + y2) / 2.0, float(x2 - x1), float(y2 - y1), float(confs[jb])))
+                            continue
+                        ids = ids.cpu().numpy().astype(int)
+                        for j in range(len(xyxy)):
+                            x1, y1, x2, y2 = xyxy[j]
+                            tracks[int(ids[j])].append((fi, (x1 + x2) / 2.0, (y1 + y2) / 2.0, x2 - x1, y2 - y1, float(confs[j])))
+                    else:
+                        jb = int(np.argmax(confs))
+                        x1, y1, x2, y2 = xyxy[jb]
+                        tracks[0].append((fi, (x1 + x2) / 2.0, (y1 + y2) / 2.0, float(x2 - x1), float(y2 - y1), float(confs[jb])))
+                    del r
             else:
-                # Single-ball net: one best detection per frame → synthetic track 0;
-                # segment_deliveries splits on frame gaps between deliveries.
-                jb = int(np.argmax(confs))
-                x1, y1, x2, y2 = xyxy[jb]
-                cx = (x1 + x2) / 2.0
-                cy = (y1 + y2) / 2.0
-                w = float(x2 - x1)
-                h = float(y2 - y1)
-                tracks[0].append((fi, cx, cy, w, h, float(confs[jb])))
+                raise iter_e
 
         if total_video_frames <= 0 and max_ri >= 0:
             total_video_frames = max_ri + 1
@@ -1225,8 +1361,15 @@ def run_ball_analytics(
         out["error"] = str(e)
         return out
     finally:
+        if model is not None:
+            del model
+            model = None
+        gc.collect()
         if has_torch and torch.cuda.is_available():
-            torch.cuda.empty_cache()
+            try:
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
 
     track_segments: List[Dict[str, Any]] = []
     for tid, frames in tracks.items():

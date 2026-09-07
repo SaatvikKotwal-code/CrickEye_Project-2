@@ -1,6 +1,6 @@
 # Final Submission Report
 
-- **Live Demo Link:** [https://installation-radiation-boss-active.trycloudflare.com](https://installation-radiation-boss-active.trycloudflare.com)
+- **Live Demo Link:** [https://macintosh-seating-yield-ultimate.trycloudflare.com](https://macintosh-seating-yield-ultimate.trycloudflare.com)
 
 This file summarizes what is committed for final project submission and what must be explicitly present for successful execution after cloning.
 

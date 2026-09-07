@@ -1,17 +1,26 @@
 # CrickEye Project (Final Submission)
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Cloudflare_Tunnel-orange?style=for-the-badge&logo=cloudflare)](https://installation-radiation-boss-active.trycloudflare.com)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Cloudflare_Tunnel-orange?style=for-the-badge&logo=cloudflare)](https://macintosh-seating-yield-ultimate.trycloudflare.com)
 
-> 🚀 **Live Demo URL:** [https://installation-radiation-boss-active.trycloudflare.com](https://installation-radiation-boss-active.trycloudflare.com)
+> 🚀 **Live Demo URL:** [https://macintosh-seating-yield-ultimate.trycloudflare.com](https://macintosh-seating-yield-ultimate.trycloudflare.com)
 
 CrickEye is a cricket batting analytics platform that combines:
-- Pose-based biomechanics analysis
-- Shot classification and scoring
-- Ball analytics overlays
-- Web dashboard for players/coaches
-- Supabase-backed session storage and role-based access
+- **Live Web Cam capture** with 3-2-1 audio/visual countdown & timed delivery auto-recording
+- **Pose-based biomechanics analysis** (17 body keypoints)
+- **Shot classification and scoring** (deep neural net classifier)
+- **Ball analytics overlays** (Hawkeye trajectory, pitch bounce detection, speed estimation)
+- **Interactive web dashboard** for players and coaches
+- **Supabase-backed session storage** and role-based access control
 
-This repository is prepared for final major-project submission so a reviewer can clone and run it locally.
+## Capture Modes
+
+- 📹 **Live Web Cam**:
+  - Direct browser camera access (built-in webcam, external 60/120 FPS USB net camera, or mobile phone).
+  - Stance Alignment Guide overlay (Head zone, center axis, batsman crease line).
+  - **Timed Delivery Record**: 3-2-1 audio beeps & visual countdown, records 5 seconds (1 ball), auto-stops, and immediately starts AI analysis.
+  - **Manual Record**: Start / Stop recording on demand.
+- 📁 **Video File Upload**:
+  - Drag and drop or browse any MP4, AVI, MOV, or WebM delivery clip.
 
 ## Repository Structure
 
@@ -21,7 +30,7 @@ This repository is prepared for final major-project submission so a reviewer can
 - `components/` - Frontend JS modules
 - `assets/` - Required model files and generated analysis videos
 - `data/` - Session report JSON outputs
-- `docs/` - Technical notes (`docs/ANALYSIS.md`)
+- `docs/` - Technical notes (`docs/ANALYSIS.md`, `docs/MOBILE_AND_NEXTJS_ARCHITECTURE.md`)
 - `tests/` - Unit/integration tests
 - `project_report/` - LaTeX project report sources
 

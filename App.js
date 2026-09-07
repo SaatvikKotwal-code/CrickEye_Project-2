@@ -61,6 +61,7 @@ const headerSessionInfo = document.querySelector('.session-info');
 const shotCount        = document.getElementById('shotCount');
 const overTableBody    = document.getElementById('overTableBody');
 const btnClearWheel    = document.getElementById('btnClearWheel');
+const btnNewCapture    = document.getElementById('btnNewCapture');
 const btnSpeed         = document.getElementById('btnSpeed');
 const btnLoop          = document.getElementById('btnLoop');
 const wagonCanvas      = document.getElementById('wagonWheelCanvas');
@@ -269,6 +270,7 @@ function createProcessingOverlay() {
         <div class="proc-stat"><span class="proc-stat-val" id="procEta">—</span><span class="proc-stat-lbl">ETA</span></div>
         <div class="proc-stat"><span class="proc-stat-val" id="procShots">0</span><span class="proc-stat-lbl">SHOTS FOUND</span></div>
       </div>
+      <div class="proc-live-shots" id="procLiveShots"></div>
     </div>`;
   document.querySelector('.video-wrapper').appendChild(overlay);
   injectOverlayStyles();
@@ -3590,7 +3592,7 @@ async function fetchLlmInsightsForResults(resultsPayload) {
   if (!resultsPayload || typeof resultsPayload !== 'object') return null;
   const baseUrl = (window.CRICKEYE_CONFIG && window.CRICKEYE_CONFIG.backendApiBaseUrl)
     ? String(window.CRICKEYE_CONFIG.backendApiBaseUrl).replace(/\/+$/, '')
-    : 'http://localhost:8080';
+    : '';
   // DGX can take ~40-50s for strict JSON output; keep browser timeout above backend processing window.
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const controller = new AbortController();
@@ -3750,7 +3752,9 @@ let ws = null;
 function connectWebSocket() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
   updateWsStatus('connecting');
-  ws = new WebSocket('ws://localhost:8000/ws');
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host || 'localhost:8000';
+  ws = new WebSocket(`${protocol}//${host}/ws`);
   ws.onopen    = () => { updateWsStatus('connected'); document.getElementById('startBtn')?.removeAttribute('disabled'); };
   ws.onmessage = (e) => { let m; try{m=JSON.parse(e.data);}catch{return;} handleMessage(m); };
   ws.onclose   = () => { updateWsStatus('disconnected'); document.getElementById('startBtn')?.setAttribute('disabled',''); setTimeout(connectWebSocket,3000); };
@@ -3786,30 +3790,90 @@ const STAGE_LABELS = {
 };
 function onStage(msg) {
   updateStageText(msg.message || STAGE_LABELS[msg.stage] || msg.stage);
-  if (msg.stage==='keypoints' && msg.total_frames) updateProcStat('procFrame',`0 / ${msg.total_frames}`);
-  if (msg.stage==='ball_tracking' && msg.total_frames) updateProcStat('procFrame',`0 / ${msg.total_frames}`);
-  if (msg.stage==='rendering') updateProcStat('procFrame',`0 / ${msg.total_frames||'—'}`);
+  const tf = Number(msg.total_frames);
+  if (msg.stage==='keypoints' && tf > 0) updateProcStat('procFrame',`0 / ${tf}`);
+  if (msg.stage==='ball_tracking' && tf > 0) updateProcStat('procFrame',`0 / ${tf}`);
+  if (msg.stage==='rendering') updateProcStat('procFrame',`0 / ${(tf > 0 ? tf : '—')}`);
 }
 function onProgress(msg) {
-  setProgressBar(msg.pct);
-  if (msg.frame&&msg.total) updateProcStat('procFrame',`${msg.frame} / ${msg.total}`);
+  setProgressBar(Math.max(0, Math.min(100, msg.pct || 0)));
+  const f = Number(msg.frame);
+  const t = Number(msg.total);
+  if (f >= 0 && t > 0) updateProcStat('procFrame',`${f} / ${t}`);
   if (msg.eta!==undefined)  updateProcStat('procEta',  msg.eta>0?`${msg.eta}s`:'—');
 }
 
 function onShotReceived(msg) {
-  state.shotLog.push(msg);
-  if (!state.shotStats[msg.label]) state.shotStats[msg.label] = {count:0};
-  state.shotStats[msg.label].count++;
-  const zone = SHOT_ZONE[msg.label];
-  if (zone) state.zoneCounts[zone]++;
-  const ts=msg.timestamp||'00:00.00'; const parts=ts.split(':');
-  state.pendingSpokes.push({timestamp_sec:parseFloat(parts[0])*60+parseFloat(parts[1]||0),label:msg.label,shot_num:msg.shot_num,msg});
-  updateProcStat('procShots',`${state.shotLog.length} confirmed`);
+  const existingIdx = state.shotLog.findIndex(s => s.shot_num === msg.shot_num);
+  if (existingIdx >= 0) {
+    state.shotLog[existingIdx] = msg;
+    const spokeIdx = state.pendingSpokes.findIndex(s => s.shot_num === msg.shot_num);
+    if (spokeIdx >= 0) {
+      state.pendingSpokes[spokeIdx].msg = msg;
+      state.pendingSpokes[spokeIdx].label = msg.label;
+    }
+  } else {
+    state.shotLog.push(msg);
+    if (!state.shotStats[msg.label]) state.shotStats[msg.label] = {count:0};
+    state.shotStats[msg.label].count++;
+    const zone = SHOT_ZONE[msg.label];
+    if (zone) state.zoneCounts[zone]++;
+    const ts = msg.timestamp || '00:00.00';
+    const parts = ts.split(':');
+    state.pendingSpokes.push({
+      timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
+      label: msg.label,
+      shot_num: msg.shot_num,
+      msg
+    });
+  }
+
+  const confirmedCount = state.shotLog.filter(s => s.confirmed !== false).length;
+  updateProcStat('procShots', `${confirmedCount} confirmed`);
+  renderLiveProcShotCard(msg);
+}
+
+function renderLiveProcShotCard(shot) {
+  const container = document.getElementById('procLiveShots');
+  if (!container) return;
+
+  let card = document.getElementById(`procShotCard-${shot.shot_num}`);
+  const shotLabel = (SHOT_LABELS[shot.label] || shot.label || 'Shot').toUpperCase();
+  const color = SHOT_COLORS[shot.label] || '#06B6D4';
+  const confPct = Math.round((shot.conf || 0) * 100);
+  const scoreVal = shot.shot_score != null ? Number(shot.shot_score).toFixed(1) : '—';
+  const speedVal = shot.peak_swing_speed != null ? `${Math.round(shot.peak_swing_speed)} km/h` : '';
+  const stanceVal = shot.handedness || '';
+
+  const html = `
+    <div class="proc-shot-header">
+      <span class="proc-shot-pill" style="border-color:${color}; color:${color};">⚡ SHOT #${shot.shot_num} ANALYSED</span>
+      <span class="proc-shot-conf">${confPct}% CONF</span>
+    </div>
+    <div class="proc-shot-main">
+      <span class="proc-shot-name" style="color:${color};">${shotLabel}</span>
+      <div class="proc-shot-tags">
+        ${speedVal ? `<span class="proc-tag-speed">⚡ ${speedVal}</span>` : ''}
+        ${stanceVal ? `<span class="proc-tag-stance">${stanceVal}</span>` : ''}
+        <span class="proc-tag-score">SCORE: ${scoreVal}/10</span>
+      </div>
+    </div>
+  `;
+
+  if (card) {
+    card.innerHTML = html;
+  } else {
+    card = document.createElement('div');
+    card.id = `procShotCard-${shot.shot_num}`;
+    card.className = 'proc-shot-card';
+    card.innerHTML = html;
+    container.appendChild(card);
+  }
 }
 
 function onComplete(msg, opts = {}) {
   const skipPersist = opts.skipPersist === true;
-  const videoDelayMs = opts.videoDelayMs != null ? opts.videoDelayMs : 1500;
+  const videoDelayMs = opts.videoDelayMs != null ? opts.videoDelayMs : 150;
 
   state.completePayload = msg;
   if (msg.llm_insights && typeof msg.llm_insights === 'object') {
@@ -3834,8 +3898,18 @@ function onComplete(msg, opts = {}) {
   forceHand(handLower, msg.handedness||'RHB', msg.stance_conf||1.0);
   state.drawnSpokes.clear();
 
+  // Pre-render the first shot right away into HUD and Biomech Card so the user sees results immediately
+  if (state.pendingSpokes.length > 0) {
+    const firstSpoke = state.pendingSpokes[0];
+    if (!state.drawnSpokes.has(firstSpoke.shot_num)) {
+      state.drawnSpokes.add(firstSpoke.shot_num);
+      drawSpokeNow(firstSpoke);
+    }
+  }
+  flushDashboard();
+
   const overlay = document.getElementById('processingOverlay');
-  if (overlay) { overlay.style.transition='opacity 0.8s ease'; overlay.style.opacity='0'; setTimeout(()=>overlay.remove(),800); }
+  if (overlay) { overlay.style.transition='opacity 0.6s ease'; overlay.style.opacity='0'; setTimeout(()=>overlay.remove(),600); }
 
   if (!video || !msg.output_video) {
     if (!skipPersist) saveLiveAnalysisResult(msg);
@@ -3866,7 +3940,7 @@ function onComplete(msg, opts = {}) {
     video.addEventListener('play', onReadyUi, { once: true });
 
     video.addEventListener('loadeddata', tryPlay, { once: true });
-    setTimeout(tryPlay, 3000);
+    setTimeout(tryPlay, 2000);
 
     video.addEventListener('error', () => {
       const ve = video.error;
@@ -4034,83 +4108,565 @@ function clearWheelAndReset() {
   console.log('[CrickEye] State cleared.');
 }
 
-// ── Start Panel (v6.4 — file upload) ───────────────────────
-function buildStartPanel() {
+// ── Webcam & Audio State ─────────────────────────────────────
+let currentWebcamStream = null;
+let currentMediaRecorder = null;
+let recordedWebcamChunks = [];
+let webcamCountdownTimer = null;
+let webcamRecTimerInterval = null;
+let selectedWebcamDuration = 5;
+let isWebcamRecording = false;
+
+function stopWebcamStream() {
+  if (currentWebcamStream) {
+    try {
+      currentWebcamStream.getTracks().forEach(track => track.stop());
+    } catch (e) {}
+    currentWebcamStream = null;
+  }
+  if (webcamCountdownTimer) {
+    clearInterval(webcamCountdownTimer);
+    webcamCountdownTimer = null;
+  }
+  if (webcamRecTimerInterval) {
+    clearInterval(webcamRecTimerInterval);
+    webcamRecTimerInterval = null;
+  }
+  isWebcamRecording = false;
+}
+
+function playBeep(freq = 440, duration = 0.12, type = 'sine') {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {}
+}
+
+function getSupportedMimeType() {
+  const types = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4;codecs=h264',
+    'video/mp4'
+  ];
+  for (const t of types) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) {
+      return t;
+    }
+  }
+  return '';
+}
+
+// ── Start Panel (v6.5 — file upload + Live Webcam) ───────────
+function buildStartPanel(options = {}) {
+  const existing = document.getElementById('startPanel');
+  if (existing) existing.remove();
+
+  stopWebcamStream();
+
+  const defaultTab = options.defaultTab || 'upload';
+
   const panel = document.createElement('div');
   panel.id = 'startPanel';
   panel.innerHTML = `
-    <svg width="52" height="52" viewBox="0 0 32 32" fill="none" style="filter:drop-shadow(0 0 12px #06B6D4)">
-      <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.5"/>
-      <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.2" stroke="#06B6D4" stroke-width="1"/>
-      <circle cx="16" cy="16" r="2.5" fill="#06B6D4"/>
-    </svg>
-    <div class="start-title">Start Analysis</div>
-    <div class="start-form">
-      <input type="file" id="videoFileInput" accept="video/*" style="display:none"/>
-      <div class="upload-zone" id="uploadZone">
-        <div class="upload-zone-icon">📁</div>
-        <div class="upload-zone-label" id="uploadZoneLabel">Choose a video file</div>
-        <div class="upload-zone-sub">MP4, AVI, MOV · any resolution</div>
+    <div class="start-header">
+      <div class="start-title-row">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="none" style="filter:drop-shadow(0 0 10px #06B6D4)">
+          <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.5"/>
+          <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.2" stroke="#06B6D4" stroke-width="1"/>
+          <circle cx="16" cy="16" r="2.5" fill="#06B6D4"/>
+        </svg>
+        <div class="start-title">Start Delivery Analysis</div>
       </div>
-      <div class="upload-progress-wrap" id="uploadProgressWrap" style="display:none">
-        <div class="upload-progress-track">
-          <div class="upload-progress-fill" id="uploadProgressFill"></div>
-        </div>
-        <span class="upload-progress-label" id="uploadProgressLabel">Uploading… 0%</span>
+      <div class="start-tabs">
+        <button type="button" class="start-tab ${defaultTab === 'upload' ? 'active' : ''}" id="tabUpload">📁 Upload File</button>
+        <button type="button" class="start-tab ${defaultTab === 'webcam' ? 'active' : ''}" id="tabWebcam">📹 Live Web Cam</button>
       </div>
-      <button class="start-btn" id="startBtn" disabled>▶  RUN CRICKEYE PIPELINE</button>
     </div>
+
+    <!-- TAB 1: FILE UPLOAD -->
+    <div class="start-tab-content" id="uploadTabContent" style="${defaultTab === 'upload' ? 'display:flex' : 'display:none'}">
+      <div class="start-form">
+        <input type="file" id="videoFileInput" accept="video/*" style="display:none"/>
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-zone-icon">📁</div>
+          <div class="upload-zone-label" id="uploadZoneLabel">Choose a video file</div>
+          <div class="upload-zone-sub">MP4, AVI, MOV, WebM · any resolution</div>
+        </div>
+        <div class="upload-progress-wrap" id="uploadProgressWrap" style="display:none">
+          <div class="upload-progress-track">
+            <div class="upload-progress-fill" id="uploadProgressFill"></div>
+          </div>
+          <span class="upload-progress-label" id="uploadProgressLabel">Uploading… 0%</span>
+        </div>
+        <button class="start-btn" id="startBtn" disabled>▶  RUN CRICKEYE PIPELINE</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: LIVE WEBCAM -->
+    <div class="start-tab-content" id="webcamTabContent" style="${defaultTab === 'webcam' ? 'display:flex' : 'display:none'}">
+      <div class="webcam-viewport-wrap">
+        <video id="webcamLivePreview" autoplay playsinline muted></video>
+        <div class="webcam-alignment-guide" id="webcamGuide">
+          <div class="guide-box guide-head">HEAD ZONE</div>
+          <div class="guide-center-axis"></div>
+          <div class="guide-box guide-crease">BATSMAN CREASE &amp; STUMP LINE</div>
+        </div>
+        <div class="webcam-rec-badge" id="webcamRecBadge" style="display:none">
+          <span class="rec-dot-pulse"></span>
+          <span id="webcamRecTimer">REC 00:00</span>
+        </div>
+        <div class="webcam-countdown-overlay" id="webcamCountdownOverlay" style="display:none">
+          <div class="webcam-countdown-num" id="webcamCountdownNum">3</div>
+          <div class="webcam-countdown-sub" id="webcamCountdownSub">GET IN STANCE!</div>
+        </div>
+      </div>
+
+      <div class="webcam-toolbar">
+        <div class="webcam-device-wrap">
+          <select id="webcamDeviceSelect" class="webcam-select" title="Choose Camera"></select>
+          <button type="button" id="webcamToggleGuideBtn" class="webcam-tool-btn" title="Toggle Stance Guide">🎯 Guide</button>
+        </div>
+        <div class="webcam-durations">
+          <span class="webcam-dur-label">Duration:</span>
+          <button type="button" class="webcam-dur-btn" data-sec="3">3s</button>
+          <button type="button" class="webcam-dur-btn active" data-sec="5">5s (1 ball)</button>
+          <button type="button" class="webcam-dur-btn" data-sec="8">8s</button>
+        </div>
+      </div>
+
+      <div class="webcam-actions" id="webcamLiveActions">
+        <button type="button" class="start-btn start-btn--record" id="webcamAutoRecordBtn">
+          ⚡ RECORD DELIVERY (3s COUNTDOWN)
+        </button>
+        <div class="webcam-secondary-actions">
+          <button type="button" class="webcam-manual-btn" id="webcamManualRecordBtn">⏺ Manual Record</button>
+          <button type="button" class="webcam-cancel-btn" id="webcamStopRecordBtn" style="display:none">⏹ Stop &amp; Analyze</button>
+        </div>
+        <div class="webcam-info-badge" id="webcamInfoBadge">Initializing camera…</div>
+      </div>
+    </div>
+
     <div class="ws-status">
-      <div class="ws-dot connecting" id="wsDot"></div>
-      <span id="wsText">CONNECTING…</span>
-    </div>`;
+      <div class="ws-dot ${ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'connecting'}" id="wsDot"></div>
+      <span id="wsText">${ws && ws.readyState === WebSocket.OPEN ? 'CONNECTED (READY)' : 'CONNECTING…'}</span>
+    </div>
+  `;
 
   document.querySelector('.video-wrapper').appendChild(panel);
 
-  const zone      = document.getElementById('uploadZone');
-  const fileInput = document.getElementById('videoFileInput');
-  const label     = document.getElementById('uploadZoneLabel');
-  const startBtn  = document.getElementById('startBtn');
+  const tabUpload          = document.getElementById('tabUpload');
+  const tabWebcam          = document.getElementById('tabWebcam');
+  const uploadContent      = document.getElementById('uploadTabContent');
+  const webcamContent      = document.getElementById('webcamTabContent');
 
-  zone.addEventListener('click', () => fileInput.click());
+  const zone               = document.getElementById('uploadZone');
+  const fileInput          = document.getElementById('videoFileInput');
+  const label              = document.getElementById('uploadZoneLabel');
+  const startBtn           = document.getElementById('startBtn');
 
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-  zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
-  zone.addEventListener('drop', e => {
+  const liveVideo          = document.getElementById('webcamLivePreview');
+  const guideEl            = document.getElementById('webcamGuide');
+  const toggleGuideBtn     = document.getElementById('webcamToggleGuideBtn');
+  const deviceSelect       = document.getElementById('webcamDeviceSelect');
+  const infoBadge          = document.getElementById('webcamInfoBadge');
+  const autoRecordBtn      = document.getElementById('webcamAutoRecordBtn');
+  const manualRecordBtn    = document.getElementById('webcamManualRecordBtn');
+  const stopRecordBtn      = document.getElementById('webcamStopRecordBtn');
+  const countdownOverlay   = document.getElementById('webcamCountdownOverlay');
+  const countdownNum       = document.getElementById('webcamCountdownNum');
+  const countdownSub       = document.getElementById('webcamCountdownSub');
+  const recBadge           = document.getElementById('webcamRecBadge');
+  const recTimer           = document.getElementById('webcamRecTimer');
+  const durationBtns       = Array.from(panel.querySelectorAll('.webcam-dur-btn'));
+
+  tabUpload?.addEventListener('click', () => {
+    tabUpload.classList.add('active');
+    tabWebcam.classList.remove('active');
+    if (uploadContent) uploadContent.style.display = 'flex';
+    if (webcamContent) webcamContent.style.display = 'none';
+    stopWebcamStream();
+  });
+
+  tabWebcam?.addEventListener('click', () => {
+    tabWebcam.classList.add('active');
+    tabUpload.classList.remove('active');
+    if (uploadContent) uploadContent.style.display = 'none';
+    if (webcamContent) webcamContent.style.display = 'flex';
+    initWebcam();
+  });
+
+  zone?.addEventListener('click', () => fileInput.click());
+  zone?.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone?.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+  zone?.addEventListener('drop', e => {
     e.preventDefault(); zone.classList.remove('drag-over');
     const file = e.dataTransfer?.files?.[0];
     if (file) setSelectedFile(file);
   });
 
-  fileInput.addEventListener('change', () => {
+  fileInput?.addEventListener('change', () => {
     const file = fileInput.files?.[0];
     if (file) setSelectedFile(file);
   });
 
-  startBtn.addEventListener('click', startAnalysis);
+  startBtn?.addEventListener('click', () => startAnalysis());
 
   function setSelectedFile(file) {
     fileInput._selectedFile = file;
-    label.textContent = file.name;
-    zone.classList.add('has-file');
-    if (ws && ws.readyState === WebSocket.OPEN) startBtn.removeAttribute('disabled');
+    if (label) label.textContent = file.name;
+    zone?.classList.add('has-file');
+    if (ws && ws.readyState === WebSocket.OPEN && startBtn) startBtn.removeAttribute('disabled');
+  }
+
+  async function getStreamWithFallback(selectedDevId) {
+    const constraintList = [];
+
+    if (selectedDevId && typeof selectedDevId === 'string' && selectedDevId.trim()) {
+      constraintList.push({
+        video: {
+          deviceId: { exact: selectedDevId },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+      constraintList.push({
+        video: {
+          deviceId: { ideal: selectedDevId }
+        },
+        audio: false
+      });
+    }
+
+    constraintList.push({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    });
+
+    constraintList.push({
+      video: true,
+      audio: false
+    });
+
+    let lastErr = null;
+    for (const c of constraintList) {
+      try {
+        const stream = await Promise.race([
+          navigator.mediaDevices.getUserMedia(c),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout starting video source (hardware took too long to initialize or is locked by another application)')), 15000))
+        ]);
+        if (stream) return stream;
+      } catch (err) {
+        lastErr = err;
+        console.warn('[CrickEye Webcam] Constraint attempt failed:', c, err?.message || err);
+        // If permission was explicitly denied, don't keep looping through fallbacks
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          throw err;
+        }
+      }
+    }
+    throw lastErr || new Error('Could not access camera device');
+  }
+
+  async function initWebcam() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (infoBadge) infoBadge.textContent = 'Webcam not supported in this browser.';
+      alert('Camera access is not supported by your current browser.');
+      return;
+    }
+
+    try {
+      if (infoBadge) infoBadge.textContent = 'Connecting camera…';
+      stopWebcamStream();
+      // Brief pause for OS camera handle release
+      await new Promise(r => setTimeout(r, 80));
+
+      const selectedDevId = (deviceSelect && deviceSelect.value) ? deviceSelect.value : undefined;
+      const stream = await getStreamWithFallback(selectedDevId);
+      currentWebcamStream = stream;
+
+      if (liveVideo) {
+        liveVideo.srcObject = stream;
+        await liveVideo.play().catch(() => {});
+      }
+
+      const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      
+      if (deviceSelect) {
+        const currentSelected = deviceSelect.value;
+        deviceSelect.innerHTML = '';
+        videoDevices.forEach((d, idx) => {
+          const opt = document.createElement('option');
+          opt.value = d.deviceId;
+          opt.textContent = d.label || `Camera ${idx + 1}`;
+          if (d.deviceId === currentSelected) opt.selected = true;
+          deviceSelect.appendChild(opt);
+        });
+        if (videoDevices.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Default Camera';
+          deviceSelect.appendChild(opt);
+        }
+      }
+
+      const track = stream.getVideoTracks()[0];
+      if (track && infoBadge) {
+        const settings = track.getSettings ? track.getSettings() : {};
+        const w = settings.width || liveVideo.videoWidth || 1280;
+        const h = settings.height || liveVideo.videoHeight || 720;
+        const fps = settings.frameRate ? Math.round(settings.frameRate) : 30;
+        infoBadge.textContent = `🟢 Ready: ${w}×${h} @ ${fps} FPS`;
+      }
+    } catch (err) {
+      console.error('[CrickEye Webcam] Camera access error:', err);
+      let msg = err.message || 'Permission denied';
+      if (msg.includes('Timeout') || err.name === 'NotReadableError') {
+        msg = 'Camera is in use by another app (Zoom, Teams, Camera app, or another browser tab) or took too long to respond.\n\nPlease close any app using your camera and click "Live Web Cam" again.';
+      }
+      if (infoBadge) infoBadge.textContent = 'Camera unavailable';
+      alert(`Could not access camera:\n\n${msg}`);
+    }
+  }
+
+  deviceSelect?.addEventListener('change', () => {
+    initWebcam();
+  });
+
+  toggleGuideBtn?.addEventListener('click', () => {
+    if (guideEl) {
+      guideEl.style.display = guideEl.style.display === 'none' ? 'flex' : 'none';
+    }
+  });
+
+  durationBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      durationBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedWebcamDuration = Number(btn.getAttribute('data-sec')) || 5;
+    });
+  });
+
+  function recordWebcamStream(durationSec, onFinish) {
+    if (!currentWebcamStream) {
+      alert('Camera stream is not active.');
+      return;
+    }
+
+    recordedWebcamChunks = [];
+    const mimeType = getSupportedMimeType();
+    const options = mimeType ? { mimeType } : {};
+
+    try {
+      currentMediaRecorder = new MediaRecorder(currentWebcamStream, options);
+    } catch (e) {
+      currentMediaRecorder = new MediaRecorder(currentWebcamStream);
+    }
+
+    currentMediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        recordedWebcamChunks.push(e.data);
+      }
+    };
+
+    currentMediaRecorder.onstop = () => {
+      isWebcamRecording = false;
+      const finalMime = currentMediaRecorder.mimeType || mimeType || 'video/webm';
+      const isMp4 = finalMime.includes('mp4');
+      const blob = new Blob(recordedWebcamChunks, { type: finalMime });
+      if (!blob || blob.size === 0) {
+        console.error('[CrickEye] Webcam recording produced an empty file (0 bytes).');
+        alert('Recording failed — no video data was captured.\n\nPlease ensure camera permissions are granted and try again.');
+        const autoBtn = document.getElementById('autoRecordBtn');
+        const manBtn = document.getElementById('manualRecordBtn');
+        if (autoBtn) { autoBtn.disabled = false; autoBtn.textContent = '⚡ RECORD DELIVERY (3s COUNTDOWN)'; }
+        if (manBtn) { manBtn.disabled = false; manBtn.style.display = 'inline-flex'; }
+        return;
+      }
+      const ext = isMp4 ? 'mp4' : 'webm';
+      const file = new File([blob], `webcam_delivery_${Date.now()}.${ext}`, { type: finalMime });
+      if (onFinish) onFinish(file, blob);
+    };
+
+    isWebcamRecording = true;
+    currentMediaRecorder.start(100);
+  }
+
+  autoRecordBtn?.addEventListener('click', async () => {
+    if (isWebcamRecording) return;
+
+    if (!currentWebcamStream) {
+      if (infoBadge) infoBadge.textContent = 'Requesting camera access…';
+      autoRecordBtn.disabled = true;
+      autoRecordBtn.textContent = '⏳ STARTING CAMERA…';
+      await initWebcam();
+      autoRecordBtn.disabled = false;
+      autoRecordBtn.textContent = '⚡ RECORD DELIVERY (3s COUNTDOWN)';
+    }
+
+    if (!currentWebcamStream) {
+      alert('Camera stream could not be started. Please check browser camera permissions.');
+      return;
+    }
+
+    autoRecordBtn.disabled = true;
+    if (manualRecordBtn) manualRecordBtn.disabled = true;
+
+    let countdown = 3;
+    if (countdownOverlay) {
+      countdownOverlay.style.display = 'flex';
+      countdownOverlay.style.zIndex = '99';
+    }
+    if (countdownNum) countdownNum.textContent = String(countdown);
+    if (countdownSub) countdownSub.textContent = 'GET IN BATTING STANCE';
+    playBeep(440, 0.12);
+
+    if (webcamCountdownTimer) {
+      clearInterval(webcamCountdownTimer);
+      webcamCountdownTimer = null;
+    }
+
+    webcamCountdownTimer = setInterval(() => {
+      countdown -= 1;
+      if (countdown > 0) {
+        if (countdownNum) countdownNum.textContent = String(countdown);
+        playBeep(440, 0.12);
+      } else if (countdown === 0) {
+        clearInterval(webcamCountdownTimer);
+        webcamCountdownTimer = null;
+        if (countdownNum) countdownNum.textContent = 'GO!';
+        if (countdownSub) countdownSub.textContent = 'BOWLING & EXECUTE SHOT';
+        playBeep(880, 0.25);
+
+        setTimeout(() => {
+          if (countdownOverlay) countdownOverlay.style.display = 'none';
+        }, 500);
+
+        if (recBadge) recBadge.style.display = 'flex';
+        let elapsed = 0;
+        const durSec = selectedWebcamDuration;
+        if (recTimer) recTimer.textContent = `REC 00:00 / 00:0${durSec}`;
+
+        recordWebcamStream(durSec, (file) => {
+          if (recBadge) recBadge.style.display = 'none';
+          playBeep(660, 0.2);
+          stopWebcamStream();
+          startAnalysis(file);
+        });
+
+        if (webcamRecTimerInterval) clearInterval(webcamRecTimerInterval);
+        webcamRecTimerInterval = setInterval(() => {
+          elapsed += 1;
+          const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+          const ss = String(elapsed % 60).padStart(2, '0');
+          const durSS = String(durSec).padStart(2, '0');
+          if (recTimer) recTimer.textContent = `REC ${mm}:${ss} / 00:${durSS}`;
+          if (elapsed >= durSec) {
+            clearInterval(webcamRecTimerInterval);
+            webcamRecTimerInterval = null;
+            if (currentMediaRecorder && currentMediaRecorder.state === 'recording') {
+              currentMediaRecorder.stop();
+            }
+          }
+        }, 1000);
+      }
+    }, 1000);
+  });
+
+  manualRecordBtn?.addEventListener('click', async () => {
+    if (isWebcamRecording) return;
+
+    if (!currentWebcamStream) {
+      if (infoBadge) infoBadge.textContent = 'Requesting camera access…';
+      await initWebcam();
+    }
+
+    if (!currentWebcamStream) {
+      alert('Camera stream could not be started. Please check camera permissions.');
+      return;
+    }
+
+    if (autoRecordBtn) autoRecordBtn.style.display = 'none';
+    if (manualRecordBtn) manualRecordBtn.style.display = 'none';
+    if (stopRecordBtn) stopRecordBtn.style.display = 'inline-flex';
+    if (recBadge) recBadge.style.display = 'flex';
+    playBeep(880, 0.2);
+
+    let elapsed = 0;
+    if (recTimer) recTimer.textContent = 'REC 00:00';
+
+    recordWebcamStream(0, (file) => {
+      if (recBadge) recBadge.style.display = 'none';
+      stopWebcamStream();
+      startAnalysis(file);
+    });
+
+    if (webcamRecTimerInterval) clearInterval(webcamRecTimerInterval);
+    webcamRecTimerInterval = setInterval(() => {
+      elapsed += 1;
+      const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const ss = String(elapsed % 60).padStart(2, '0');
+      if (recTimer) recTimer.textContent = `REC ${mm}:${ss}`;
+    }, 1000);
+  });
+
+  stopRecordBtn?.addEventListener('click', () => {
+    if (currentMediaRecorder && currentMediaRecorder.state === 'recording') {
+      if (webcamRecTimerInterval) {
+        clearInterval(webcamRecTimerInterval);
+        webcamRecTimerInterval = null;
+      }
+      playBeep(660, 0.2);
+      currentMediaRecorder.stop();
+    }
+  });
+
+  if (defaultTab === 'webcam') {
+    initWebcam();
   }
 }
 
-// ── Start Analysis (v6.4 — upload then run) ────────────────
-async function startAnalysis() {
+// ── Start Analysis (v6.5 — file upload or Live Webcam) ────────
+async function startAnalysis(overrideFile = null) {
   if (!state.currentUser) {
-    alert('Please login before uploading a video.');
+    alert('Please login before uploading or recording a video.');
     return;
   }
 
   const fileInput = document.getElementById('videoFileInput');
-  const file = fileInput?._selectedFile || fileInput?.files?.[0];
+  const file = overrideFile || fileInput?._selectedFile || fileInput?.files?.[0];
 
   if (!file) {
-    alert('Please choose a video file first.');
+    alert('Please choose a video file or record a delivery first.');
     return;
   }
+
+  if (file.size === 0) {
+    alert('The selected video file is empty (0 bytes).\n\nIf using the webcam, please ensure the recording completes before submitting.');
+    return;
+  }
+
+  stopWebcamStream();
 
   const startBtn = document.getElementById('startBtn');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳  Preparing…'; }
@@ -4181,7 +4737,6 @@ async function startAnalysis() {
   if (startBtn) startBtn.textContent = '⏳  UPLOADING…';
 
   try {
-    // Save owner + video in Supabase if reachable, but allow local pipeline to proceed if Supabase fails.
     try {
       if (supabaseClient && state.currentUser) {
         await createSupabaseSessionForLiveAnalysis(file, fileHash);
@@ -4196,7 +4751,7 @@ async function startAnalysis() {
 
     const uploadResult = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:8000/upload');
+      xhr.open('POST', '/upload');
 
       xhr.upload.addEventListener('progress', e => {
         if (!e.lengthComputable) return;
@@ -4210,7 +4765,12 @@ async function startAnalysis() {
           try { resolve(JSON.parse(xhr.responseText)); }
           catch { reject(new Error('Invalid server response')); }
         } else {
-          reject(new Error(`Upload failed: HTTP ${xhr.status}`));
+          let errMsg = `Upload failed: HTTP ${xhr.status}`;
+          try {
+            const body = JSON.parse(xhr.responseText);
+            if (body.error) errMsg = body.error;
+          } catch {}
+          reject(new Error(errMsg));
         }
       });
 
@@ -4225,7 +4785,7 @@ async function startAnalysis() {
 
     createProcessingOverlay();
     clearWheelAndReset();
-    updateStageText('Full analysis — Uploaded clip is being processed (replay cache not used).');
+    updateStageText('Full analysis — Delivery is being processed by AI pipeline.');
     console.info(
       `[CrickEye] Full pipeline — analyse_session will run on ${uploadResult.video_path} (not Supabase replay).`
     );
@@ -4501,6 +5061,14 @@ function init() {
     }
   });
   btnClearWheel?.addEventListener('click', clearWheelAndReset);
+  btnNewCapture?.addEventListener('click', () => {
+    if (!state.currentUser) {
+      alert('Please log in first.');
+      return;
+    }
+    if (video) video.pause();
+    buildStartPanel({ defaultTab: 'webcam' });
+  });
   btnSpeed?.addEventListener('click', cycleSpeed);
   btnLoop?.addEventListener('click', toggleLoop);
   connectWebSocket();
