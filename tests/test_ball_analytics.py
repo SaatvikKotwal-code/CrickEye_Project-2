@@ -1,17 +1,18 @@
 """Unit tests for ball analytics helpers (no YOLO)."""
 import math
 import os
+import sys
 import unittest
 from pathlib import Path
 
-import sys
-
-import numpy as np
-
+# Add project root to sys.path so ball_analytics can be imported from tests directory
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-from ball_analytics import (  # noqa: E402
+import numpy as np  # noqa: E402  # type: ignore
+
+from ball_analytics import (  # noqa: E402  # type: ignore
     PaceConfig,
     _apply_session_ball_speed_rescale,
     _is_moving_ball_segment,
@@ -148,7 +149,7 @@ class TestSessionSpeedRescale(unittest.TestCase):
         self.assertIsNotNone(info)
         self.assertTrue(info.get("applied"))
         self.assertGreater(info["factor"], 1.2)
-        meds = sorted(d["speed_kmh_est"] for d in deliveries)
+        meds = sorted(float(d["speed_kmh_est"]) for d in deliveries)  # type: ignore
         self.assertGreaterEqual(meds[1], 65.0)
 
 
@@ -180,6 +181,7 @@ class TestRealisticSpeed(unittest.TestCase):
 
     def test_keeps_clean_medium(self):
         out, w, rel = _realistic_ball_speed_kmh(72.0, [], 0.9)
+        self.assertIsNotNone(out)
         self.assertAlmostEqual(out, 72.0, places=3)
         self.assertNotIn("speed_adjusted_plausible_floor", w)
 

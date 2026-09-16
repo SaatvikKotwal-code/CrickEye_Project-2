@@ -53,3 +53,16 @@ config.js
 
 # Data files (optional - keep only small demo JSON)
 *.csv
+
+# Android build & local configuration
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+local.properties
+
+# Scratch & temporary visual verification captures
+scratch/
+mobile_screen*.png
+mobile_screenshot.png

@@ -1,8 +1,8 @@
 # CrickEye Project (Final Submission)
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Cloudflare_Tunnel-orange?style=for-the-badge&logo=cloudflare)](https://macintosh-seating-yield-ultimate.trycloudflare.com)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Cloudflare_Tunnel-orange?style=for-the-badge&logo=cloudflare)](https://suggestion-apartment-plane-yet.trycloudflare.com)
 
-> 🚀 **Live Demo URL:** [https://macintosh-seating-yield-ultimate.trycloudflare.com](https://macintosh-seating-yield-ultimate.trycloudflare.com)
+> 🚀 **Live Demo URL:** [https://suggestion-apartment-plane-yet.trycloudflare.com](https://suggestion-apartment-plane-yet.trycloudflare.com)
 
 CrickEye is a cricket batting analytics platform that combines:
 - **Live Web Cam capture** with 3-2-1 audio/visual countdown & timed delivery auto-recording
@@ -21,6 +21,10 @@ CrickEye is a cricket batting analytics platform that combines:
   - **Manual Record**: Start / Stop recording on demand.
 - 📁 **Video File Upload**:
   - Drag and drop or browse any MP4, AVI, MOV, or WebM delivery clip.
+- 📱 **Android Mobile App (`CrickEye-Pro.apk`)**:
+  - Native Android app container for cricket net practice.
+  - Features: screen wake-lock (display stays awake during practice), 3-2-1 countdown tactile haptic vibration, camera front/rear picker, and physical back-button modal navigation.
+  - Download directly from `/download/apk` or the header button, or compile via `build_apk.bat`.
 
 ## Repository Structure
 
@@ -30,7 +34,7 @@ CrickEye is a cricket batting analytics platform that combines:
 - `components/` - Frontend JS modules
 - `assets/` - Required model files and generated analysis videos
 - `data/` - Session report JSON outputs
-- `docs/` - Technical notes (`docs/ANALYSIS.md`, `docs/MOBILE_AND_NEXTJS_ARCHITECTURE.md`)
+- `docs/` - Technical notes (`docs/ANALYSIS.md`, `docs/MOBILE_OPTIMIZATION_AND_DEPLOYMENT_GUIDE.md`, `docs/PRODUCTION_DEPLOYMENT_GUIDE_AND_CHECKLIST.md`, `docs/MOBILE_AND_NEXTJS_ARCHITECTURE.md`)
 - `tests/` - Unit/integration tests
 - `project_report/` - LaTeX project report sources
 

@@ -1,97 +1,377 @@
 {
-  "total_frames": 24,
-  "fps": 30.0,
-  "session_handedness": "UNKNOWN",
-  "stance_conf": 0.0,
+  "total_frames": 165,
+  "fps": 33.42245989304813,
+  "session_handedness": "RHB",
+  "stance_conf": 1.0,
   "speed_unit": "km/h",
   "camera_calibration": {
     "mode": "shoulder_median_scale",
     "description": "pixel_scale = session_median_shoulder_px / ref_shoulder_px; used for biomechanics (bat speed, foot plant, swing intensity baseline). Swing detection / shot clip boundaries use swing_pixel_scale (fixed 1.0) so the video shot classifier always sees the same framing as the legacy detector.",
     "ref_shoulder_px": 85.0,
-    "session_shoulder_px": 31.556674957988076,
-    "pixel_scale": 0.3712549995057421,
+    "session_shoulder_px": 79.75254234858926,
+    "pixel_scale": 0.9382652041010501,
     "swing_pixel_scale": 1.0
   },
   "analysis": {
-    "error": "No confirmed shots to analyse."
+    "session_handedness": "RHB",
+    "stance_conf": 1.0,
+    "shots_total": 2,
+    "shots_confirmed": 2,
+    "best_shot": {
+      "shot_num": 2,
+      "label": "sweep",
+      "shot_score": 7.2,
+      "shot_quality": "Good",
+      "timestamp": "00:02.99"
+    },
+    "worst_shot": {
+      "shot_num": 1,
+      "label": "straight",
+      "shot_score": 6.2,
+      "shot_quality": "Average",
+      "timestamp": "00:00.72"
+    },
+    "session_summary": {
+      "shots_confirmed": 2,
+      "shots_total_detected": 2,
+      "avg_bat_speed_kmh": 22.8,
+      "avg_head_quality_score": 97.0,
+      "avg_symmetry_score": 21.55,
+      "avg_footwork_score": 71.95,
+      "avg_swing_intensity": 85.35,
+      "avg_swing_path_score": 85.45,
+      "avg_execution_score": 64.25,
+      "avg_shot_score": 6.7,
+      "feet_active_rate": 1.0,
+      "fatigue_detected": false,
+      "swing_path_fatigue": false,
+      "trend": {
+        "first_half_swing_intensity": 72.1,
+        "second_half_swing_intensity": 98.6,
+        "first_half_swing_path_score": 92.2,
+        "second_half_swing_path_score": 78.7,
+        "first_half_execution_score": 54.0,
+        "second_half_execution_score": 74.5,
+        "first_half_head_quality_score": 97.0,
+        "second_half_head_quality_score": 97.0,
+        "first_half_symmetry_score": 23.1,
+        "second_half_symmetry_score": 20.0,
+        "first_half_footwork_score": 58.3,
+        "second_half_footwork_score": 85.6
+      },
+      "flags_summary": {
+        "HEAD_LATERAL_DRIFT_count": 0,
+        "HEAD_VERTICAL_DRIFT_count": 0,
+        "HEAD_DUCKING_PULL_count": 0,
+        "STANCE_ASYMMETRIC_count": 2,
+        "ELBOW_COLLAPSE_count": 1,
+        "ELBOW_REACHING_count": 0,
+        "ELBOW_BEHIND_PAD_count": 1,
+        "FLAT_FOOTED_count": 0,
+        "LATE_PLANT_count": 1,
+        "FOOTWORK_LINE_MISMATCH_count": 2,
+        "BAT_SPEED_SESSION_LOCK_count": 0
+      },
+      "by_shot_type": {
+        "straight": {
+          "count": 1,
+          "avg_conf": 0.33,
+          "swing_intensity": {
+            "mean": 72.1,
+            "std": null,
+            "n": 1
+          },
+          "swing_path_score": {
+            "mean": 92.2,
+            "std": null,
+            "n": 1
+          },
+          "execution_score": {
+            "mean": 54.0,
+            "std": null,
+            "n": 1
+          },
+          "head_quality_score": {
+            "mean": 97.0,
+            "std": null,
+            "n": 1
+          },
+          "symmetry_score": {
+            "mean": 23.1,
+            "std": null,
+            "n": 1
+          },
+          "footwork_score": {
+            "mean": 58.3,
+            "std": null,
+            "n": 1
+          },
+          "shot_score": {
+            "mean": 6.2,
+            "std": null,
+            "n": 1
+          },
+          "elbow_breakdown": {
+            "consistent": 0,
+            "cramped": 1,
+            "reaching": 0,
+            "marginal": 0
+          },
+          "head_flag_breakdown": {
+            "HEAD_LATERAL_DRIFT": 0,
+            "HEAD_VERTICAL_DRIFT": 0,
+            "HEAD_DUCKING_PULL": 0
+          }
+        },
+        "sweep": {
+          "count": 1,
+          "avg_conf": 0.3,
+          "swing_intensity": {
+            "mean": 98.6,
+            "std": null,
+            "n": 1
+          },
+          "swing_path_score": {
+            "mean": 78.7,
+            "std": null,
+            "n": 1
+          },
+          "execution_score": {
+            "mean": 74.5,
+            "std": null,
+            "n": 1
+          },
+          "head_quality_score": {
+            "mean": 97.0,
+            "std": null,
+            "n": 1
+          },
+          "symmetry_score": {
+            "mean": 20.0,
+            "std": null,
+            "n": 1
+          },
+          "footwork_score": {
+            "mean": 85.6,
+            "std": null,
+            "n": 1
+          },
+          "shot_score": {
+            "mean": 7.2,
+            "std": null,
+            "n": 1
+          },
+          "elbow_breakdown": {
+            "consistent": 0,
+            "cramped": 0,
+            "reaching": 1,
+            "marginal": 0
+          },
+          "head_flag_breakdown": {
+            "HEAD_LATERAL_DRIFT": 0,
+            "HEAD_VERTICAL_DRIFT": 0,
+            "HEAD_DUCKING_PULL": 0
+          }
+        }
+      }
+    },
+    "coaching_alerts": [
+      {
+        "severity": "MEDIUM",
+        "metric": "Line of ball",
+        "flag": "FOOTWORK_LINE_MISMATCH",
+        "shot_type": "all",
+        "message": "Feet not moving to the line of the ball on 2 shots.",
+        "player_cue": "Step or lean toward where you see the ball in the net \u2014 head stays level.",
+        "drill": "Tee on three lines \u2014 hit 10 balls each stepping slightly toward each line."
+      }
+    ],
+    "shots_with_flags": [
+      {
+        "shot_num": 1,
+        "label": "straight",
+        "shot_score": 6.2,
+        "flags_plain": [
+          "Stance uneven",
+          "Bat too tight to the body",
+          "Front foot down late",
+          "Feet not moving to the line of the ball"
+        ]
+      },
+      {
+        "shot_num": 2,
+        "label": "sweep",
+        "shot_score": 7.2,
+        "flags_plain": [
+          "Stance uneven",
+          "Sweep: bat turning in early",
+          "Feet not moving to the line of the ball"
+        ]
+      }
+    ]
   },
   "shots": [
     {
       "shot_num": 1,
-      "display_num": null,
-      "label": "unclear",
-      "confidence": 0.0,
-      "confirmed": false,
-      "timestamp": "00:00.57",
-      "peak_frame": 17,
-      "travel_px": 70.4,
-      "swing_intensity": 89.4,
-      "swing_intensity_session_relative": 100.0,
-      "swing_path_score": 63.3,
-      "swing_path_label": "OK path",
+      "display_num": 1,
+      "label": "straight",
+      "confidence": 0.3317,
+      "confirmed": true,
+      "timestamp": "00:00.72",
+      "peak_frame": 24,
+      "travel_px": 132.0,
+      "swing_intensity": 72.1,
+      "swing_intensity_session_relative": 73.1,
+      "swing_path_score": 92.2,
+      "swing_path_label": "Smooth arc \u2014 hands through",
       "swing_path_note": "ok",
-      "execution_score": 50.7,
+      "execution_score": 54.0,
       "execution_label": "OK / neutral",
-      "execution_confidence": 0.32,
-      "length_zone": "full",
-      "ball_line_score": null,
-      "execution_length_note": "unclear vs full",
-      "peak_swing_speed": 23.3,
+      "execution_confidence": 1.0,
+      "length_zone": "short",
+      "ball_line_score": 36.0,
+      "execution_length_note": "straight vs short",
+      "peak_swing_speed": 15.6,
       "speed_is_capped": false,
-      "head_quality_score": 94.5,
-      "head_rule_applied": "default",
+      "head_quality_score": 97.0,
+      "head_rule_applied": "straight",
       "head_multiplier_used": 3.6,
-      "head_lateral_ratio": 0.0479,
-      "head_vertical_ratio": 0.2246,
-      "head_frames_used": 6,
+      "head_lateral_ratio": 0.1059,
+      "head_vertical_ratio": 0.1936,
+      "head_frames_used": 14,
       "head_flag": null,
-      "symmetry_score": 96.0,
-      "avg_shoulder_tilt": 1.11,
-      "avg_hip_tilt": 0.23,
-      "stance_flag": null,
-      "elbow_collapse": "unknown",
-      "elbow_delta": null,
-      "setup_elbow_ratio": 1.308,
-      "contact_elbow_ratio": null,
+      "symmetry_score": 23.1,
+      "avg_shoulder_tilt": 17.27,
+      "avg_hip_tilt": 8.38,
+      "stance_flag": "STANCE_ASYMMETRIC",
+      "elbow_collapse": "cramped",
+      "elbow_delta": -0.697,
+      "setup_elbow_ratio": 0.496,
+      "contact_elbow_ratio": 0.151,
       "elbow_behind_pad": false,
-      "elbow_flag": null,
-      "elbow_score": 54.0,
+      "elbow_flag": "ELBOW_COLLAPSE",
+      "elbow_score": 21.0,
       "feet_active": true,
-      "pre_shot_movement": 7.8,
-      "plant_timing": null,
-      "feet_timing_score": 50.0,
-      "feet_timing_band": "unknown",
-      "footwork_score": 60.0,
-      "footwork_flag": null,
-      "shot_score": 7.1,
-      "shot_quality": "Good",
-      "flags": [],
+      "pre_shot_movement": 68.0,
+      "plant_timing": 9,
+      "feet_timing_score": 25.0,
+      "feet_timing_band": "late",
+      "footwork_score": 58.3,
+      "footwork_flag": "LATE_PLANT",
+      "shot_score": 6.2,
+      "shot_quality": "Average",
+      "flags": [
+        "STANCE_ASYMMETRIC",
+        "ELBOW_COLLAPSE",
+        "LATE_PLANT",
+        "FOOTWORK_LINE_MISMATCH"
+      ],
       "head_quality_label": "Very still \u2014 eyes on the ball",
-      "symmetry_label": "Level stance",
-      "swing_intensity_label": "Strong, committed swing",
+      "symmetry_label": "Strongly off balance",
+      "swing_intensity_label": "Solid swing",
       "footwork_label": "Timing inconsistent \u2014 plant a touch earlier",
-      "shot_quality_label": "Good",
-      "flags_plain": [],
+      "shot_quality_label": "Average",
+      "flags_plain": [
+        "Stance uneven",
+        "Bat too tight to the body",
+        "Front foot down late",
+        "Feet not moving to the line of the ball"
+      ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2,
-        "flick": 0.2,
-        "pull": 0.2,
-        "straight": 0.2,
-        "sweep": 0.2
+        "cover": 0.2024,
+        "flick": 0.2479,
+        "pull": 0.0928,
+        "straight": 0.3317,
+        "sweep": 0.1251
+      }
+    },
+    {
+      "shot_num": 2,
+      "display_num": 2,
+      "label": "sweep",
+      "confidence": 0.3004,
+      "confirmed": true,
+      "timestamp": "00:02.99",
+      "peak_frame": 100,
+      "travel_px": 239.4,
+      "swing_intensity": 98.6,
+      "swing_intensity_session_relative": 100.0,
+      "swing_path_score": 78.7,
+      "swing_path_label": "Clean path",
+      "swing_path_note": "ok",
+      "execution_score": 74.5,
+      "execution_label": "Strong execution",
+      "execution_confidence": 0.5536,
+      "length_zone": "short",
+      "ball_line_score": 36.0,
+      "execution_length_note": "sweep vs short",
+      "peak_swing_speed": 29.9,
+      "speed_is_capped": false,
+      "head_quality_score": 97.0,
+      "head_rule_applied": "sweep",
+      "head_multiplier_used": 2.5,
+      "head_lateral_ratio": 0.0317,
+      "head_vertical_ratio": 0.3013,
+      "head_frames_used": 12,
+      "head_flag": null,
+      "symmetry_score": 20.0,
+      "avg_shoulder_tilt": 25.96,
+      "avg_hip_tilt": 15.49,
+      "stance_flag": "STANCE_ASYMMETRIC",
+      "elbow_collapse": "reaching",
+      "elbow_delta": 7.044,
+      "setup_elbow_ratio": 0.132,
+      "contact_elbow_ratio": 1.059,
+      "elbow_behind_pad": true,
+      "elbow_flag": "ELBOW_BEHIND_PAD",
+      "elbow_score": 36.0,
+      "feet_active": true,
+      "pre_shot_movement": 139.6,
+      "plant_timing": 3,
+      "feet_timing_score": 90.0,
+      "feet_timing_band": "on_time",
+      "footwork_score": 85.6,
+      "footwork_flag": null,
+      "shot_score": 7.2,
+      "shot_quality": "Good",
+      "flags": [
+        "STANCE_ASYMMETRIC",
+        "ELBOW_BEHIND_PAD",
+        "FOOTWORK_LINE_MISMATCH"
+      ],
+      "head_quality_label": "Very still \u2014 eyes on the ball",
+      "symmetry_label": "Strongly off balance",
+      "swing_intensity_label": "Strong, committed swing",
+      "footwork_label": "Good foot timing \u2014 stable at contact",
+      "shot_quality_label": "Good",
+      "flags_plain": [
+        "Stance uneven",
+        "Sweep: bat turning in early",
+        "Feet not moving to the line of the ball"
+      ],
+      "data_quality": "good",
+      "data_quality_note": "Reliable read",
+      "head_confidence": "measured",
+      "probs": {
+        "cover": 0.1724,
+        "flick": 0.107,
+        "pull": 0.2215,
+        "straight": 0.1987,
+        "sweep": 0.3004
       }
     }
   ],
   "ball_analytics": {
     "enabled": true,
-    "model_path": "C:\\Users\\HP\\OneDrive\\Desktop\\CRIE Project\\CrickEye_Project\\assets\\best_ball.pt",
+    "model_path": "C:\\Users\\HP\\OneDrive\\Desktop\\CRIE\\assets\\best_ball.pt",
     "calibration": {
       "segment_m": 10.06,
       "axis_a_norm": [
         0.5,
-        0.88
+        0.8800000000000001
       ],
       "axis_b_norm": [
         0.5,
@@ -132,63 +412,989 @@
     "deliveries": [
       {
         "delivery_id": "d1",
+        "track_id": 0,
+        "start_frame": 20,
+        "end_frame": 46,
+        "frame_count": 11,
+        "track_confidence_score": 0.5454,
+        "speed_kmh_est": 45.8,
+        "speed_is_estimated": true,
+        "speed_reliability_score": 0.1114,
+        "speed_warnings": [
+          "tiny_pixel_displacement",
+          "very_low_speed_estimate",
+          "speed_adjusted_plausible_floor"
+        ],
+        "pace_band": "slow",
+        "bounce": {
+          "frame": 26,
+          "confidence": 1.0,
+          "method_note": "curvature_peak",
+          "point_norm": {
+            "nx": 0.5226,
+            "ny": 0.18497,
+            "distance_from_batter_m": 9.9879
+          }
+        },
+        "length": {
+          "label": "short",
+          "distance_m": 9.9879,
+          "confidence": 1.0,
+          "uncertain": false,
+          "reason": null
+        },
+        "pitch_plot": {
+          "trajectory": [
+            {
+              "frame": 20,
+              "nx": 0.52251,
+              "ny": 0.18546,
+              "along_t": 0.9922,
+              "distance_from_batter_m": 9.9816,
+              "conf": 0.5658
+            },
+            {
+              "frame": 21,
+              "nx": 0.52258,
+              "ny": 0.18499,
+              "along_t": 0.99287,
+              "distance_from_batter_m": 9.9883,
+              "conf": 0.5339
+            },
+            {
+              "frame": 22,
+              "nx": 0.52267,
+              "ny": 0.18498,
+              "along_t": 0.99289,
+              "distance_from_batter_m": 9.9885,
+              "conf": 0.5361
+            },
+            {
+              "frame": 25,
+              "nx": 0.52257,
+              "ny": 0.18512,
+              "along_t": 0.99269,
+              "distance_from_batter_m": 9.9864,
+              "conf": 0.5696
+            },
+            {
+              "frame": 26,
+              "nx": 0.5226,
+              "ny": 0.18497,
+              "along_t": 0.9929,
+              "distance_from_batter_m": 9.9886,
+              "conf": 0.5611
+            },
+            {
+              "frame": 27,
+              "nx": 0.52254,
+              "ny": 0.18502,
+              "along_t": 0.99283,
+              "distance_from_batter_m": 9.9879,
+              "conf": 0.5774
+            },
+            {
+              "frame": 28,
+              "nx": 0.52271,
+              "ny": 0.18523,
+              "along_t": 0.99253,
+              "distance_from_batter_m": 9.9849,
+              "conf": 0.5704
+            },
+            {
+              "frame": 29,
+              "nx": 0.52283,
+              "ny": 0.18519,
+              "along_t": 0.99259,
+              "distance_from_batter_m": 9.9854,
+              "conf": 0.5561
+            },
+            {
+              "frame": 30,
+              "nx": 0.52263,
+              "ny": 0.1849,
+              "along_t": 0.99301,
+              "distance_from_batter_m": 9.9896,
+              "conf": 0.5038
+            },
+            {
+              "frame": 45,
+              "nx": 0.51844,
+              "ny": 0.18044,
+              "along_t": 0.99937,
+              "distance_from_batter_m": 10.0537,
+              "conf": 0.5145
+            },
+            {
+              "frame": 46,
+              "nx": 0.51827,
+              "ny": 0.18044,
+              "along_t": 0.99937,
+              "distance_from_batter_m": 10.0537,
+              "conf": 0.511
+            }
+          ],
+          "bounce": {
+            "nx": 0.5226,
+            "ny": 0.18497,
+            "distance_from_batter_m": 9.9879
+          },
+          "length_zone": "short"
+        },
+        "quality_flags": [
+          "tiny_pixel_displacement",
+          "very_low_speed_estimate",
+          "speed_adjusted_plausible_floor",
+          "motion_filter_relaxed"
+        ],
         "shot_num": 1,
         "display_num": 1,
-        "peak_frame": 17,
-        "ball_track_matched": false,
-        "track_id": null,
-        "start_frame": null,
-        "end_frame": null,
-        "frame_count": 0,
-        "track_confidence_score": 0.0,
-        "speed_kmh_est": null,
+        "peak_frame": 24,
+        "ball_track_matched": true,
+        "matched_confirmed_shot_num": 1,
+        "match_source": "shot_time_window",
+        "shot_classifier_conf": 0.3317,
+        "shot_confirmed": true
+      },
+      {
+        "delivery_id": "d2",
+        "track_id": 1,
+        "start_frame": 71,
+        "end_frame": 92,
+        "frame_count": 5,
+        "track_confidence_score": 0.5696,
+        "speed_kmh_est": 46.48,
         "speed_is_estimated": true,
-        "speed_reliability_score": 0.12,
+        "speed_reliability_score": 0.2553,
         "speed_warnings": [
-          "no_moving_ball_track"
+          "very_low_speed_estimate",
+          "speed_adjusted_plausible_floor"
         ],
-        "pace_band": "unknown",
+        "pace_band": "slow",
         "bounce": {
           "frame": null,
           "confidence": 0.0,
-          "method_note": "no_track",
-          "point_norm": null
+          "method_note": "too_few_points",
+          "point_norm": {
+            "nx": 0.49971,
+            "ny": 0.08909,
+            "distance_from_batter_m": 10.06
+          }
         },
         "length": {
-          "label": "full",
-          "distance_m": 3.8,
-          "confidence": 0.32,
+          "label": "short",
+          "distance_m": 10.06,
+          "confidence": 0.5536,
           "uncertain": false,
-          "reason": "No ball track; nominal full length for display."
+          "reason": null
         },
         "pitch_plot": {
-          "trajectory": [],
-          "bounce": null,
-          "length_zone": "full"
+          "trajectory": [
+            {
+              "frame": 71,
+              "nx": 0.49971,
+              "ny": 0.08909,
+              "along_t": 1.12988,
+              "distance_from_batter_m": 10.06,
+              "conf": 0.5372
+            },
+            {
+              "frame": 85,
+              "nx": 0.51039,
+              "ny": 0.06041,
+              "along_t": 1.17084,
+              "distance_from_batter_m": 10.06,
+              "conf": 0.5169
+            },
+            {
+              "frame": 86,
+              "nx": 0.51153,
+              "ny": 0.06428,
+              "along_t": 1.16532,
+              "distance_from_batter_m": 10.06,
+              "conf": 0.6526
+            },
+            {
+              "frame": 87,
+              "nx": 0.51243,
+              "ny": 0.06733,
+              "along_t": 1.16095,
+              "distance_from_batter_m": 10.06,
+              "conf": 0.6239
+            },
+            {
+              "frame": 92,
+              "nx": 0.5179,
+              "ny": 0.07229,
+              "along_t": 1.15387,
+              "distance_from_batter_m": 10.06,
+              "conf": 0.5175
+            }
+          ],
+          "bounce": {
+            "nx": 0.49971,
+            "ny": 0.08909,
+            "distance_from_batter_m": 10.06
+          },
+          "length_zone": "short"
         },
         "quality_flags": [
-          "no_ball_track"
+          "very_low_speed_estimate",
+          "speed_adjusted_plausible_floor",
+          "bounce_uncertain"
         ],
-        "shot_classifier_conf": 0.0,
-        "shot_confirmed": false
+        "shot_num": 2,
+        "display_num": 2,
+        "peak_frame": 100,
+        "ball_track_matched": true,
+        "matched_confirmed_shot_num": 2,
+        "match_source": "shot_time_window",
+        "shot_classifier_conf": 0.3004,
+        "shot_confirmed": true
       }
     ],
-    "frame_overlays": [],
-    "video_trajectories": [],
+    "frame_overlays": [
+      {
+        "frame": 20,
+        "boxes": [
+          {
+            "cx": 376.21,
+            "cy": 237.39,
+            "w": 30.23,
+            "h": 30.06,
+            "conf": 0.5658,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 21,
+        "boxes": [
+          {
+            "cx": 376.26,
+            "cy": 236.79,
+            "w": 30.11,
+            "h": 29.59,
+            "conf": 0.5339,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 22,
+        "boxes": [
+          {
+            "cx": 376.32,
+            "cy": 236.77,
+            "w": 30.09,
+            "h": 29.57,
+            "conf": 0.5361,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 25,
+        "boxes": [
+          {
+            "cx": 376.25,
+            "cy": 236.95,
+            "w": 30.69,
+            "h": 31.01,
+            "conf": 0.5696,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 26,
+        "boxes": [
+          {
+            "cx": 376.27,
+            "cy": 236.76,
+            "w": 30.51,
+            "h": 30.62,
+            "conf": 0.5611,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 27,
+        "boxes": [
+          {
+            "cx": 376.23,
+            "cy": 236.82,
+            "w": 30.6,
+            "h": 30.69,
+            "conf": 0.5774,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 28,
+        "boxes": [
+          {
+            "cx": 376.35,
+            "cy": 237.09,
+            "w": 30.82,
+            "h": 31.77,
+            "conf": 0.5704,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 29,
+        "boxes": [
+          {
+            "cx": 376.44,
+            "cy": 237.04,
+            "w": 31.07,
+            "h": 32.21,
+            "conf": 0.5561,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 30,
+        "boxes": [
+          {
+            "cx": 376.29,
+            "cy": 236.67,
+            "w": 31.0,
+            "h": 31.61,
+            "conf": 0.5038,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 45,
+        "boxes": [
+          {
+            "cx": 373.28,
+            "cy": 230.96,
+            "w": 33.66,
+            "h": 37.64,
+            "conf": 0.5145,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 46,
+        "boxes": [
+          {
+            "cx": 373.16,
+            "cy": 230.97,
+            "w": 33.63,
+            "h": 38.9,
+            "conf": 0.511,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 71,
+        "boxes": [
+          {
+            "cx": 359.79,
+            "cy": 114.03,
+            "w": 33.61,
+            "h": 40.03,
+            "conf": 0.5372,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 85,
+        "boxes": [
+          {
+            "cx": 367.48,
+            "cy": 77.33,
+            "w": 30.2,
+            "h": 31.9,
+            "conf": 0.5169,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 86,
+        "boxes": [
+          {
+            "cx": 368.3,
+            "cy": 82.28,
+            "w": 31.8,
+            "h": 36.53,
+            "conf": 0.6526,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 87,
+        "boxes": [
+          {
+            "cx": 368.95,
+            "cy": 86.19,
+            "w": 32.81,
+            "h": 38.0,
+            "conf": 0.6239,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 92,
+        "boxes": [
+          {
+            "cx": 372.89,
+            "cy": 92.53,
+            "w": 30.61,
+            "h": 33.27,
+            "conf": 0.5175,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 131,
+        "boxes": [
+          {
+            "cx": 386.04,
+            "cy": 97.85,
+            "w": 33.43,
+            "h": 35.75,
+            "conf": 0.5056,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 132,
+        "boxes": [
+          {
+            "cx": 385.91,
+            "cy": 98.18,
+            "w": 33.52,
+            "h": 36.16,
+            "conf": 0.6044,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 133,
+        "boxes": [
+          {
+            "cx": 385.7,
+            "cy": 98.21,
+            "w": 32.95,
+            "h": 37.53,
+            "conf": 0.6029,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 134,
+        "boxes": [
+          {
+            "cx": 385.48,
+            "cy": 99.14,
+            "w": 34.34,
+            "h": 40.57,
+            "conf": 0.6412,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 135,
+        "boxes": [
+          {
+            "cx": 385.34,
+            "cy": 99.97,
+            "w": 34.33,
+            "h": 42.62,
+            "conf": 0.6547,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 136,
+        "boxes": [
+          {
+            "cx": 385.17,
+            "cy": 99.3,
+            "w": 34.38,
+            "h": 41.6,
+            "conf": 0.6875,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 137,
+        "boxes": [
+          {
+            "cx": 385.08,
+            "cy": 98.27,
+            "w": 30.89,
+            "h": 38.92,
+            "conf": 0.5773,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 138,
+        "boxes": [
+          {
+            "cx": 384.8,
+            "cy": 98.76,
+            "w": 33.67,
+            "h": 40.84,
+            "conf": 0.6619,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 139,
+        "boxes": [
+          {
+            "cx": 384.5,
+            "cy": 98.54,
+            "w": 33.38,
+            "h": 40.08,
+            "conf": 0.6856,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 140,
+        "boxes": [
+          {
+            "cx": 384.81,
+            "cy": 98.43,
+            "w": 33.17,
+            "h": 38.89,
+            "conf": 0.7076,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 141,
+        "boxes": [
+          {
+            "cx": 384.74,
+            "cy": 98.45,
+            "w": 32.85,
+            "h": 37.27,
+            "conf": 0.687,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 142,
+        "boxes": [
+          {
+            "cx": 384.77,
+            "cy": 98.39,
+            "w": 31.8,
+            "h": 35.52,
+            "conf": 0.703,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 143,
+        "boxes": [
+          {
+            "cx": 384.76,
+            "cy": 98.66,
+            "w": 32.03,
+            "h": 35.36,
+            "conf": 0.7053,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 144,
+        "boxes": [
+          {
+            "cx": 384.78,
+            "cy": 100.04,
+            "w": 32.62,
+            "h": 36.47,
+            "conf": 0.6512,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 145,
+        "boxes": [
+          {
+            "cx": 385.16,
+            "cy": 99.44,
+            "w": 31.98,
+            "h": 34.51,
+            "conf": 0.6016,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 146,
+        "boxes": [
+          {
+            "cx": 385.85,
+            "cy": 99.32,
+            "w": 30.81,
+            "h": 32.86,
+            "conf": 0.5155,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 147,
+        "boxes": [
+          {
+            "cx": 386.0,
+            "cy": 99.36,
+            "w": 30.42,
+            "h": 32.44,
+            "conf": 0.5569,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 148,
+        "boxes": [
+          {
+            "cx": 386.39,
+            "cy": 99.28,
+            "w": 30.04,
+            "h": 32.21,
+            "conf": 0.5152,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 152,
+        "boxes": [
+          {
+            "cx": 387.87,
+            "cy": 102.84,
+            "w": 32.96,
+            "h": 33.81,
+            "conf": 0.549,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 153,
+        "boxes": [
+          {
+            "cx": 388.62,
+            "cy": 103.59,
+            "w": 33.08,
+            "h": 32.42,
+            "conf": 0.5922,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 154,
+        "boxes": [
+          {
+            "cx": 388.55,
+            "cy": 104.86,
+            "w": 32.64,
+            "h": 32.25,
+            "conf": 0.573,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 155,
+        "boxes": [
+          {
+            "cx": 388.87,
+            "cy": 105.04,
+            "w": 32.23,
+            "h": 31.81,
+            "conf": 0.6362,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 156,
+        "boxes": [
+          {
+            "cx": 389.04,
+            "cy": 105.03,
+            "w": 31.74,
+            "h": 31.06,
+            "conf": 0.5348,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 157,
+        "boxes": [
+          {
+            "cx": 389.22,
+            "cy": 105.06,
+            "w": 31.01,
+            "h": 30.87,
+            "conf": 0.5871,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 158,
+        "boxes": [
+          {
+            "cx": 389.15,
+            "cy": 105.48,
+            "w": 31.4,
+            "h": 31.54,
+            "conf": 0.5648,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 159,
+        "boxes": [
+          {
+            "cx": 389.13,
+            "cy": 105.65,
+            "w": 31.48,
+            "h": 31.8,
+            "conf": 0.5511,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 160,
+        "boxes": [
+          {
+            "cx": 389.1,
+            "cy": 105.66,
+            "w": 31.6,
+            "h": 31.82,
+            "conf": 0.546,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 161,
+        "boxes": [
+          {
+            "cx": 389.32,
+            "cy": 105.1,
+            "w": 32.22,
+            "h": 32.13,
+            "conf": 0.5464,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 162,
+        "boxes": [
+          {
+            "cx": 389.3,
+            "cy": 105.59,
+            "w": 32.6,
+            "h": 32.66,
+            "conf": 0.5826,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 163,
+        "boxes": [
+          {
+            "cx": 389.22,
+            "cy": 106.12,
+            "w": 32.97,
+            "h": 33.63,
+            "conf": 0.5975,
+            "track_id": 0
+          }
+        ]
+      },
+      {
+        "frame": 164,
+        "boxes": [
+          {
+            "cx": 389.12,
+            "cy": 106.08,
+            "w": 32.98,
+            "h": 33.54,
+            "conf": 0.5941,
+            "track_id": 0
+          }
+        ]
+      }
+    ],
+    "video_trajectories": [
+      {
+        "track_id": 0,
+        "bgr": [
+          0,
+          255,
+          255
+        ],
+        "points": [
+          {
+            "frame": 20,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 21,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 22,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 25,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 26,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 27,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 28,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 29,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 30,
+            "x": 376,
+            "y": 237
+          },
+          {
+            "frame": 45,
+            "x": 373,
+            "y": 231
+          },
+          {
+            "frame": 46,
+            "x": 373,
+            "y": 231
+          }
+        ]
+      },
+      {
+        "track_id": 1,
+        "bgr": [
+          0,
+          165,
+          255
+        ],
+        "points": [
+          {
+            "frame": 71,
+            "x": 360,
+            "y": 114
+          },
+          {
+            "frame": 85,
+            "x": 367,
+            "y": 77
+          },
+          {
+            "frame": 86,
+            "x": 368,
+            "y": 82
+          },
+          {
+            "frame": 87,
+            "x": 369,
+            "y": 86
+          },
+          {
+            "frame": 92,
+            "x": 373,
+            "y": 93
+          }
+        ]
+      }
+    ],
     "insights": {
       "batsman": {
         "by_pace_and_outcome": [
           {
             "delivery_id": "d1",
             "matched_shot_num": 1,
-            "ball_track_matched": false,
-            "pace_band": "unknown",
-            "length_zone": "full",
+            "ball_track_matched": true,
+            "pace_band": "slow",
+            "length_zone": "short",
             "shot_outcome": {
-              "shot_label": "unclear",
-              "shot_score": 7.1,
+              "shot_label": "straight",
+              "shot_score": 6.1,
+              "shot_quality": "Average",
+              "confirmed": true
+            }
+          },
+          {
+            "delivery_id": "d2",
+            "matched_shot_num": 2,
+            "ball_track_matched": true,
+            "pace_band": "slow",
+            "length_zone": "short",
+            "shot_outcome": {
+              "shot_label": "sweep",
+              "shot_score": 6.9,
               "shot_quality": "Good",
-              "confirmed": false
+              "confirmed": true
             }
           }
         ],
@@ -196,31 +1402,31 @@
       },
       "bowler": {
         "length_distribution": {
-          "full": 1
+          "short": 2
         },
-        "pace_consistency_std_kmh": 0.0,
+        "pace_consistency_std_kmh": 0.34,
         "notes": [
-          "Most common length zone this session: full."
+          "Most common length zone this session: short."
         ]
       }
     },
     "session_aggregates": {
-      "delivery_count": 1,
-      "confirmed_shot_count": 0,
+      "delivery_count": 2,
+      "confirmed_shot_count": 2,
       "moving_track_segments": 0,
-      "raw_track_segments": 0,
-      "shot_assignment_pool": "empty",
+      "raw_track_segments": 2,
+      "shot_assignment_pool": "raw_longest",
       "shot_ball_mapping": "per_peak_time_window",
-      "video_trajectory_layers": 0,
-      "unmatched_tracks_after_assignment": 0,
-      "unmatched_moving_tracks_after_assignment": 0,
+      "video_trajectory_layers": 2,
+      "unmatched_tracks_after_assignment": 2,
+      "unmatched_moving_tracks_after_assignment": 2,
       "pace_band_counts": {
-        "unknown": 1
+        "slow": 2
       },
       "length_zone_counts": {
-        "full": 1
+        "short": 2
       },
-      "mean_speed_kmh_est": null,
+      "mean_speed_kmh_est": 46.14,
       "uncertainty_note": "All ball metrics are single-camera estimates; see calibration section.",
       "session_ball_speed_rescale": null
     }

@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # ── FastAPI AI Computer Vision Inference Engine ──────────────────────────
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crickeye-fastapi
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,garbage_collection_threshold:0.8
+    volumes:
+      - ./uploads:/app/uploads
+      - ./assets:/app/assets
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/api/public-config\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Node.js Express LLM & Coaching Service ───────────────────────────────
+  node-api:
+    image: node:20-alpine
+    container_name: crickeye-node-api
+    restart: unless-stopped
+    working_dir: /app/backend
+    volumes:
+      - ./backend:/app/backend
+    ports:
+      - "8080:8080"
+    command: sh -c "npm install --production && node server.js"
+    environment:
+      - PORT=8080
+      - NODE_ENV=production
+    depends_on:
+      - fastapi
+
+  # ── Next.js Web Presentation & Analytics Platform ────────────────────────
+  web:
+    image: node:20-alpine
+    container_name: crickeye-web
+    restart: unless-stopped
+    working_dir: /app/web
+    volumes:
+      - ./web:/app/web
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_FASTAPI_URL=http://localhost:8000
+      - NEXT_PUBLIC_NODE_API_URL=http://localhost:8080
+    depends_on:
+      - fastapi
+      - node-api

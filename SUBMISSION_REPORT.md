@@ -1,6 +1,6 @@
 # Final Submission Report
 
-- **Live Demo Link:** [https://macintosh-seating-yield-ultimate.trycloudflare.com](https://macintosh-seating-yield-ultimate.trycloudflare.com)
+- **Live Demo Link:** [https://suggestion-apartment-plane-yet.trycloudflare.com](https://suggestion-apartment-plane-yet.trycloudflare.com)
 
 This file summarizes what is committed for final project submission and what must be explicitly present for successful execution after cloning.
 
@@ -11,6 +11,8 @@ This file summarizes what is committed for final project submission and what mus
   - `ball_analytics.py`
   - `backend/`
   - `components/`
+  - `android/` (Native Android wrapper app with Java bridge, styles, and assets)
+  - `build_apk.bat` (Automated asset sync and Gradle builder)
   - `types/`
   - `tests/`
 - Frontend entry files:

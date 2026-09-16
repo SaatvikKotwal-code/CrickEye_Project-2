@@ -3,19 +3,18 @@ import os
 import sys
 from pathlib import Path
 
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128,garbage_collection_threshold:0.8")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,garbage_collection_threshold:0.8")
 
 # Ensure project root is importable.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-import analyse_session as ce  # noqa: E402
-
-
 def main():
     if len(sys.argv) < 3:
         print(json.dumps({"error": "Usage: python yolo_runner.py <video_path> <output_video_path>"}))
         sys.exit(1)
+
+    import analyse_session as ce  # noqa: E402
 
     video_path = sys.argv[1]
     output_path = sys.argv[2]

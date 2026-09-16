@@ -97,6 +97,26 @@ async def serve_config_js():
     return FileResponse(str(BASE_DIR / "config.example.js"), media_type="application/javascript")
 
 
+@app.get("/download/apk")
+async def download_apk():
+    """Serve the compiled CrickEye Pro Android APK for mobile devices."""
+    candidates = [
+        BASE_DIR / "CrickEye-Pro.apk",
+        BASE_DIR / "android" / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk",
+    ]
+    for apk_path in candidates:
+        if apk_path.exists():
+            return FileResponse(
+                path=str(apk_path),
+                filename="CrickEye-Pro.apk",
+                media_type="application/vnd.android.package-archive"
+            )
+    return JSONResponse(
+        status_code=404,
+        content={"error": "APK not found yet. Please compile the APK or check the project root."}
+    )
+
+
 @app.get("/api/public-config")
 async def public_config():
     """
@@ -364,7 +384,21 @@ async def websocket_endpoint(websocket: WebSocket):
 # ── Real pipeline runner ───────────────────────────────────────────────────────
 
 async def _run_pipeline(video_path: str, websocket: WebSocket):
-    import analyse_session as ce
+    try:
+        import analyse_session as ce
+    except Exception as e:
+        err_msg = str(e)
+        if "paging file is too small" in err_msg.lower() or "1455" in err_msg:
+            err_msg = (
+                "Windows paging file / virtual memory is exhausted or disabled. "
+                "Please run enable_virtual_memory.bat as Administrator (or enable 'Automatically manage paging file' in Windows Settings) and restart your machine."
+            )
+        print(f"[CrickEye Server] Pipeline import error: {err_msg}")
+        try:
+            await websocket.send_json({"type": "error", "message": err_msg})
+        except Exception:
+            pass
+        return
 
     loop = asyncio.get_event_loop()
 
@@ -382,4 +416,4 @@ async def _run_pipeline(video_path: str, websocket: WebSocket):
         try:
             await websocket.send_json({"type": "error", "message": f"Pipeline error: {str(e)}"})
         except Exception:
-            pass
+            pass
