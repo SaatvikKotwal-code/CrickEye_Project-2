@@ -159,8 +159,8 @@ def output_video_paths(video_path: str):
 BILATERAL_VEL_THRESHOLD  = 12.0
 MIN_SWING_FRAMES         = 5
 BILATERAL_FRAME_FRAC     = 0.6
-MIN_TRAVEL_PX            = 40
-MIN_SHOT_GAP_FRAMES      = 45
+MIN_TRAVEL_PX            = 50
+MIN_SHOT_GAP_FRAMES      = 60
 
 # Population baseline for swing intensity normalisation.
 # P90 of wrist rolling-mean at which a batter is considered "making good contact effort".
@@ -184,7 +184,7 @@ PRESHOT_END              = 3
 
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
-CONF_THRESHOLD           = 0.30
+CONF_THRESHOLD           = 0.35
 
 # Composite shot score weights (must sum to 100). Diagnostic: swing_intensity, peak_swing_speed.
 SCORE_W_HEAD         = 28
@@ -919,10 +919,11 @@ def find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws=None, loop=None,
             grouped.append([frame_i, score_i])
 
     shots = []
+    effective_min_gap = max(int((fps or 30) * 2.2), MIN_SHOT_GAP_FRAMES, 65)
     for frame_i, score_i in grouped:
         if not shots:
             shots.append([frame_i, score_i]); continue
-        if frame_i - shots[-1][0] >= MIN_SHOT_GAP_FRAMES:
+        if frame_i - shots[-1][0] >= effective_min_gap:
             shots.append([frame_i, score_i])
         else:
             if score_i > shots[-1][1]: shots[-1] = [frame_i, score_i]

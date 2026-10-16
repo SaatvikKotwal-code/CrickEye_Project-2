@@ -23,14 +23,6 @@ const PlayCard = (() => {
     return document.getElementById('playCardPlaceholder');
   }
 
-  function compileBarEl() {
-    return document.getElementById('playCardCompileBar');
-  }
-
-  function compileBarFillEl() {
-    return document.getElementById('playCardCompileBarFill');
-  }
-
   function cancelCompileTimer() {
     if (compileTimer != null) {
       clearTimeout(compileTimer);
@@ -51,10 +43,13 @@ const PlayCard = (() => {
     const titleEl = document.getElementById('playCardDetailTitle');
     const body = document.getElementById('playCardDetailBody');
     if (titleEl) titleEl.textContent = title || 'Details';
-    if (body) body.innerHTML = html || '';
+    if (body) {
+      body.innerHTML = html || '';
+      body.scrollTop = 0;
+    }
     if (!modal) return;
-    modal.hidden = false;
-    document.body.classList.add('ce-modal-open');
+    if (typeof openDialog === 'function') openDialog(modal);
+    else { modal.hidden = false; document.body.classList.add('ce-modal-open'); }
     setTimeout(() => animatePiesIn(body), 100);
   }
 
@@ -67,34 +62,14 @@ const PlayCard = (() => {
     });
   }
 
-  function showCompileBar(durationMs) {
-    const bar = compileBarEl();
-    const fill = compileBarFillEl();
-    if (bar) {
-      bar.removeAttribute('hidden');
-      bar.setAttribute('aria-hidden', 'false');
-    }
-    if (fill) {
-      fill.style.transition = 'none';
-      fill.style.width = '0%';
-      requestAnimationFrame(() => {
-        fill.style.transition = `width ${durationMs}ms linear`;
-        fill.style.width = '100%';
-      });
-    }
+  // The compile step shows the section's own skeleton (components/skeleton.js),
+  // which mirrors this card's layout, rather than a bare progress bar.
+  function showCompileLoading() {
+    if (typeof Skeleton !== 'undefined') Skeleton.set('score', 'loading');
   }
 
-  function hideCompileBar() {
-    const bar = compileBarEl();
-    const fill = compileBarFillEl();
-    if (bar) {
-      bar.setAttribute('hidden', '');
-      bar.setAttribute('aria-hidden', 'true');
-    }
-    if (fill) {
-      fill.style.transition = 'none';
-      fill.style.width = '0%';
-    }
+  function hideCompileLoading() {
+    if (typeof Skeleton !== 'undefined') Skeleton.set('score', 'ready');
   }
 
   function mountContent(state, opts = {}) {
@@ -141,7 +116,7 @@ const PlayCard = (() => {
   function finishPendingReveal() {
     const shell = mountEl();
     const inner = innerEl();
-    hideCompileBar();
+    hideCompileLoading();
     if (inner) inner.classList.remove('playcard-inner--pending');
     if (shell) shell.classList.remove('playcard--compiling');
     if (inner) runRevealAnimation(inner);
@@ -153,7 +128,7 @@ const PlayCard = (() => {
 
     const wasActive = active;
     cancelCompileTimer();
-    hideCompileBar();
+    hideCompileLoading();
 
     if (!mountContent(state, { pending: false })) return false;
 
@@ -178,7 +153,7 @@ const PlayCard = (() => {
 
     if (!mountContent(state, { pending: true })) return false;
 
-    showCompileBar(delayMs);
+    showCompileLoading();
 
     compileTimer = setTimeout(() => {
       compileTimer = null;

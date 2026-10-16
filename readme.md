@@ -125,3 +125,11 @@ py -3 -m unittest tests.test_ball_analytics.TestIntegrationBallPipeline -v
 - If model files are missing, the pipeline will raise a file-not-found error with the expected absolute path.
 - For coach dashboard features, run SQL schema/policies from `backend/supabase_schema.sql`.
 - Legacy sessions may need re-analysis to populate the latest metrics schema.
+
+# terminal 1
+- py -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# terminal 2
+- node backend/server.js
+
+# Then open http://localhost:8000.

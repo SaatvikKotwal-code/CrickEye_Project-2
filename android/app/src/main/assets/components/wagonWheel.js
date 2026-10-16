@@ -59,23 +59,24 @@ const WagonWheel = (() => {
 
   // ── Field ──────────────────────────────────────────────────────────────────
   function drawField() {
+    if (!radius || radius <= 2) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Lighter, more vivid green field — matches image 2 style
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, radius));
     grad.addColorStop(0,    '#2d7a45');
     grad.addColorStop(0.40, '#256838');
     grad.addColorStop(0.70, '#1e5a30');
     grad.addColorStop(1,    '#174825');
     ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, Math.max(1, radius), 0, Math.PI * 2);
     ctx.fillStyle = grad;
     ctx.fill();
 
     // Mowing stripes (lighter contrast)
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, radius - 1, 0, Math.PI * 2);
+    ctx.arc(cx, cy, Math.max(0.1, radius - 1), 0, Math.PI * 2);
     ctx.clip();
     const sw = radius * 0.13;
     const ns = Math.ceil((radius * 2) / sw) + 2;
@@ -340,7 +341,7 @@ const WagonWheel = (() => {
   }
 
   // ── Spoke animation ───────────────────────────────────────────────────────
-  function animateSpoke(shotType, shotScore, headStability, batSpeed, angleDeg, color, glow, distanceFactor, onDone) {
+  function animateSpoke(shotType, shotScore, headStability, batSpeed, angleDeg, color, glow, distanceFactor, onDone, shotNum) {
     const angleRad = toCanvasAngle(angleDeg);
     const spokeEnd = radius * 0.92 * distanceFactor;
     const endX     = cx + Math.cos(angleRad) * spokeEnd;
@@ -389,11 +390,14 @@ const WagonWheel = (() => {
       if (frame < FRAMES) {
         requestAnimationFrame(step);
       } else {
-        spokes.push({
-          angleDeg, color, glow, distanceFactor, endX, endY,
-          shotType, shotScore: safeScore, headStability: safeHead, batSpeed: safeSpeed,
-          lineW, alpha,
-        });
+        if (shotNum == null || !spokes.some(s => s.shotNum === shotNum)) {
+          spokes.push({
+            shotNum,
+            angleDeg, color, glow, distanceFactor, endX, endY,
+            shotType, shotScore: safeScore, headStability: safeHead, batSpeed: safeSpeed,
+            lineW, alpha,
+          });
+        }
         redrawAll();
         if (onDone) onDone();
       }
@@ -480,17 +484,18 @@ const WagonWheel = (() => {
   // ── Resize ────────────────────────────────────────────────────────────────
   function resize() {
     const dpr  = window.devicePixelRatio || 1;
-    const rect = canvas.parentElement.getBoundingClientRect();
-    const size = Math.min(rect.width - 32, 420);
-    canvas.width  = size * dpr;
-    canvas.height = size * dpr;
+    const parentWidth = canvas.parentElement ? (canvas.parentElement.getBoundingClientRect().width || canvas.parentElement.clientWidth || 320) : 320;
+    // The backing store and displayed box share one dimension: never stretch the field.
+    const size = Math.max(120, Math.min(Math.floor(parentWidth - 32), 420));
+    canvas.width  = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
     canvas.style.width  = size + 'px';
     canvas.style.height = size + 'px';
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     cx = size / 2;
     cy = size / 2;
 
-    radius = Math.min(canvas.width / dpr, canvas.height / dpr) * 0.48;
+    radius = Math.max(10, Math.min(canvas.width / dpr, canvas.height / dpr) * 0.48);
     pitchW = size * 0.085;
     pitchH = size * 0.38;
 
@@ -549,7 +554,11 @@ const WagonWheel = (() => {
     redrawAll();
   }
 
-  function drawSpoke(shotType, shotScore, headStability, batSpeed, onDone) {
+  function drawSpoke(shotType, shotScore, headStability, batSpeed, onDone, shotNum) {
+    if (shotNum != null && spokes.some(s => s.shotNum === shotNum)) {
+      if (onDone) onDone();
+      return;
+    }
     const cfg = SHOT_CONFIG[shotType];
     if (!cfg) {
       console.warn(`[WagonWheel] Unknown shot type: "${shotType}" for hand: ${currentHand}`);
@@ -559,7 +568,7 @@ const WagonWheel = (() => {
     if (zoneHits[shotType] !== undefined) zoneHits[shotType]++;
     const angle = randomAngle(cfg.min, cfg.max);
     const dist  = randomDistance();
-    animateSpoke(shotType, shotScore, headStability, batSpeed, angle, cfg.color, cfg.glowColor, dist, onDone);
+    animateSpoke(shotType, shotScore, headStability, batSpeed, angle, cfg.color, cfg.glowColor, dist, onDone, shotNum);
   }
 
   function clearAll() {

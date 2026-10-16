@@ -1,31 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-sidebar="full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#06B6D4" />
+  <meta name="theme-color" content="#0b0e14" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>CrickEye Pro — AI Cricket Analytics</title>
-  <link rel="stylesheet" href="style.css" />
+  <!-- style.css loads first: it declares the cascade layer order. -->
+  <link rel="stylesheet" href="style.css?v=7.5.2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Round|Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link rel="stylesheet" href="components/tailwind.css?v=7.5.1" />
+  <script>
+    // Applied pre-paint to avoid the sidebar flashing full-width then collapsing.
+    (function () {
+      var m, t;
+      try { m = localStorage.getItem('ce-sidebar'); } catch (e) {}
+      if (m !== 'rail' && m !== 'full') m = window.innerWidth < 1280 ? 'rail' : 'full';
+      document.documentElement.dataset.sidebar = m;
+
+      try { t = localStorage.getItem('ce-theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
 </head>
-<body>
-  <div id="authGate" class="auth-gate">
-    <div class="auth-gate-card">
-      <div class="auth-gate-head">
-        <h2 id="gateTitle">CrickEye Login</h2>
-        <p id="gateSubtitle">Login to continue your batting analytics.</p>
+<body class="bg-base-200 font-body text-base-content">
+
+  <!-- ═══════════════ AUTH GATE ═══════════════ -->
+  <div id="authGate" class="auth-gate auth-gate--pending">
+    <div class="auth-restore-status" role="status" aria-live="polite">
+      <span class="auth-restore-spinner" aria-hidden="true"></span>
+      <strong>Restoring your session</strong>
+      <span>Please wait a moment…</span>
+    </div>
+    <div class="auth-login-card w-full max-w-[400px] rounded-box border border-base-300 bg-base-100 p-7 shadow-2xl">
+      <div class="mb-6 flex items-center gap-3">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.5"/>
+          <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.2" stroke="#06B6D4" stroke-width="1"/>
+          <circle cx="16" cy="16" r="2.5" fill="#06B6D4"/>
+        </svg>
+        <div class="leading-tight">
+          <h2 id="gateTitle" class="font-display text-xl font-extrabold tracking-tight">CrickEye Login</h2>
+          <p id="gateSubtitle" class="text-xs text-base-content/55">Login to continue your batting analytics.</p>
+        </div>
       </div>
-      <div class="auth-gate-form">
-        <div id="signupFields" class="auth-signup-fields" hidden>
-          <input type="text" id="gateFullName" placeholder="Full name" autocomplete="name" />
-          <div class="auth-grid-2">
-            <input type="number" id="gateAge" placeholder="Age" min="8" max="100" />
-            <select id="gateGender">
+
+      <div class="flex flex-col gap-3">
+        <div id="signupFields" class="flex flex-col gap-3" hidden>
+          <input type="text" id="gateFullName" placeholder="Full name" autocomplete="name" class="input" />
+          <div class="grid grid-cols-2 gap-3">
+            <input type="number" id="gateAge" placeholder="Age" min="8" max="100" class="input" />
+            <select id="gateGender" class="select">
               <option value="">Gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -34,101 +65,449 @@
             </select>
           </div>
         </div>
-        <input type="email" id="gateEmail" placeholder="Email" autocomplete="email" />
-        <input type="password" id="gatePassword" placeholder="Password" autocomplete="current-password" />
+        <input type="email" id="gateEmail" placeholder="Email" autocomplete="email" class="input" />
+        <input type="password" id="gatePassword" placeholder="Password" autocomplete="current-password" class="input" />
       </div>
-      <div class="auth-gate-actions">
-        <button type="button" id="gatePrimaryBtn" class="auth-btn auth-btn--primary">Login</button>
-        <button type="button" id="gateSwitchMode" class="auth-btn auth-btn--ghost">Need an account? Sign up</button>
+
+      <div class="mt-5 flex flex-col gap-2">
+        <button type="button" id="gatePrimaryBtn" class="btn btn-primary w-full">Login</button>
+        <button type="button" id="gateSwitchMode" class="btn btn-ghost btn-sm w-full font-normal text-base-content/60">Need an account? Sign up</button>
       </div>
-      <div id="gateMessage" class="auth-gate-msg"></div>
+      <div id="gateMessage" class="mt-3 min-h-[1.2em] text-center text-xs text-warning"></div>
     </div>
   </div>
 
-  <!-- ───────────────── TOP HEADER ───────────────── -->
-  <header class="top-header">
-    <div class="header-left">
-      <div class="logo-mark">
-        <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.5"/>
-          <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.2" stroke="#06B6D4" stroke-width="1"/>
-          <circle cx="16" cy="16" r="2.5" fill="#06B6D4"/>
-        </svg>
-      </div>
-      <div class="header-title-block">
-        <h1 class="header-title">CrickEye<span class="accent">Pro</span></h1>
-        <span class="header-sub">AI Batting Analytics Engine</span>
-      </div>
-    </div>
+  <!-- ═══════════════ APP SHELL ═══════════════ -->
+  <input id="appDrawer" type="checkbox" class="sidebar-toggle sr-only" aria-label="Toggle navigation" />
 
-    <div class="verdict-pill">
-      <span class="material-symbols-outlined verdict-icon">bolt</span>
-      <span class="verdict-text">Awaiting analysis…</span>
-    </div>
+  <!-- ───────── SIDEBAR: overlay <768 · icon rail 768-1279 · full 1280+ ───────── -->
+  <aside class="app-sidebar" id="appSidebar">
 
-    <div class="verdict-pill verdict-pill--orange">
-      <span class="material-symbols-outlined verdict-icon">sports_cricket</span>
-      <span class="verdict-text" id="batsmanLabel">AWAITING ANALYSIS</span>
-    </div>
+        <div class="sidebar-brand flex h-14 shrink-0 items-center gap-2.5 border-b border-base-300 px-4">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true" class="shrink-0">
+            <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.5"/>
+            <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.2" stroke="#06B6D4" stroke-width="1"/>
+            <circle cx="16" cy="16" r="2.5" fill="#06B6D4"/>
+          </svg>
+          <div class="sidebar-label leading-tight">
+            <div class="font-display text-[0.95rem] font-extrabold tracking-tight">CrickEye<span class="text-primary">Pro</span></div>
+            <div class="font-mono text-[0.5rem] uppercase tracking-[0.18em] text-base-content/35">Batting Analytics</div>
+          </div>
+        </div>
 
-    <div class="header-right">
-      <div class="status-badge">
-        <span class="status-dot"></span>
-        <span class="status-label">Online &amp; Tracking</span>
-      </div>
-      <div class="session-info">
-        <span class="session-label">Session</span>
-        <span class="session-value" id="sessionTime">00:00</span>
-      </div>
-      <div class="header-profile-wrap">
-        <p id="headerAuthHint" class="header-auth-hint" hidden>Configure Supabase in <code>backend/.env</code></p>
-        <button type="button" class="header-profile-btn" id="headerProfileBtn" hidden aria-haspopup="dialog" aria-controls="profileModal">
-          <span class="header-profile-avatar" id="headerProfileAvatar">?</span>
-          <span class="header-profile-text">
-            <span class="header-profile-label">Account</span>
-            <span class="header-profile-email" id="headerProfileEmail"></span>
-          </span>
+        <nav class="ce-nav" aria-label="Sections">
+          <p class="ce-nav-heading sidebar-label">Analysis</p>
+          <ul class="ce-nav-group">
+            <li><button type="button" class="ce-nav-link is-active" data-nav-target="capture" data-tip="Live Capture">
+              <span class="material-symbols-outlined">videocam</span><span class="sidebar-label">Live Capture</span></button></li>
+            <li><button type="button" class="ce-nav-link" data-nav-target="score" data-tip="Session Score">
+              <span class="material-symbols-outlined">scoreboard</span><span class="sidebar-label">Session Score</span></button></li>
+            <li><button type="button" class="ce-nav-link" data-nav-target="pitch" data-tip="Pitch &amp; Wagon">
+              <span class="material-symbols-outlined">sports_cricket</span><span class="sidebar-label">Pitch &amp; Wagon</span></button></li>
+            <li><button type="button" class="ce-nav-link" data-nav-target="biomech" data-tip="Biomechanics">
+              <span class="material-symbols-outlined">accessibility_new</span><span class="sidebar-label">Biomechanics</span></button></li>
+          </ul>
+
+          <p class="ce-nav-heading sidebar-label">Library</p>
+          <ul class="ce-nav-group">
+            <li><button type="button" class="ce-nav-link" data-nav-target="sessions" data-tip="My Sessions">
+              <span class="material-symbols-outlined">video_library</span><span class="sidebar-label">My Sessions</span></button></li>
+          </ul>
+        </nav>
+
+        <div class="sidebar-foot">
+          <!-- Connection state doubles as the shortcut into server settings. -->
+          <button type="button" class="status-badge ce-status" id="headerServerBtn" data-tip="Connection"
+                  title="Server connection &amp; mobile settings" aria-haspopup="dialog" aria-controls="serverSettingsModal">
+            <span class="ce-status-dot" aria-hidden="true"></span>
+            <span class="material-symbols-outlined" id="headerServerIcon">wifi</span>
+            <span class="status-label sidebar-label truncate text-[0.72rem] font-medium" id="headerServerStatusText">Server</span>
+          </button>
+
+          <button type="button" class="ce-nav-link" id="themeToggle" data-tip="Theme">
+            <span class="material-symbols-outlined" id="themeToggleIcon">dark_mode</span>
+            <span class="sidebar-label" id="themeToggleLabel">Dark mode</span>
+          </button>
+
+          <button type="button" class="ce-nav-link" data-nav-target="settings" data-tip="Settings">
+            <span class="material-symbols-outlined">tune</span><span class="sidebar-label">Settings</span>
+          </button>
+
+          <p id="headerAuthHint" class="sidebar-label rounded-field bg-base-200/50 px-3 py-2 text-[0.65rem] leading-snug text-base-content/45" hidden>
+            Configure Supabase in <code class="font-mono text-primary/80">backend/.env</code>
+          </p>
+
+          <button type="button" class="ce-account" id="headerProfileBtn" hidden data-tip="Account"
+                  aria-haspopup="dialog" aria-controls="profileModal">
+            <span class="ce-avatar" id="headerProfileAvatar">?</span>
+            <span class="sidebar-label min-w-0 leading-tight">
+              <span class="block font-mono text-[0.5rem] uppercase tracking-[0.16em] text-base-content/35">Account</span>
+              <span class="block truncate text-[0.72rem] text-base-content/75" id="headerProfileEmail"></span>
+            </span>
+          </button>
+        </div>
+  </aside>
+  <label for="appDrawer" class="sidebar-scrim" aria-hidden="true"></label>
+
+  <!-- ───────── CONTENT COLUMN ───────── -->
+  <div class="app-main">
+
+      <!-- Topbar -->
+      <header class="top-header sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-base-300 bg-base-100 px-4 lg:px-6">
+        <label for="appDrawer" class="btn btn-ghost btn-sm btn-square md:hidden" aria-label="Open menu">
+          <span class="material-symbols-outlined">menu</span>
+        </label>
+        <button type="button" id="sidebarCollapseBtn" class="btn btn-ghost btn-sm btn-square hidden md:inline-flex"
+                aria-controls="appSidebar" aria-expanded="true" aria-label="Collapse sidebar" title="Collapse sidebar">
+          <span class="material-symbols-outlined">left_panel_close</span>
         </button>
-      <div class="header-tools-group">
-        <a href="/download/apk" download="CrickEye-Pro.apk" class="header-tool-btn header-tool-btn--apk" id="headerApkBtn" title="Download CrickEye Pro Android APK">
-          <span class="material-symbols-outlined header-tool-icon">android</span>
-          <span class="header-tool-text">APK</span>
-        </a>
-        <button type="button" class="header-tool-btn" id="headerServerBtn" title="Server Connection & Mobile Settings" aria-haspopup="dialog" aria-controls="serverSettingsModal">
-          <span class="material-symbols-outlined header-tool-icon" id="headerServerIcon">wifi</span>
-          <span class="header-tool-text" id="headerServerStatusText">Server</span>
-        </button>
+
+        <div class="min-w-0 leading-tight">
+          <h2 id="appScreenTitle" class="truncate font-display text-[0.95rem] font-bold tracking-tight">Session Overview</h2>
+          <p class="hidden truncate font-mono text-[0.55rem] uppercase tracking-[0.16em] text-base-content/40 sm:block">Live batting telemetry</p>
+        </div>
+
+        <div class="ml-auto flex items-center gap-2">
+          <div class="verdict-pill hidden items-center gap-1.5 rounded-full border border-base-300 bg-base-200/60 px-3 py-1.5 xl:inline-flex" hidden>
+            <span class="material-symbols-outlined text-[16px] text-primary">bolt</span>
+            <span class="verdict-text text-xs font-medium text-base-content/70">Awaiting analysis…</span>
+          </div>
+          <div class="verdict-pill hidden items-center gap-1.5 rounded-full border border-base-300 bg-base-200/60 px-3 py-1.5 lg:inline-flex" hidden>
+            <span class="material-symbols-outlined text-[16px] text-accent">sports_cricket</span>
+            <span class="verdict-text text-xs font-medium text-base-content/70" id="batsmanLabel">AWAITING ANALYSIS</span>
+          </div>
+
+          <div class="session-info flex flex-row items-center gap-2 rounded-field border border-base-300 bg-base-200/60 px-3 py-1.5">
+            <span class="material-symbols-outlined text-[16px] text-base-content/40">timer</span>
+            <span class="font-mono text-xs font-semibold tabular-nums" id="sessionTime">00:00</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Coach view -->
+      <section id="coachDashboard" class="coach-dashboard p-4 lg:p-6" hidden>
+        <div class="coach-dashboard-head">
+          <div>
+            <h2>Coach Control Panel</h2>
+            <p>Track all registered players and their session performance.</p>
+          </div>
+          <button type="button" class="btn btn-error btn-sm" id="coachLogoutBtn">Log out</button>
+        </div>
+        <div id="coachStatsRow" class="coach-stats-row"></div>
+        <div id="coachDashboardToolbar" class="coach-dashboard-toolbar" hidden></div>
+        <div id="coachPlayersList" class="coach-players-container">
+          <div class="session-item-empty">No player profiles found yet.</div>
+        </div>
+      </section>
+
+      <!-- Player view -->
+      <div id="playerAppShell" class="flex-1">
+        <main class="mx-auto w-full max-w-[1800px] p-4 lg:p-6">
+          <div class="grid grid-cols-12 gap-4 lg:gap-5">
+
+            <!-- ── Live Feed ── -->
+            <section class="live-feed-panel ce-panel col-span-12 flex w-full flex-col lg:col-span-8" aria-label="Live video feed" data-section="feed">
+              <div class="ce-panel-head">
+                <div class="flex items-center gap-2">
+                  <span class="live-dot"></span>
+                  <span class="ce-panel-title">Live Feed</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" class="btn btn-primary btn-xs gap-1" id="btnNewCapture" title="Record Delivery via Live Webcam or Upload Video">
+                    <span class="material-symbols-outlined text-[15px]">videocam</span>
+                    <span class="hidden sm:inline">New Capture</span>
+                  </button>
+                  <!-- btnSpeed text is replaced wholesale by JS (textContent) — keep it text-only. -->
+                  <span class="btn btn-ghost btn-xs font-mono" id="btnSpeed" role="button" tabindex="0">1×</span>
+                  <span class="btn btn-ghost btn-xs gap-1" id="btnLoop" role="button" tabindex="0">
+                    <span class="material-symbols-outlined text-[15px]">repeat</span>
+                    <span class="hidden sm:inline">Loop</span>
+                  </span>
+                  <!-- Phones only: open the stage full screen. Lives in the header so
+                       it never sits on top of the capture panel's title. -->
+                  <button type="button" class="btn btn-ghost btn-square -my-1 size-[40px] shrink-0 md:hidden" id="feedFullscreenOpen"
+                          aria-label="Open live feed full screen" title="Full screen">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">open_in_full</span>
+                  </button>
+                </div>
+              </div>
+
+              <div data-skeleton="video" hidden></div>
+              <div data-content>
+              <div class="video-wrapper">
+                <!-- Visible only while the stage is full screen (phones). -->
+                <button type="button" class="feed-fs-btn" id="feedFullscreenClose" aria-label="Close full screen" title="Close">
+                  <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <video id="mainVideo" class="main-video" playsinline></video>
+                <canvas id="ballOverlayCanvas" class="ball-overlay-canvas" aria-hidden="true"></canvas>
+                <div class="video-hud">
+                  <div class="hud-corner hud-tl"><span class="rec-dot"></span> LIVE</div>
+                  <div class="hud-corner hud-tr" id="hudTime">00:00</div>
+                  <div class="hud-corner hud-bl">SHOT: <span id="hudShot">—</span></div>
+                  <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
+                </div>
+              </div>
+
+              <div class="timeline-section">
+                <div class="timeline-label">Shot Timeline</div>
+                <div class="timeline-track" id="timelineTrack"></div>
+                <div class="timeline-bar">
+                  <div class="timeline-progress" id="timelineProgress"></div>
+                </div>
+              </div>
+
+              <div class="current-shot-display">
+                <div class="shot-badge" id="currentShotBadge">
+                  <span class="shot-number">SHOT <span id="shotIndex">—</span></span>
+                  <span class="shot-name" id="shotName">AWAITING</span>
+                  <span class="shot-time" id="shotTime">—</span>
+                </div>
+                <div class="shot-color-bar" id="shotColorBar"></div>
+              </div>
+              </div>
+            </section>
+
+            <!-- ── Session Score ── -->
+            <aside class="playcard-panel ce-panel col-span-12 flex w-full flex-col lg:col-span-4" aria-label="Session score panel" data-section="score">
+              <div class="ce-panel-head">
+                <span class="ce-panel-title">Session Score</span>
+              </div>
+              <div data-skeleton="score" hidden></div>
+              <div id="playCardMount" data-content class="playcard playcard--inactive flex-1 w-full rounded-none border-0 bg-transparent shadow-none">
+                <div class="playcard-body">
+                  <div id="playCardPlaceholder" class="playcard-placeholder">
+                    <div class="playcard-placeholder-icon"><span class="material-symbols-outlined" style="font-size:38px;color:var(--cyan)">insights</span></div>
+                    <p class="playcard-placeholder-title">Awaiting Analysis</p>
+                    <p class="playcard-placeholder-text">Watch the full video — your session score, shot highlights, and coaching breakdown appear here when playback finishes.</p>
+                  </div>
+                  <div id="playCardInner" class="playcard-inner" hidden></div>
+                </div>
+              </div>
+            </aside>
+
+            <!-- ── Pitch Map ── -->
+            <section class="analytics-split-row ce-panel col-span-12 flex w-full flex-col items-stretch gap-0 lg:col-span-5" id="analysisPitchColumn" data-section="pitch">
+              <div class="ce-panel-head">
+                <span class="ce-panel-title">Pitch Map</span>
+              </div>
+              <div data-skeleton="pitch" hidden></div>
+              <div data-content class="flex flex-1 flex-col items-center justify-center p-4">
+                <!-- ballAnalytics.js rewrites this with the measured zone distances. -->
+                <p class="ball-pitch-title mb-3 w-full text-center"></p>
+                <div class="pitch-map-frame">
+                  <div id="pitchMapReactRoot" hidden></div>
+                  <canvas id="pitchMapCanvas" width="280" height="360" class="max-w-full"></canvas>
+                </div>
+                <div class="pitch-map-legend" aria-label="Delivery outcome legend">
+                  <span><i class="pitch-legend-dot pitch-legend-dot--dot"></i>Dot</span>
+                  <span><i class="pitch-legend-dot pitch-legend-dot--runs"></i>1–2 runs</span>
+                  <span><i class="pitch-legend-dot pitch-legend-dot--boundary"></i>4 / 6</span>
+                  <span><i class="pitch-legend-dot pitch-legend-dot--wicket"></i>Wicket</span>
+                </div>
+                <p class="ce-caption mt-3 text-center">
+                  Leg side / off side are schematic (RHB). Single-camera — lateral spread is approximate.
+                </p>
+              </div>
+              <div data-empty hidden class="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+                <span class="material-symbols-outlined text-[28px] text-base-content/25">scatter_plot</span>
+                <p class="text-sm font-medium text-base-content/55">No deliveries tracked yet</p>
+                <p class="max-w-[30ch] text-xs text-base-content/35">Run an analysis and pitched lengths will map here.</p>
+              </div>
+            </section>
+
+            <!-- ── Wagon Wheel ── -->
+            <section class="ce-panel @container col-span-12 flex w-full flex-col lg:col-span-7" data-section="wagon">
+              <div class="ce-panel-head">
+                <span class="ce-panel-title">Wagon Wheel</span>
+              </div>
+
+              <div data-skeleton="wagon" hidden></div>
+              <div data-content class="p-4">
+                <div class="wagon-wheel-container">
+                  <canvas id="wagonWheelCanvas"></canvas>
+                </div>
+
+                <div class="ce-caption mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+                  <span class="flex items-center gap-1.5"><i class="inline-block size-2 rounded-full" style="background:#06B6D4"></i>Cover Drive</span>
+                  <span class="flex items-center gap-1.5"><i class="inline-block size-2 rounded-full" style="background:#10B981"></i>Straight Drive</span>
+                  <span class="flex items-center gap-1.5"><i class="inline-block size-2 rounded-full" style="background:#F97316"></i>Pull Shot</span>
+                  <span class="flex items-center gap-1.5"><i class="inline-block size-2 rounded-full" style="background:#A855F7"></i>Flick</span>
+                  <span class="flex items-center gap-1.5"><i class="inline-block size-2 rounded-full" style="background:#EAB308"></i>Sweep</span>
+                </div>
+
+                <div class="mt-4 grid gap-4 @lg:grid-cols-2">
+                  <!-- Coverage -->
+                  <div class="rounded-field border border-base-300 bg-base-200/40 p-3">
+                    <div class="ce-eyebrow mb-2.5">Wagon Wheel Coverage</div>
+                    <div class="flex flex-col gap-2.5">
+                      <div>
+                        <div class="mb-1 flex items-center justify-between text-[0.7rem]">
+                          <span class="font-medium text-accent">Leg Side</span>
+                          <span class="font-mono tabular-nums text-base-content/55"><span id="dist-leg-cnt">0</span> · <span id="dist-leg-pct">0%</span></span>
+                        </div>
+                        <div class="h-1.5 overflow-hidden rounded-full bg-base-300">
+                          <div class="dist-bar leg h-full rounded-full bg-accent transition-[width]" id="dist-leg-bar" style="width:0%"></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="mb-1 flex items-center justify-between text-[0.7rem]">
+                          <span class="font-medium text-primary">Off Side</span>
+                          <span class="font-mono tabular-nums text-base-content/55"><span id="dist-off-cnt">0</span> · <span id="dist-off-pct">0%</span></span>
+                        </div>
+                        <div class="h-1.5 overflow-hidden rounded-full bg-base-300">
+                          <div class="dist-bar off h-full rounded-full bg-primary transition-[width]" id="dist-off-bar" style="width:0%"></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="mb-1 flex items-center justify-between text-[0.7rem]">
+                          <span class="font-medium text-success">Straight</span>
+                          <span class="font-mono tabular-nums text-base-content/55"><span id="dist-str-cnt">0</span> · <span id="dist-str-pct">0%</span></span>
+                        </div>
+                        <div class="h-1.5 overflow-hidden rounded-full bg-base-300">
+                          <div class="dist-bar str h-full rounded-full bg-success transition-[width]" id="dist-str-bar" style="width:0%"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Summary -->
+                  <div class="rounded-field border border-base-300 bg-base-200/40 p-3">
+                    <div class="ce-eyebrow mb-2.5">Session Summary</div>
+                    <div class="ce-body mb-2 flex items-center gap-1.5">
+                      Rating:
+                      <span id="sessionStars" class="text-accent">
+                        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+                      </span>
+                      <span class="font-mono text-[0.6rem] tracking-[0.08em] text-base-content/40" id="ratingLabel"></span>
+                    </div>
+                    <table class="over-table table" id="overTable">
+                      <thead><tr><th>Shot Type</th><th class="text-center">Count</th></tr></thead>
+                      <tbody id="overTableBody"><tr><td>—</td><td class="text-center">—</td></tr></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div data-empty hidden class="flex flex-col items-center justify-center gap-2 p-10 text-center">
+                <span class="material-symbols-outlined text-[28px] text-base-content/25">track_changes</span>
+                <p class="text-sm font-medium text-base-content/55">No shots recorded yet</p>
+                <p class="max-w-[34ch] text-xs text-base-content/35">Scoring areas appear here once deliveries are analysed.</p>
+              </div>
+            </section>
+
+            <!-- ── Ball Analytics ── -->
+            <section class="ce-panel @container col-span-12 w-full" id="ballAnalyticsSection" data-section="ball" hidden>
+              <div class="ce-panel-head">
+                <span class="ce-panel-title">Ball Analytics</span>
+                <div class="ball-analytics-controls">
+                  <label class="ball-analytics-control"><input type="checkbox" id="ballToggleCalib" class="toggle" checked /> <span>Calibration axis</span></label>
+                  <label class="ball-analytics-control"><input type="checkbox" id="ballToggleTrail" class="toggle" checked /> <span>Trajectory</span></label>
+                </div>
+              </div>
+              <div data-skeleton="cards:4" hidden></div>
+              <div data-content class="p-4">
+                <div id="ballAvgSpeedStrip" class="ball-speed-session-strip mb-4" hidden></div>
+                <div class="ball-analytics-content-grid grid gap-4 @2xl:grid-cols-2">
+                  <div id="ballPaceSplit" class="ball-split-card"></div>
+                  <div id="ballLengthSplit" class="ball-split-card"></div>
+                  <div id="ballDeliveryTable" class="ball-split-card ball-table-card @2xl:col-span-2"></div>
+                  <div id="ballInsights" class="ball-split-card ball-insights-card @2xl:col-span-2"></div>
+                </div>
+              </div>
+              <div data-empty hidden class="flex flex-col items-center justify-center gap-2 p-10 text-center">
+                <span class="material-symbols-outlined text-[28px] text-base-content/25">sports_baseball</span>
+                <p class="text-sm font-medium text-base-content/55">No ball tracking data</p>
+                <p class="max-w-[34ch] text-xs text-base-content/35">Pace and length readings need a delivery with a visible ball.</p>
+              </div>
+            </section>
+
+            <!-- ── Biomechanics ── -->
+            <section class="biomech-section ce-panel col-span-12 w-full p-0" data-section="biomech">
+              <div class="ce-panel-head">
+                <div class="flex items-center gap-2">
+                  <span class="ce-panel-title">Biomechanics</span>
+                  <span class="badge badge-success">Live</span>
+                </div>
+                <span class="font-mono text-[0.68rem] text-base-content/50">Shots: <span id="shotCount" class="font-semibold text-base-content/80">0</span></span>
+              </div>
+              <div data-skeleton="feed:5" hidden></div>
+              <div id="biomech-feed" data-content class="p-4">
+                <div class="biomech-empty">AWAITING FIRST SHOT…</div>
+              </div>
+              <nav id="biomechPagination" class="biomech-pagination" aria-label="Biomechanics pages" hidden>
+                <button type="button" id="biomechPrevPage" class="btn btn-outline btn-sm">
+                  <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>Previous
+                </button>
+                <span id="biomechPageStatus" class="biomech-page-status" aria-live="polite">Page 1 of 1</span>
+                <button type="button" id="biomechNextPage" class="btn btn-outline btn-sm">
+                  Next<span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                </button>
+              </nav>
+            </section>
+
+            <!-- ── My Sessions ── -->
+            <section class="user-sessions-panel ce-panel col-span-12 w-full" data-section="sessions">
+              <div class="ce-panel-head flex-wrap">
+                <span class="ce-panel-title">My Sessions</span>
+              </div>
+              <div data-skeleton="rows:4" hidden></div>
+              <div data-content class="sessions-content">
+                <div class="sessions-content-toolbar">
+                  <button type="button" class="sessions-toolbar-btn" id="openSessionCompareBtn" aria-haspopup="dialog" aria-controls="sessionCompareModal"><span class="material-symbols-outlined" aria-hidden="true">compare_arrows</span>Compare</button>
+                  <button type="button" class="sessions-toolbar-btn" id="clearAllSessionsBtn" hidden title="Remove every saved session for your account"><span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>Clear all</button>
+                  <button type="button" class="sessions-toolbar-btn" id="resetEverythingBtn" hidden title="Delete all cloud sessions and show browser cleanup steps"><span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>Reset</button>
+                </div>
+                <div id="sessionsList" class="sessions-list">
+                  <div class="session-item-empty">Login to view your sessions.</div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </main>
+
+        <footer class="mx-auto w-full max-w-[1800px] px-4 pb-6 lg:px-6">
+          <div class="flex flex-wrap items-center justify-center gap-2 border-t border-base-300 pt-5 text-[0.7rem] text-base-content/35">
+            <span class="font-display font-bold text-base-content/55">CrickEye<span class="text-primary">Pro</span></span>
+            <span>·</span><span>AI Batting Analytics Engine</span>
+            <span>·</span><span>© 2026</span>
+          </div>
+        </footer>
       </div>
     </div>
-  </header>
 
-  <!-- Mobile & Server Connection Settings Modal -->
+  </div>
+  </div>
+
+  <!-- ═══════════════ MODALS ═══════════════ -->
   <div id="serverSettingsModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="serverModalTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="serverSettingsModal"></div>
-    <div class="ce-modal-dialog ce-modal-dialog--server">
-      <button type="button" class="ce-modal-close" data-close-modal="serverSettingsModal" aria-label="Close">&times;</button>
-      <div class="server-modal-header">
-        <span class="material-symbols-outlined server-modal-icon">router</span>
-        <div>
-          <h2 id="serverModalTitle" class="ce-modal-title">Mobile &amp; Server Settings</h2>
-          <p class="ce-modal-lead">Configure your wireless backend connection and mobile camera settings.</p>
-        </div>
-      </div>
-      <div class="server-modal-body">
+    <div class="ce-dialog">
+      <header class="ce-dialog-head">
+        <button type="button" class="ce-dialog-icon-btn" data-dialog-back aria-label="Back">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        </button>
+        <h2 id="serverModalTitle" class="ce-dialog-title" tabindex="-1">Mobile &amp; Server Settings</h2>
+        <button type="button" class="ce-dialog-icon-btn" data-close-modal="serverSettingsModal" aria-label="Close">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+      <div class="ce-dialog-body server-modal-body">
+        <p class="ce-modal-lead">Configure your wireless backend connection and mobile camera settings.</p>
         <div class="server-field-group">
           <label for="serverUrlInput" class="server-label">FastAPI Backend Server URL</label>
           <div class="server-input-wrap">
             <input type="url" id="serverUrlInput" class="server-input" placeholder="http://192.168.1.X:8000 or https://..." spellcheck="false" />
-            <button type="button" id="btnTestServerConnection" class="ce-btn ce-btn--accent ce-btn--sm">Test Ping</button>
+            <button type="button" id="btnTestServerConnection" class="btn btn-primary btn-sm">Test Ping</button>
           </div>
           <div id="serverPingResult" class="server-ping-status"></div>
-          <span class="server-hint">When using the Android APK on Wi-Fi or mobile data, enter your PC's Wi-Fi IP (e.g. <code>http://10.253.13.192:8000</code>) or your Cloudflare Tunnel URL.</span>
+          <span class="server-hint">When using the Android APK on Wi-Fi or mobile data, enter your PC's Wi-Fi IP (e.g. <code>http://10.253.18.57:8000</code>) or your Cloudflare Tunnel URL.</span>
         </div>
 
         <div class="server-presets-group">
           <span class="server-preset-label">Quick Presets:</span>
           <div class="server-preset-chips">
-            <button type="button" class="preset-chip" id="presetWifi"><span class="material-symbols-outlined preset-chip-icon">wifi</span> PC Wi-Fi (10.253.13.192)</button>
+            <button type="button" class="preset-chip" id="presetWifi"><span class="material-symbols-outlined preset-chip-icon">wifi</span> PC Wi-Fi (10.253.18.57)</button>
             <button type="button" class="preset-chip" id="presetLocalhost"><span class="material-symbols-outlined preset-chip-icon">usb</span> USB / Localhost (:8000)</button>
             <button type="button" class="preset-chip" id="presetCloudflare"><span class="material-symbols-outlined preset-chip-icon">cloud</span> Cloudflare Live Demo</button>
             <button type="button" class="preset-chip" id="presetEmulator"><span class="material-symbols-outlined preset-chip-icon">phone_android</span> Emulator (10.0.2.2:8000)</button>
@@ -155,46 +534,44 @@
             <strong>CrickEye Pro Android App</strong>
             <p>Directly install the APK onto Android phones for practice sessions in the nets.</p>
           </div>
-          <a href="/download/apk" download="CrickEye-Pro.apk" class="ce-btn ce-btn--primary"><span class="material-symbols-outlined">download</span> Download APK</a>
+          <a href="/download/apk" download="CrickEye-Pro.apk" class="btn btn-primary btn-sm"><span class="material-symbols-outlined">download</span> Download APK</a>
         </div>
       </div>
-      <div class="ce-modal-actions">
-        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="serverSettingsModal">Close</button>
-        <button type="button" class="ce-btn ce-btn--primary" id="btnSaveServerSettings">Save &amp; Reconnect</button>
-      </div>
+      <footer class="ce-dialog-foot">
+        <button type="button" class="btn btn-outline btn-sm" data-close-modal="serverSettingsModal">Close</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnSaveServerSettings">Save &amp; Reconnect</button>
+      </footer>
     </div>
   </div>
 
-  <!-- Account / profile (logged-in user) -->
   <div id="profileModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="profileModal"></div>
-    <div class="ce-modal-dialog ce-modal-dialog--profile">
-      <button type="button" class="ce-modal-close" data-close-modal="profileModal" aria-label="Close">&times;</button>
-      <h2 id="profileModalTitle" class="ce-modal-title">Your profile</h2>
+    <div class="ce-dialog">
+      <header class="ce-dialog-head">
+        <button type="button" class="ce-dialog-icon-btn" data-dialog-back aria-label="Back">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        </button>
+        <h2 id="profileModalTitle" class="ce-dialog-title" tabindex="-1">Your profile</h2>
+        <button type="button" class="ce-dialog-icon-btn" data-close-modal="profileModal" aria-label="Close">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+      <div class="ce-dialog-body profile-dialog-body">
       <p class="ce-modal-lead">Signed in to CrickEye Pro. Sessions and uploads are tied to this account.</p>
       <dl class="profile-detail-list">
-        <div class="profile-detail-row">
-          <dt>Email</dt>
-          <dd id="profileModalEmail">—</dd>
-        </div>
-        <div class="profile-detail-row">
-          <dt>User ID</dt>
-          <dd><code id="profileModalUserId" class="profile-code">—</code></dd>
-        </div>
-        <div class="profile-detail-row">
-          <dt>Member since</dt>
-          <dd id="profileModalCreated">—</dd>
-        </div>
+        <div class="profile-detail-row"><dt>Email</dt><dd id="profileModalEmail">—</dd></div>
+        <div class="profile-detail-row"><dt>User ID</dt><dd><code id="profileModalUserId" class="profile-code">—</code></dd></div>
+        <div class="profile-detail-row"><dt>Member since</dt><dd id="profileModalCreated">—</dd></div>
       </dl>
       <p class="ce-modal-footnote">To change your password, use the reset link from the login screen or your Supabase project settings.</p>
-      <div class="ce-modal-actions">
-        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="profileModal">Close</button>
-        <button type="button" class="ce-btn ce-btn--danger" id="profileLogoutBtn">Log out</button>
       </div>
+      <footer class="ce-dialog-foot">
+        <button type="button" class="btn btn-outline btn-sm" data-close-modal="profileModal">Close</button>
+        <button type="button" class="btn btn-error btn-sm" id="profileLogoutBtn">Log out</button>
+      </footer>
     </div>
   </div>
 
-  <!-- Saved session details (from My Sessions) -->
   <div id="sessionDetailModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="sessionDetailTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="sessionDetailModal"></div>
     <div class="ce-modal-dialog ce-modal-dialog--session">
@@ -202,56 +579,65 @@
       <h2 id="sessionDetailTitle" class="ce-modal-title">Session details</h2>
       <div id="sessionDetailBody" class="session-detail-body"></div>
       <div class="ce-modal-actions">
-        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="sessionDetailModal">Close</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-close-modal="sessionDetailModal">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- Session-to-session comparison -->
-  <!-- Live dashboard: section detail popups (AI / length / deliveries / zones) -->
+  <!-- Session Score detail views. Centred dialog on desktop, full screen on phones. -->
   <div id="playCardDetailModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="playCardDetailTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="playCardDetailModal"></div>
-    <div class="ce-modal-dialog ce-modal-dialog--playcard-detail">
-      <button type="button" class="ce-modal-close" data-close-modal="playCardDetailModal" aria-label="Close">&times;</button>
-      <h2 id="playCardDetailTitle" class="ce-modal-title">Details</h2>
-      <div id="playCardDetailBody" class="playcard-detail-body"></div>
-      <div class="ce-modal-actions">
-        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="playCardDetailModal">Close</button>
-      </div>
+    <div class="ce-dialog">
+      <header class="ce-dialog-head">
+        <button type="button" class="ce-dialog-icon-btn" data-dialog-back aria-label="Back">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        </button>
+        <h2 id="playCardDetailTitle" class="ce-dialog-title" tabindex="-1">Details</h2>
+        <button type="button" class="ce-dialog-icon-btn" data-close-modal="playCardDetailModal" aria-label="Close">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+      <div id="playCardDetailBody" class="ce-dialog-body"></div>
+      <footer class="ce-dialog-foot">
+        <button type="button" class="btn btn-ghost btn-sm" id="playCardDetailReport">
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">description</span>Full session report
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" data-close-modal="playCardDetailModal">Done</button>
+      </footer>
     </div>
   </div>
 
   <div id="sessionCompareModal" class="ce-modal ce-modal--compare" role="dialog" aria-modal="true" aria-labelledby="sessionCompareTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="sessionCompareModal"></div>
-    <div class="ce-modal-dialog ce-modal-dialog--compare">
-      <button type="button" class="ce-modal-close" data-close-modal="sessionCompareModal" aria-label="Close">&times;</button>
-      <h2 id="sessionCompareTitle" class="ce-modal-title">Session Comparison</h2>
+    <div class="ce-dialog">
+      <header class="ce-dialog-head">
+        <button type="button" class="ce-dialog-icon-btn" data-dialog-back aria-label="Back">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        </button>
+        <h2 id="sessionCompareTitle" class="ce-dialog-title" tabindex="-1">Session Comparison</h2>
+        <button type="button" class="ce-dialog-icon-btn" data-close-modal="sessionCompareModal" aria-label="Close">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+      <div class="ce-dialog-body">
       <p id="sessionCompareLead" class="ce-modal-lead">Pick two completed sessions to compare, or overlay every completed session from this calendar month on the same charts.</p>
       <div class="compare-picker-grid">
-        <label class="compare-picker-field">
-          <span>Session 1 (baseline)</span>
-          <select id="compareSessionA"></select>
-        </label>
-        <label class="compare-picker-field">
-          <span>Session 2 (latest)</span>
-          <select id="compareSessionB"></select>
-        </label>
+        <label class="compare-picker-field"><span>Session 1 (baseline)</span><select id="compareSessionA"></select></label>
+        <label class="compare-picker-field"><span>Session 2 (latest)</span><select id="compareSessionB"></select></label>
       </div>
       <div class="compare-month-row">
-        <button type="button" id="compareThisMonthBtn" class="compare-month-all-btn" disabled>
-          This month · all sessions
-        </button>
+        <button type="button" id="compareThisMonthBtn" class="compare-month-all-btn" disabled>This month · all sessions</button>
       </div>
       <div id="sessionCompareBody" class="session-compare-body">
         <p class="session-item-empty">Select two completed sessions to compare.</p>
       </div>
-      <div class="ce-modal-actions">
-        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="sessionCompareModal">Close</button>
       </div>
+      <footer class="ce-dialog-foot">
+        <button type="button" class="btn btn-primary btn-sm" data-close-modal="sessionCompareModal">Done</button>
+      </footer>
     </div>
   </div>
 
-  <!-- After cloud reset: browser + local dev cleanup tips -->
   <div id="resetEverythingModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="resetEverythingTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="resetEverythingModal"></div>
     <div class="ce-modal-dialog ce-modal-dialog--session">
@@ -271,348 +657,49 @@
         <p class="reset-everything-footnote">Uploaded videos in Supabase Storage are not removed by this button — delete those from the Supabase dashboard if you need to free space.</p>
       </div>
       <div class="ce-modal-actions">
-        <button type="button" class="ce-btn ce-btn--ghost" id="resetEverythingLogoutBtn" title="Sign out of CrickEye on this browser">Log out now</button>
-        <button type="button" class="ce-btn ce-btn--ghost" data-close-modal="resetEverythingModal">Close</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="resetEverythingLogoutBtn" title="Sign out of CrickEye on this browser">Log out now</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-close-modal="resetEverythingModal">Close</button>
       </div>
     </div>
   </div>
 
-  <section id="coachDashboard" class="coach-dashboard" hidden>
-    <div class="coach-dashboard-head">
-      <div>
-        <h2>Coach Control Panel</h2>
-        <p>Track all registered players and their session performance.</p>
-      </div>
-      <button type="button" class="ce-btn ce-btn--danger" id="coachLogoutBtn">Log out</button>
+  <!-- Hidden stubs — keep App.js DOM refs valid without rendering anything -->
+  <div style="display:none">
+    <div id="session-report"></div>
+    <svg><circle id="ring-timing"/><circle id="ring-middling"/><circle id="ring-impact"/><circle id="ring-backlift"/></svg>
+    <div class="analysis-row">
+      <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
+      <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
+      <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
+      <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
     </div>
-    <div id="coachStatsRow" class="coach-stats-row"></div>
-    <div id="coachDashboardToolbar" class="coach-dashboard-toolbar" hidden></div>
-    <div id="coachPlayersList" class="coach-players-container">
-      <div class="session-item-empty">No player profiles found yet.</div>
-    </div>
-  </section>
-
-  <div id="playerAppShell">
-  <!-- Player-only analysis (live feed, pitch map, wagon wheel, ball analytics, biomechanics). Hidden for coach role via App.js + body class. -->
-  <div id="playerAnalysisOnly" class="player-analysis-only">
-  <!-- ───────────────── MAIN STACK (video → wagon wheel) ───────────────── -->
-  <main class="main-grid player-dashboard-main">
-
-    <!-- ══════════ LIVE FEED + PLAYCARD — side by side ══════════ -->
-    <div class="live-feed-row">
-
-      <!-- LEFT: Video sub-panel -->
-      <section class="panel live-feed-panel" aria-label="Live video feed">
-        <div class="panel-header">
-          <div class="panel-label-group">
-            <span class="live-dot"></span>
-            <span class="panel-label">Live Feed</span>
-          </div>
-          <div class="panel-controls">
-            <button type="button" class="ctrl-btn ctrl-btn--accent" id="btnNewCapture" title="Record Delivery via Live Webcam or Upload Video"><span class="material-symbols-outlined ctrl-btn-icon">videocam</span> New Capture</button>
-            <span class="ctrl-btn" id="btnSpeed"><span class="material-symbols-outlined ctrl-btn-icon">speed</span> 1×</span>
-            <span class="ctrl-btn" id="btnLoop"><span class="material-symbols-outlined ctrl-btn-icon">repeat</span> Loop</span>
-          </div>
-        </div>
-
-        <div class="video-wrapper">
-          <video id="mainVideo" class="main-video" playsinline></video>
-          <canvas id="ballOverlayCanvas" class="ball-overlay-canvas" aria-hidden="true"></canvas>
-          <div class="video-hud">
-            <div class="hud-corner hud-tl">
-              <span class="rec-dot"></span> LIVE
-            </div>
-            <div class="hud-corner hud-tr" id="hudTime">00:00</div>
-            <div class="hud-corner hud-bl">SHOT: <span id="hudShot">—</span></div>
-            <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
-          </div>
-        </div>
-
-        <!-- Shot timeline -->
-        <div class="timeline-section">
-          <div class="timeline-label">Shot Timeline</div>
-          <div class="timeline-track" id="timelineTrack"></div>
-          <div class="timeline-bar">
-            <div class="timeline-progress" id="timelineProgress"></div>
-          </div>
-        </div>
-
-        <!-- Current shot display -->
-        <div class="current-shot-display">
-          <div class="shot-badge" id="currentShotBadge">
-            <span class="shot-number">SHOT <span id="shotIndex">—</span></span>
-            <span class="shot-name" id="shotName">AWAITING</span>
-            <span class="shot-time" id="shotTime">—</span>
-          </div>
-          <div class="shot-color-bar" id="shotColorBar"></div>
-        </div>
-      </section>
-
-      <!-- RIGHT: PlayCard / Score panel -->
-      <aside class="playcard-panel" aria-label="Session score panel">
-        <!-- Panel header — always visible, outside the scrollable card -->
-        <div class="playcard-panel-header">
-          <div class="playcard-panel-title-group">
-            <span class="playcard-panel-title">Session Score</span>
-          </div>
-        </div>
-
-        <!-- Card body: placeholder and score view share the same slot -->
-        <div id="playCardMount" class="playcard playcard--inactive">
-          <div id="playCardCompileBar" class="playcard-compile-bar" hidden aria-hidden="true">
-            <div class="playcard-compile-bar-track">
-              <div class="playcard-compile-bar-fill" id="playCardCompileBarFill"></div>
-            </div>
-          </div>
-          <div class="playcard-body">
-            <div id="playCardPlaceholder" class="playcard-placeholder">
-              <div class="playcard-placeholder-icon"><span class="material-symbols-outlined" style="font-size: 38px; color: var(--cyan);">insights</span></div>
-              <p class="playcard-placeholder-title">Awaiting Analysis</p>
-              <p class="playcard-placeholder-text">Watch the full video — your session score, shot highlights, and coaching breakdown appear here when playback finishes.</p>
-            </div>
-            <div id="playCardInner" class="playcard-inner" hidden></div>
-          </div>
-        </div>
-      </aside>
-
-    </div>
-
-    <!-- ══════════ PITCH MAP (L) + WAGON WHEEL (R) — two columns; Ball Analytics cards stay below ══════════ -->
-    <div class="analytics-split-row">
-      <div class="analytics-split-row__col analytics-split-row__pitch" id="analysisPitchColumn">
-        <div class="ball-pitch-card">
-          <div class="ball-pitch-title">Pitch map · length zones from striker</div>
-          <div class="ball-pitch-canvas-wrap">
-            <div id="pitchMapReactRoot" hidden></div>
-            <canvas id="pitchMapCanvas" width="280" height="360"></canvas>
-          </div>
-          <p class="ball-muted ball-pitch-note">Leg side / off side are schematic (RHB). Single-camera — lateral spread is approximate.</p>
-        </div>
-      </div>
-      <div class="analytics-split-row__col analytics-split-row__wagon">
-        <section class="panel panel--wagon-stack">
-
-          <div class="panel-header">
-            <span class="panel-label">Wagon Wheel</span>
-            <div class="panel-controls">
-              <span class="ctrl-btn" id="btnClearWheel">Clear</span>
-            </div>
-          </div>
-
-          <div class="wagon-wheel-container">
-            <canvas id="wagonWheelCanvas"></canvas>
-          </div>
-
-          <div class="wheel-legend">
-            <div class="legend-item"><span class="legend-dot" style="background:#06B6D4"></span>Cover Drive</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#10B981"></span>Straight Drive</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#F97316"></span>Pull Shot</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#A855F7"></span>Flick</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#EAB308"></span>Sweep</div>
-          </div>
-
-          <div class="shot-distribution">
-            <div class="dist-header">Wagon Wheel Coverage</div>
-            <div class="dist-rows">
-              <div class="dist-row">
-                <div class="dist-row-top">
-                  <span class="dist-label dist-label--orange">Leg Side</span>
-                  <div class="dist-row-right">
-                    <span class="dist-count" id="dist-leg-cnt">0</span>
-                    <span class="dist-pct" id="dist-leg-pct">0%</span>
-                  </div>
-                </div>
-                <div class="dist-track">
-                  <div class="dist-bar leg" id="dist-leg-bar" style="width:0%"></div>
-                </div>
-              </div>
-              <div class="dist-row">
-                <div class="dist-row-top">
-                  <span class="dist-label dist-label--cyan">Off Side</span>
-                  <div class="dist-row-right">
-                    <span class="dist-count" id="dist-off-cnt">0</span>
-                    <span class="dist-pct" id="dist-off-pct">0%</span>
-                  </div>
-                </div>
-                <div class="dist-track">
-                  <div class="dist-bar off" id="dist-off-bar" style="width:0%"></div>
-                </div>
-              </div>
-              <div class="dist-row">
-                <div class="dist-row-top">
-                  <span class="dist-label dist-label--green">Straight</span>
-                  <div class="dist-row-right">
-                    <span class="dist-count" id="dist-str-cnt">0</span>
-                    <span class="dist-pct" id="dist-str-pct">0%</span>
-                  </div>
-                </div>
-                <div class="dist-track">
-                  <div class="dist-bar str" id="dist-str-bar" style="width:0%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="over-summary">
-            <div class="over-summary-header">Session Summary</div>
-            <div class="over-rating">
-              Rating:
-              <span id="sessionStars">
-                <span class="star">★</span>
-                <span class="star">★</span>
-                <span class="star">★</span>
-                <span class="star">★</span>
-                <span class="star">★</span>
-              </span>
-              <span class="rating-label" id="ratingLabel" style="font-family:JetBrains Mono,monospace;font-size:0.6rem;color:#94A3B8;margin-left:6px;letter-spacing:0.08em"></span>
-            </div>
-            <table class="over-table" id="overTable">
-              <thead>
-                <tr><th>Shot Type</th><th>Count</th></tr>
-              </thead>
-              <tbody id="overTableBody">
-                <tr><td>—</td><td>—</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-        </section>
-      </div>
-    </div>
-  </main>
-
-  <!-- ───────────────── BALL ANALYTICS (YOLO track) — below wagon ───────────────── -->
-  <section class="ball-analytics-section" id="ballAnalyticsSection" hidden>
-    <div class="ball-analytics-head">
-      <div class="panel-label-group">
-        <span class="panel-label">Ball Analytics</span>
-      </div>
-      <div class="ball-analytics-toggles">
-        <label class="ball-toggle"><input type="checkbox" id="ballToggleCalib" checked /> Calib. axis</label>
-        <label class="ball-toggle"><input type="checkbox" id="ballToggleTrail" checked /> Trajectory</label>
-      </div>
-    </div>
-    <div id="ballAvgSpeedStrip" class="ball-speed-session-strip" hidden></div>
-    <div class="ball-analytics-grid">
-      <div class="ball-stats-stack">
-        <div id="ballPaceSplit" class="ball-split-card"></div>
-        <div id="ballLengthSplit" class="ball-split-card"></div>
-        <div id="ballDeliveryTable" class="ball-split-card ball-table-card"></div>
-        <div id="ballInsights" class="ball-split-card ball-insights-card"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ───────────────── BIOMECHANICS — full width (same horizontal gutters as dashboard) ───────────────── -->
-  <section class="biomech-section">
-    <div class="biomechanics-card">
-      <div class="biomech-section-header">
-        <div class="panel-label-group">
-          <span class="panel-label">Biomechanics</span>
-          <span class="live-chip">
-            <span class="live-chip-dot"></span>Live
-          </span>
-        </div>
-        <span class="shot-count-display">Shots: <span id="shotCount">0</span></span>
-      </div>
-      <div id="biomech-feed">
-        <div class="biomech-empty">AWAITING FIRST SHOT…</div>
-      </div>
-    </div>
-  </section>
-
   </div>
 
-  <!-- ───────────────── BOTTOM: MY SESSIONS + COMPARE ───────────────── -->
-  <section class="bottom-section">
-    <section class="user-sessions-panel my-sessions-container">
-      <div class="panel-header">
-        <span class="panel-label">My Sessions</span>
-        <div class="sessions-panel-actions">
-          <button type="button" class="clear-sessions-btn" id="clearAllSessionsBtn" hidden title="Remove every saved session for your account">
-            Clear all
-          </button>
-          <button type="button" class="clear-sessions-btn reset-everything-btn" id="resetEverythingBtn" hidden title="Delete all cloud sessions and show browser cleanup steps">
-            Reset everything
-          </button>
-          <button type="button" class="compare-sessions-btn" id="openSessionCompareBtn" aria-haspopup="dialog" aria-controls="sessionCompareModal">
-            Compare Sessions
-          </button>
-        </div>
-      </div>
-      <div id="sessionsList" class="sessions-list">
-        <div class="session-item-empty">Login to view your sessions.</div>
-      </div>
-    </section>
-
-    <!-- Hidden stubs — keep app.js DOM refs valid without rendering anything -->
-    <div style="display:none">
-      <div id="session-report"></div>
-      <svg>
-        <circle id="ring-timing"/>
-        <circle id="ring-middling"/>
-        <circle id="ring-impact"/>
-        <circle id="ring-backlift"/>
-      </svg>
-      <div class="analysis-row">
-        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
-        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
-        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
-        <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
-      </div>
-    </div>
-
-    <footer class="site-footer">
-      <span class="footer-brand">CrickEye<span class="accent">Pro</span></span>
-      <span class="footer-sep">·</span>
-      <span class="footer-sub">AI Batting Analytics Engine</span>
-      <span class="footer-sep">·</span>
-      <span class="footer-copy">© 2026</span>
-    </footer>
-
-  </section>
-  </div>
+  <!-- ═══════════════ MOBILE BOTTOM NAV ═══════════════ -->
+  <nav class="mobile-nav-bar fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-base-300 bg-base-100/95 backdrop-blur-xl md:hidden" id="mobileNavBar" aria-label="Mobile Navigation" style="padding-bottom:env(safe-area-inset-bottom,0px)">
+    <button type="button" class="mobile-nav-item active" data-nav-target="capture"><span class="material-symbols-outlined mobile-nav-icon">videocam</span><span class="mobile-nav-label">Capture</span></button>
+    <button type="button" class="mobile-nav-item" data-nav-target="score"><span class="material-symbols-outlined mobile-nav-icon">speed</span><span class="mobile-nav-label">Score</span></button>
+    <button type="button" class="mobile-nav-item" data-nav-target="pitch"><span class="material-symbols-outlined mobile-nav-icon">track_changes</span><span class="mobile-nav-label">Pitch</span></button>
+    <button type="button" class="mobile-nav-item" data-nav-target="biomech"><span class="material-symbols-outlined mobile-nav-icon">accessibility_new</span><span class="mobile-nav-label">Biomech</span></button>
+    <button type="button" class="mobile-nav-item" data-nav-target="sessions"><span class="material-symbols-outlined mobile-nav-icon">video_library</span><span class="mobile-nav-label">Sessions</span></button>
+    <button type="button" class="mobile-nav-item" data-nav-target="settings"><span class="material-symbols-outlined mobile-nav-icon">tune</span><span class="mobile-nav-label">Settings</span></button>
+  </nav>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="components/PitchMap.js?v=6.5.1"></script>
-  <script src="components/wagonWheel.js?v=6.5.1"></script>
-  <script src="components/ballAnalytics.js?v=6.5.1"></script>
-  <script src="components/lengthInsights.js?v=6.5.1"></script>
-  <script src="components/ReportModal.js?v=6.5.1"></script>
-  <script src="components/PlayCard.js?v=6.5.1"></script>
-  <!-- UMD build required for classic <script>; bare @2 points at CJS and breaks in the browser -->
+  <script src="components/tone.js?v=7.4.4"></script>
+  <script src="components/PitchMap.js?v=7.4.4"></script>
+  <script src="components/wagonWheel.js?v=7.4.4"></script>
+  <script src="components/ballAnalytics.js?v=7.4.4"></script>
+  <script src="components/lengthInsights.js?v=7.4.4"></script>
+  <script src="components/ReportModal.js?v=7.4.4"></script>
+  <script src="components/PlayCard.js?v=7.4.4"></script>
+  <script src="components/skeleton.js?v=7.4.4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="config.js?v=6.5.2"></script>
-  <script src="App.js?v=6.5.2"></script>
-
-  <!-- Mobile Bottom Navigation Bar -->
-  <nav class="mobile-nav-bar" id="mobileNavBar" aria-label="Mobile Navigation">
-    <button type="button" class="mobile-nav-item active" data-nav-target="capture">
-      <span class="material-symbols-outlined mobile-nav-icon">videocam</span>
-      <span class="mobile-nav-label">Capture</span>
-    </button>
-    <button type="button" class="mobile-nav-item" data-nav-target="score">
-      <span class="material-symbols-outlined mobile-nav-icon">speed</span>
-      <span class="mobile-nav-label">Score</span>
-    </button>
-    <button type="button" class="mobile-nav-item" data-nav-target="pitch">
-      <span class="material-symbols-outlined mobile-nav-icon">track_changes</span>
-      <span class="mobile-nav-label">Pitch</span>
-    </button>
-    <button type="button" class="mobile-nav-item" data-nav-target="biomech">
-      <span class="material-symbols-outlined mobile-nav-icon">accessibility_new</span>
-      <span class="mobile-nav-label">Biomech</span>
-    </button>
-    <button type="button" class="mobile-nav-item" data-nav-target="sessions">
-      <span class="material-symbols-outlined mobile-nav-icon">video_library</span>
-      <span class="mobile-nav-label">Sessions</span>
-    </button>
-    <button type="button" class="mobile-nav-item" data-nav-target="settings">
-      <span class="material-symbols-outlined mobile-nav-icon">tune</span>
-      <span class="mobile-nav-label">Settings</span>
-    </button>
-  </nav>
-
+  <script src="config.js?v=7.4.4"></script>
+  <!-- Backend exposes this at /app.js (see backend/main.py); App.js 404s. -->
+  <script src="app.js?v=7.5.2"></script>
+  <!-- DEV ONLY: dashboard mock, active only with ?mock=1. Remove with dev-mock.js. -->
+  <script src="components/dev-mock.js?v=7.4.4"></script>
 </body>
 </html>

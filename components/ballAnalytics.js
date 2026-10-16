@@ -18,6 +18,7 @@ const BallAnalytics = (() => {
   let showTrail = true;
   let togglesWired = false;
   let pitchMapPulseRaf = null;
+  let selectedPitchDeliveryId = null;
   /** Last payload from setData — insights / session speed / errors. */
   let lastBallAnalyticsRef = null;
   /**
@@ -282,6 +283,7 @@ const BallAnalytics = (() => {
         fy,
         zone,
         outcome: mapDeliveryOutcome(d),
+        sourceDelivery: d,
       };
     });
   }
@@ -299,6 +301,8 @@ const BallAnalytics = (() => {
         width: 980,
         height: 1320,
         animated: Array.isArray(items) && items.length > 0,
+        selectedId: selectedPitchDeliveryId,
+        onBallClick: selectPitchDelivery,
       }),
     );
     return true;
@@ -325,6 +329,8 @@ const BallAnalytics = (() => {
         : defaultHalf;
     if (pitchTitleEl) {
       pitchTitleEl.textContent = `Pitch map · length zones (0–${sm.toFixed(2)} m from striker · 11 yd halfway)`;
+      // Keep the measurement available without turning the panel subtitle into a paragraph.
+      pitchTitleEl.textContent = `Bounce distance: 0–${sm.toFixed(2)} m from striker`;
     }
 
     const pitchMapItems = lastBallAnalyticsRef
@@ -359,10 +365,26 @@ const BallAnalytics = (() => {
     }
   }
 
+  /** Focus a delivery from the pitch map in both the map and replay. */
+  function selectPitchDelivery(item) {
+    if (!item) return;
+    selectedPitchDeliveryId = item.id;
+    renderDeliveryTable();
+    updatePitchMapUi();
+
+    const delivery = item.sourceDelivery || {};
+    const frame = Number(delivery.peak_frame ?? delivery.start_frame ?? delivery.end_frame);
+    if (videoEl && Number.isFinite(frame) && fps > 0) {
+      videoEl.currentTime = Math.max(0, frame / fps);
+      drawOverlayAtTime(videoEl.currentTime);
+    }
+  }
+
   function clear() {
     frameMap = new Map();
     deliveries = [];
     calibration = null;
+    selectedPitchDeliveryId = null;
     if (pctx && pitchCanvas) {
       pctx.clearRect(0, 0, pitchCanvas.width, pitchCanvas.height);
     }
@@ -793,8 +815,10 @@ const BallAnalytics = (() => {
       return sessionSpeedFallback;
     }
 
-    const rows = rowsSrc.map((d) => {
+    const rows = rowsSrc.map((d, idx) => {
       const shot = d.display_num != null ? `#${d.display_num}` : (d.delivery_id || '—');
+      const mapIdRaw = d.display_num != null ? d.display_num : (d.shot_num != null ? d.shot_num : (idx + 1));
+      const mapId = Number.isFinite(Number(mapIdRaw)) ? Number(mapIdRaw) : (idx + 1);
       const rawLen = normalizeLengthLabel(
         (d.length && d.length.label) || 'full',
         d.length && d.length.distance_m,
@@ -818,7 +842,8 @@ const BallAnalytics = (() => {
         : '<span class="ball-track-no" aria-hidden="true" title="Unmatched"><span class="material-symbols-outlined mui-icon" style="font-size:14px;vertical-align:middle;">close</span></span>';
       const paceColor = PACE_COLORS[resolvedBand] || '#06B6D4';
       const paceLabel = humanizeToken(resolvedBand);
-      return `<tr class="${matched ? '' : 'ball-row-unmatched'}">
+      const selectedClass = String(mapId) === String(selectedPitchDeliveryId) ? ' ball-row-selected' : '';
+      return `<tr class="${matched ? '' : 'ball-row-unmatched'}${selectedClass}" data-pitch-map-id="${mapId}" tabindex="0" role="button" aria-label="Focus delivery ${shot}">
         <td class="ball-td-shot"><span class="ball-shot-num">${shot}</span></td>
         <td class="ball-td-pace"><span class="ball-pace-cell"><span class="ball-pace-label" style="color:${paceColor}">${paceLabel}</span> ${trkIcon}</span></td>
         <td class="ball-td-length">${lenCell}</td>
@@ -826,15 +851,28 @@ const BallAnalytics = (() => {
       </tr>`;
     }).join('');
     tbl.innerHTML = `<table class="ball-mini-table ball-delivery-table"><caption class="ball-table-caption">Per-delivery metrics — classifier-confirmed shots only (updates during replay).</caption><thead><tr><th scope="col" class="ball-th-shot">Shot</th><th scope="col" class="ball-th-pace">Pace</th><th scope="col" class="ball-th-length">Length</th><th scope="col" class="ball-th-speed">Speed</th></tr></thead><tbody>${rows}</tbody></table>`;
+    tbl.insertAdjacentHTML('afterbegin', '<div class="ball-split-title ball-card-heading">Delivery log</div>');
+    const focusTableDelivery = (event) => {
+      if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.type === 'keydown') event.preventDefault();
+      const row = event.target.closest('[data-pitch-map-id]');
+      if (!row) return;
+      const id = Number(row.dataset.pitchMapId);
+      const item = mapDeliveriesForPitchMap(rowsSrc, calibration?.segment_m || HALF_PITCH_FROM_STRIKER_M)
+        .find((candidate) => Number(candidate.id) === id);
+      if (item) selectPitchDelivery(item);
+    };
+    tbl.addEventListener('click', focusTableDelivery);
+    tbl.addEventListener('keydown', focusTableDelivery);
   }
 
   function renderInsights(ins) {
     const el = document.getElementById('ballInsights');
     if (!el || !ins) return;
     const notes = (ins.bowler && ins.bowler.notes) || [];
-    el.innerHTML = notes.length
+    el.innerHTML = '<div class="ball-split-title ball-card-heading">Bowler insights</div>' + (notes.length
       ? `<ul class="ball-insight-list">${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
-      : '<p class="ball-muted">Insights appear when multiple deliveries are tracked.</p>';
+      : '<p class="ball-muted">Insights appear when multiple deliveries are tracked.</p>');
   }
 
   /** Session-level ball speed summary (confirmed deliveries with a numeric speed). */

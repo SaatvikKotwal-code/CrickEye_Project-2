@@ -152,18 +152,36 @@ public class MainActivity extends AppCompatActivity {
                                              FileChooserParams fileChooserParams) {
                 if (mFilePathCallback != null) {
                     mFilePathCallback.onReceiveValue(null);
+                    mFilePathCallback = null;
                 }
                 mFilePathCallback = filePathCallback;
 
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("video/*");
+                Intent intent = null;
+                if (fileChooserParams != null) {
+                    try {
+                        intent = fileChooserParams.createIntent();
+                    } catch (Exception e) {
+                        Log.w(TAG, "fileChooserParams.createIntent() failed: " + e.getMessage());
+                    }
+                }
+                if (intent == null) {
+                    intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("video/*");
+                }
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                    "video/mp4", "video/webm", "video/quicktime", "video/3gpp", "video/x-matroska", "video/*"
+                });
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
                 Intent chooser = Intent.createChooser(intent, "Select Cricket Delivery Video");
                 try {
                     startActivityForResult(chooser, FILE_CHOOSER_REQ_CODE);
                 } catch (Exception e) {
-                    mFilePathCallback = null;
+                    if (mFilePathCallback != null) {
+                        mFilePathCallback.onReceiveValue(null);
+                        mFilePathCallback = null;
+                    }
                     Toast.makeText(MainActivity.this, "Cannot open file picker", Toast.LENGTH_SHORT).show();
                     return false;
                 }
@@ -231,11 +249,33 @@ public class MainActivity extends AppCompatActivity {
             if (mFilePathCallback != null) {
                 Uri[] results = null;
                 if (resultCode == RESULT_OK && data != null) {
-                    Uri dataUri = data.getData();
-                    if (dataUri != null) {
-                        results = new Uri[]{dataUri};
+                    try {
+                        results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                    } catch (Exception e) {
+                        Log.w(TAG, "parseResult exception: " + e.getMessage());
+                    }
+                    if (results == null || results.length == 0) {
+                        if (data.getClipData() != null) {
+                            int count = data.getClipData().getItemCount();
+                            results = new Uri[count];
+                            for (int i = 0; i < count; i++) {
+                                results[i] = data.getClipData().getItemAt(i).getUri();
+                            }
+                        } else if (data.getData() != null) {
+                            results = new Uri[]{data.getData()};
+                        } else if (data.getDataString() != null) {
+                            results = new Uri[]{Uri.parse(data.getDataString())};
+                        }
                     }
                 }
+                if (results != null) {
+                    for (Uri u : results) {
+                        try {
+                            grantUriPermission(getPackageName(), u, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        } catch (Exception ignored) {}
+                    }
+                }
+                Log.d(TAG, "onShowFileChooser returning " + (results != null ? results.length + " URI(s)" : "null"));
                 mFilePathCallback.onReceiveValue(results);
                 mFilePathCallback = null;
             }

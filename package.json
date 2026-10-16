@@ -1,0 +1,14 @@
+{
+  "name": "crickeye-pro-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tailwind CSS build pipeline for the CrickEye Pro dashboard.",
+  "scripts": {
+    "build:css": "tailwindcss -i ./tailwind.input.css -o ./components/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./tailwind.input.css -o ./components/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  }
+}

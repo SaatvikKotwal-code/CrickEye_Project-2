@@ -31,13 +31,13 @@ const ReportModal = (() => {
     pull:'#F97316', flick:'#A855F7', sweep:'#EAB308',
   };
   const QUALITY_COLORS = {
-    'Top class': '#10B981',
-    Good: '#06B6D4',
-    Average: '#EAB308',
-    Poor: '#EF4444',
-    OK: '#EAB308',
-    'Needs work': '#EF4444',
-    Excellent: '#10B981',
+    'Top class': TONE.strong,
+    Good: TONE.strong,
+    Average: TONE.moderate,
+    Poor: TONE.weak,
+    OK: TONE.moderate,
+    'Needs work': TONE.weak,
+    Excellent: TONE.strong,
   };
   const FLAG_INFO = {
     BAT_SPEED_SESSION_LOCK: { label: 'Bat speed session check', color: '#64748B', desc: 'Peak bat speed was aligned with swing intensity and the rest of this net so one frame spike does not dominate.' },
@@ -288,8 +288,8 @@ const ReportModal = (() => {
   function buildShotCard(shot) {
     const color = SHOT_COLORS[shot.label] || '#888';
     const score = shot.shot_score || 0;
-    const sc = score >= 7 ? '#10B981' : score >= 5 ? '#06B6D4' : score >= 3 ? '#EAB308' : '#EF4444';
-    const qc = QUALITY_COLORS[shot.shot_quality] || '#888';
+    const sc = scoreColor(score);
+    const qc = QUALITY_COLORS[shot.shot_quality] || TONE.neutral;
 
     const latTh = shot.label === 'pull' || shot.label === 'sweep' ? 0.20 : 0.12;
     const latR = shot.head_lateral_ratio != null ? Number(shot.head_lateral_ratio) : null;
@@ -332,7 +332,7 @@ const ReportModal = (() => {
           <div class="rp-shot-right">
             <span class="rp-shot-time">${shot.timestamp || '—'}</span>
             ${padBadge}
-            <span class="rp-shot-quality" style="color:${qc};background:${qc}18">${shot.shot_quality || '—'}</span>
+            <span class="rp-shot-quality" style="color:${qc};background:color-mix(in srgb, ${qc} 12%, transparent)">${shot.shot_quality || '—'}</span>
             <span class="rp-shot-score" style="color:${sc}">${score}<span class="rp-shot-denom">/10</span></span>
           </div>
         </div>
@@ -423,17 +423,19 @@ const ReportModal = (() => {
         <div class="rp-metric-title" style="color:${m.color}">${m.title}</div>
         <div class="rp-metric-section"><span class="rp-metric-tag">What it measures</span><p>${m.what}</p></div>
         <div class="rp-metric-section"><span class="rp-metric-tag">How it's calculated</span><p>${m.how}</p></div>
-        <div class="rp-metric-section"><span class="rp-metric-tag" style="background:${m.color}18;color:${m.color}">Coaching tip</span><p>${m.tip}</p></div>
+        <div class="rp-metric-section"><span class="rp-metric-tag" style="background:color-mix(in srgb, ${m.color} 12%, transparent);color:${m.color}">Coaching tip</span><p>${m.tip}</p></div>
       </div>`).join('');
   }
 
+  // Labels keep their four words; the cut-offs and colours follow tone.js
+  // (70 / 45) so a value reads the same here as on the dashboard.
   function qualityBand(v, emptyLabel = 'No data') {
-    if (v == null || !Number.isFinite(Number(v))) return { label: emptyLabel, color: '#94A3B8' };
+    if (v == null || !Number.isFinite(Number(v))) return { label: emptyLabel, color: TONE.neutral };
     const n = Number(v);
-    if (n >= 80) return { label: 'Elite', color: '#10B981' };
-    if (n >= 65) return { label: 'Good', color: '#10B981' };
-    if (n >= 50) return { label: 'Workable', color: '#EAB308' };
-    return { label: 'Needs Attention', color: '#EF4444' };
+    if (n >= 80) return { label: 'Elite', color: metricColor(n) };
+    if (n >= 70) return { label: 'Good', color: metricColor(n) };
+    if (n >= 45) return { label: 'Workable', color: metricColor(n) };
+    return { label: 'Needs Attention', color: metricColor(n) };
   }
 
   /** One table cell: /100 score + band + optional player-facing cue from the pipeline. */
@@ -877,6 +879,10 @@ const ReportModal = (() => {
     const style = document.createElement('style');
     style.id = 'rp-styles';
     style.textContent = `
+/* In the legacy layer: unlayered, these rules beat every theme and
+   component rule in the app and forced light surfaces into dark mode. */
+@layer legacy {
+
 /* ═══ REPORT MODAL OVERLAY ═══ */
 .rp-overlay {
   position: fixed; inset: 0; z-index: 9999;
@@ -889,7 +895,7 @@ const ReportModal = (() => {
 @keyframes rpFadeIn { from{opacity:0} to{opacity:1} }
 
 .rp-modal {
-  background: #F0F4F8;
+  background: var(--bg-inset);
   border-radius: 20px;
   width: 100%; max-width: 1080px;
   max-height: 92vh;
@@ -904,8 +910,8 @@ const ReportModal = (() => {
 .rp-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 24px 16px;
-  background: #fff;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--legacy-border);
   flex-shrink: 0;
 }
 .rp-header-left { display: flex; align-items: center; gap: 14px; }
@@ -915,11 +921,11 @@ const ReportModal = (() => {
   font-family: Manrope,sans-serif; font-size: 0.85rem; font-weight: 800;
   color: #06B6D4; letter-spacing: 0.06em;
 }
-.rp-title { font-family: Manrope,sans-serif; font-size: 1.3rem; font-weight: 800; color: #0F172A; }
+.rp-title { font-family: Manrope,sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); }
 .rp-subtitle { font-family: Inter,sans-serif; font-size: 0.8rem; color: #64748B; margin-top: 2px; }
 .rp-close {
   width: 36px; height: 36px; border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.04);
+  border: 1px solid var(--legacy-border); background: rgba(0,0,0,0.04);
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   color: #64748B; transition: all 0.2s;
 }
@@ -928,8 +934,8 @@ const ReportModal = (() => {
 /* ── Tabs ── */
 .rp-tabs {
   display: flex; gap: 4px; padding: 12px 24px 0;
-  background: #fff;
-  border-bottom: 1px solid rgba(0,0,0,0.07);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--legacy-border);
   flex-shrink: 0;
 }
 .rp-tab {
@@ -939,8 +945,8 @@ const ReportModal = (() => {
   border-bottom: 2px solid transparent; margin-bottom: -1px;
   transition: color 0.2s, border-color 0.2s;
 }
-.rp-tab:hover { color: #0F172A; }
-.rp-tab.active { color: #06B6D4; border-bottom-color: #06B6D4; }
+.rp-tab:hover { color: var(--text-primary); }
+.rp-tab.active { color: #06B6D4; border-bottom-color: var(--legacy-border); }
 
 /* ── Body ── */
 .rp-body {
@@ -956,7 +962,7 @@ const ReportModal = (() => {
 .rp-section-title {
   font-family: Manrope,sans-serif; font-size: 0.76rem; font-weight: 700;
   color: #64748B; letter-spacing: 0.14em; text-transform: uppercase;
-  padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.07);
+  padding-bottom: 8px; border-bottom: 1px solid var(--legacy-border);
   margin: 0 0 16px;
 }
 .rp-section-title:not(:first-child) { margin-top: 28px; }
@@ -975,34 +981,34 @@ const ReportModal = (() => {
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;
 }
 .rp-highlight-card {
-  background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
+  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
   padding: 14px 16px; display: flex; align-items: center; gap: 14px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
-.rp-highlight-card.best  { border-top: 3px solid #10B981; }
-.rp-highlight-card.worst { border-top: 3px solid #EF4444; }
+.rp-highlight-card.best  { border-top: 1px solid var(--legacy-border); }
+.rp-highlight-card.worst { border-top: 1px solid var(--legacy-border); }
 .rp-hl-icon { font-size: 1.6rem; }
-.rp-hl-tag  { font-family: JetBrains Mono,monospace; font-size: 0.65rem; font-weight: 700; color: #475569; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+.rp-hl-tag  { font-family: JetBrains Mono,monospace; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
 .rp-hl-val  { font-family: Manrope,sans-serif; font-size: 1.12rem; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
 .rp-hl-sub  { font-family: JetBrains Mono,monospace; font-size: 0.7rem; font-weight: 500; color: #64748B; margin-top: 4px; line-height: 1.35; }
 
 .rp-per-shot-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
 .rp-per-shot-row {
-  background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px;
+  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 12px;
   padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .rp-per-shot-meta {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  margin-bottom: 6px; font-family: Manrope,sans-serif; font-size: 0.78rem; font-weight: 700; color: #334155;
+  margin-bottom: 6px; font-family: Manrope,sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
 }
 .rp-per-shot-num { font-family: JetBrains Mono,monospace; font-size: 0.68rem; color: #94A3B8; }
-.rp-per-shot-name { color: #0F172A; }
+.rp-per-shot-name { color: var(--text-primary); }
 .rp-per-shot-sc { margin-left: auto; font-family: JetBrains Mono,monospace; font-size: 0.65rem; color: #64748B; }
 .rp-per-shot-cues { display: flex; flex-wrap: wrap; gap: 6px; }
 .rp-per-shot-flag {
   font-family: Inter,sans-serif; font-size: 0.68rem; font-weight: 600;
   padding: 4px 10px; border-radius: 999px;
-  background: rgba(148,163,184,0.16); color: #475569;
+  background: rgba(148,163,184,0.16); color: var(--text-muted);
   border: 1px solid rgba(100,116,139,0.22);
 }
 .rp-per-shot-none { font-size: 0.72rem; color: #94A3B8; }
@@ -1011,33 +1017,33 @@ const ReportModal = (() => {
 .rp-pies { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 16px; margin-bottom: 8px; }
 .rp-subtitle-metrics { margin-top: 6px; font-size: 0.78rem; color: #64748B; line-height: 1.45; max-width: 52rem; }
 .rp-pie-card {
-  background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
+  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
   padding: 20px 16px; display: flex; flex-direction: column; align-items: center;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .rp-pie-wrap { display:flex; flex-direction:column; align-items:center; }
-.rp-pie-label { font-family: Manrope,sans-serif; font-size: 0.92rem; font-weight: 800; color: #0F172A; margin-top: 8px; }
+.rp-pie-label { font-family: Manrope,sans-serif; font-size: 0.92rem; font-weight: 800; color: var(--text-primary); margin-top: 8px; }
 .rp-pie-quality { font-family: Inter,sans-serif; font-size: 0.78rem; font-weight: 600; margin-top: 2px; }
 .rp-pie-sublabel { font-family: Inter,sans-serif; font-size: 0.68rem; color: #94A3B8; text-align: center; margin-top: 6px; line-height: 1.4; }
 
 /* ── Footwork cards ── */
 .rp-footwork { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
 .rp-fw-card {
-  background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
+  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
   padding: 18px 12px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .rp-fw-num { font-family: Manrope,sans-serif; font-size: 2rem; font-weight: 800; line-height: 1; }
-.rp-fw-label { font-family: JetBrains Mono,monospace; font-size: 0.62rem; font-weight: 600; color: #475569; letter-spacing: 0.1em; margin-top: 6px; text-transform: uppercase; line-height: 1.3; }
+.rp-fw-label { font-family: JetBrains Mono,monospace; font-size: 0.62rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.1em; margin-top: 6px; text-transform: uppercase; line-height: 1.3; }
 
 /* ── Line graphs ── */
-.rp-graph-wrap { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 16px 18px 12px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-.rp-graph-title { font-family: Manrope,sans-serif; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 10px; }
-.rp-graph-empty { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 32px; text-align: center; font-family: JetBrains Mono,monospace; font-size: 0.7rem; color: #94A3B8; letter-spacing: 0.1em; margin-bottom: 14px; }
+.rp-graph-wrap { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 16px 18px 12px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.rp-graph-title { font-family: Manrope,sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; }
+.rp-graph-empty { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 32px; text-align: center; font-family: JetBrains Mono,monospace; font-size: 0.7rem; color: #94A3B8; letter-spacing: 0.1em; margin-bottom: 14px; }
 
 /* ── Shots grid ── */
 .rp-shots-grid { display: flex; flex-direction: column; gap: 14px; }
 .rp-shot-card {
-  background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
+  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
   padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .rp-shot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -1068,34 +1074,34 @@ const ReportModal = (() => {
 }
 .rp-bar-row--advanced .rp-bar-label { opacity: 0.88; }
 .rp-bar-meta { display: flex; align-items: center; justify-content: space-between; }
-.rp-bar-label { font-family: Inter,sans-serif; font-size: 0.8rem; font-weight: 600; color: #334155; cursor: help; }
+.rp-bar-label { font-family: Inter,sans-serif; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); cursor: help; }
 .rp-bar-val   { font-family: Manrope,sans-serif; font-size: 0.96rem; font-weight: 800; }
 .rp-bar-track { width: 100%; height: 8px; background: rgba(0,0,0,0.08); border-radius: 4px; overflow: hidden; }
 .rp-bar-fill  { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
 .rp-shot-submetrics { font-family: JetBrains Mono,monospace; font-size: 0.65rem; color: #64748B; line-height: 1.45; margin-top: 4px; }
-.rp-shot-submetrics--posture { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06); }
+.rp-shot-submetrics--posture { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--legacy-border); }
 .rp-posture-note {
   margin-top: 16px;
   padding: 14px 16px;
-  background: #F1F5F9;
+  background: var(--bg-inset);
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--legacy-border);
 }
-.rp-shot-pad-badge { font-family: JetBrains Mono,monospace; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: rgba(239,68,68,0.12); color: #B91C1C; border: 1px solid rgba(239,68,68,0.28); }
-.rp-shot-score-row { display: flex; align-items: center; border-top: 1px solid rgba(0,0,0,0.07); padding-top: 12px; gap: 4px; }
+.rp-shot-pad-badge { font-family: JetBrains Mono,monospace; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: rgba(239,68,68,0.12); color: var(--tone-weak); border: 1px solid rgba(239,68,68,0.28); }
+.rp-shot-score-row { display: flex; align-items: center; border-top: 1px solid var(--legacy-border); padding-top: 12px; gap: 4px; }
 .rp-shot-score-row .rp-bar-label { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748B; }
 .rp-shot-flags-detail { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-.rp-flag-detail { font-family: Inter,sans-serif; font-size: 0.84rem; color: #334155; padding: 9px 14px; background: rgba(0,0,0,0.03); border-radius: 8px; line-height: 1.5; }
+.rp-flag-detail { font-family: Inter,sans-serif; font-size: 0.84rem; color: var(--text-secondary); padding: 9px 14px; background: rgba(0,0,0,0.03); border-radius: 8px; line-height: 1.5; }
 .rp-coach-card {
-  border-left: 4px solid #06B6D4;
-  background: #fff;
+  border-left: 1px solid var(--legacy-border);
+  background: var(--bg-panel);
   border-radius: 12px;
   padding: 14px 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
-.rp-coach-card--primary { border-left-color: #EF4444; }
-.rp-coach-card--secondary { border-left-color: #06B6D4; }
-.rp-coach-card--clean { border-left-color: #10B981; }
+.rp-coach-card--primary { border-left-color: var(--legacy-border); }
+.rp-coach-card--secondary { border-left-color: var(--legacy-border); }
+.rp-coach-card--clean { border-left-color: var(--legacy-border); }
 .rp-coach-title {
   font-family: JetBrains Mono,monospace;
   font-size: 0.6rem;
@@ -1104,24 +1110,24 @@ const ReportModal = (() => {
   text-transform: uppercase;
   margin-bottom: 6px;
 }
-.rp-coach-text { margin: 0 0 6px; font-size: 0.84rem; color: #334155; line-height: 1.5; }
-.rp-coach-drill { font-size: 0.78rem; color: #475569; }
+.rp-coach-text { margin: 0 0 6px; font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; }
+.rp-coach-drill { font-size: 0.78rem; color: var(--text-muted); }
 
 .rp-speed-note {
-  border-left: 4px solid #F97316;
-  background: #fff;
+  border-left: 1px solid var(--legacy-border);
+  background: var(--bg-panel);
   border-radius: 12px;
   padding: 14px 16px;
   margin-top: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
-.rp-speed-note-title { font-family: Manrope,sans-serif; font-weight: 700; color: #334155; margin-bottom: 6px; }
-.rp-speed-note-range { font-size: 0.84rem; color: #475569; line-height: 1.55; }
+.rp-speed-note-title { font-family: Manrope,sans-serif; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+.rp-speed-note-range { font-size: 0.84rem; color: var(--text-muted); line-height: 1.55; }
 .rp-speed-note-sub { font-size: 0.8rem; color: #64748B; margin-top: 5px; line-height: 1.45; }
 
 .rp-shots-table-wrap {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.08);
+  background: var(--bg-panel);
+  border: 1px solid var(--legacy-border);
   border-radius: 12px;
   overflow: auto;
   max-height: 62vh;
@@ -1130,10 +1136,10 @@ const ReportModal = (() => {
   -webkit-overflow-scrolling: touch;
 }
 .rp-shots-table { width: 100%; min-width: 920px; border-collapse: separate; border-spacing: 0; font-family: Inter,sans-serif; }
-.rp-shots-table thead tr { background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%); text-align: left; }
+.rp-shots-table thead tr { background: linear-gradient(180deg, var(--bg-inset) 0%, var(--bg-inset) 100%); text-align: left; }
 .rp-shots-table thead th {
   position: sticky; top: 0; z-index: 1;
-  background: #F1F5F9;
+  background: var(--bg-inset);
   padding: 12px 10px;
   font-size: 0.68rem;
   color: #64748B;
@@ -1144,18 +1150,18 @@ const ReportModal = (() => {
   box-shadow: inset 0 -1px 0 rgba(15,23,42,0.08);
   white-space: nowrap;
 }
-.rp-shots-table tbody tr:nth-child(even) { background: rgba(248,250,252,0.65); }
+.rp-shots-table tbody tr:nth-child(even) { background: var(--bg-inset); }
 .rp-shots-table tbody tr:hover { background: rgba(6,182,212,0.06); }
-.rp-shots-table td { padding: 12px 10px; font-size: 0.82rem; color: #334155; border-top: 1px solid rgba(0,0,0,0.05); vertical-align: top; }
-.rp-shots-table td.rp-col-num { font-family: JetBrains Mono,monospace; font-weight: 700; color: #0F172A; width: 2.5rem; }
-.rp-shots-table td.rp-col-shot { font-weight: 700; letter-spacing: 0.04em; color: #0F172A; min-width: 8.5rem; }
+.rp-shots-table td { padding: 12px 10px; font-size: 0.82rem; color: var(--text-secondary); border-top: 1px solid var(--legacy-border); vertical-align: top; }
+.rp-shots-table td.rp-col-num { font-family: JetBrains Mono,monospace; font-weight: 700; color: var(--text-primary); width: 2.5rem; }
+.rp-shots-table td.rp-col-shot { font-weight: 700; letter-spacing: 0.04em; color: var(--text-primary); min-width: 8.5rem; }
 .rp-th-hint { font-weight: 500; color: #94A3B8; font-size: 0.62rem; text-transform: none; letter-spacing: 0; }
 .rp-col-ball-contact { font-size: 0.82rem; white-space: nowrap; min-width: 9.5rem; }
 .rp-col-ball-est { font-weight: 700; font-family: Manrope, sans-serif; letter-spacing: 0.02em; }
-.rp-col-ball-spd { font-family: JetBrains Mono, monospace; font-weight: 600; font-size: 0.8rem; color: #475569; }
+.rp-col-ball-spd { font-family: JetBrains Mono, monospace; font-weight: 600; font-size: 0.8rem; color: var(--text-muted); }
 .rp-col-ball-context { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 13rem; }
 .rp-col-ball-divider { color: #94A3B8; font-weight: 700; }
-.rp-col-swing-label { font-family: Inter,sans-serif; font-size: 0.82rem; font-weight: 700; color: #475569; }
+.rp-col-swing-label { font-family: Inter,sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--text-muted); }
 .rp-shots-table td.rp-col-exec { font-weight: 800; font-family: Manrope,sans-serif; color: #06B6D4; white-space: nowrap; }
 .rp-del-metric { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-width: 5.5rem; max-width: 11rem; }
 .rp-del-metric--empty { color: #94A3B8; }
@@ -1180,7 +1186,7 @@ const ReportModal = (() => {
 }
 .rp-shots-detail summary {
   cursor: pointer;
-  color: #475569;
+  color: var(--text-muted);
   font-size: 12px;
 }
 .rp-shots-detail-text {
@@ -1190,8 +1196,8 @@ const ReportModal = (() => {
 }
 
 .rp-trend-summary {
-  border-left: 4px solid #06B6D4;
-  background: #fff;
+  border-left: 1px solid var(--legacy-border);
+  background: var(--bg-panel);
   border-radius: 12px;
   padding: 14px 16px;
   margin-top: 14px;
@@ -1205,51 +1211,51 @@ const ReportModal = (() => {
   text-transform: uppercase;
   margin-bottom: 8px;
 }
-.rp-trend-summary-body { font-size: 0.84rem; color: #334155; line-height: 1.6; }
+.rp-trend-summary-body { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.6; }
 .rp-trend-summary-note { margin-top: 8px; color: #B45309; font-size: 0.8rem; }
 
 /* ── Metric cards ── */
 .rp-metrics-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
-.rp-metric-card { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.rp-metric-card { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
 .rp-metric-icon  { font-size: 1.5rem; margin-bottom: 8px; }
 .rp-metric-title { font-family: Manrope,sans-serif; font-size: 1rem; font-weight: 800; margin-bottom: 10px; }
 .rp-metric-section { margin-bottom: 9px; }
 .rp-metric-tag { display: inline-block; font-family: JetBrains Mono,monospace; font-size: 0.55rem; font-weight: 600; color: #94A3B8; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 2px 7px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
-.rp-metric-section p { font-family: Inter,sans-serif; font-size: 0.82rem; color: #475569; line-height: 1.55; margin: 0; }
-.rp-ai-card { background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:14px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.05); margin-bottom:16px; }
+.rp-metric-section p { font-family: Inter,sans-serif; font-size: 0.82rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
+.rp-ai-card { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.05); margin-bottom:16px; }
 .rp-ai-card--muted { opacity:0.92; }
 .rp-ai-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
-.rp-ai-title { font-family:Manrope,sans-serif; font-size:1rem; font-weight:800; color:#0F172A; }
+.rp-ai-title { font-family:Manrope,sans-serif; font-size:1rem; font-weight:800; color: var(--text-primary); }
 .rp-ai-right { display:flex; align-items:center; gap:8px; }
-.rp-ai-model { font-family:JetBrains Mono, ui-monospace, monospace; font-size:0.72rem; color:#64748B; }
-.rp-ai-badge { border-radius:999px; padding:2px 9px; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; border:1px solid transparent; }
-.rp-ai-badge--ok { color:#047857; background:rgba(16,185,129,0.14); border-color:rgba(16,185,129,0.3); }
-.rp-ai-badge--warn { color:#B45309; background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.3); }
-.rp-ai-badge--muted { color:#475569; background:rgba(148,163,184,0.14); border-color:rgba(148,163,184,0.3); }
-.rp-ai-summary { margin:0 0 10px; font-size:0.86rem; color:#334155; line-height:1.5; }
-.rp-ai-error { margin-bottom:10px; font-size:0.78rem; color:#B45309; }
+.rp-ai-model { font-family:JetBrains Mono, ui-monospace, monospace; font-size:0.72rem; color: #64748B; }
+.rp-ai-badge { border-radius: 999px; padding:2px 9px; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; border: 1px solid transparent; }
+.rp-ai-badge--ok { color: var(--tone-strong); background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.3); }
+.rp-ai-badge--warn { color: #B45309; background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3); }
+.rp-ai-badge--muted { color: var(--text-muted); background: rgba(148,163,184,0.14); border-color: rgba(148,163,184,0.3); }
+.rp-ai-summary { margin:0 0 10px; font-size:0.86rem; color: var(--text-secondary); line-height:1.5; }
+.rp-ai-error { margin-bottom:10px; font-size:0.78rem; color: #B45309; }
 .rp-ai-section { margin-top:10px; }
-.rp-ai-section-title { font-size:0.73rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#64748B; margin-bottom:6px; }
-.rp-ai-list { margin:0; padding-left:18px; color:#334155; font-size:0.84rem; line-height:1.45; }
-.rp-ai-empty { font-size:0.8rem; color:#94A3B8; }
+.rp-ai-section-title { font-size:0.73rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color: #64748B; margin-bottom:6px; }
+.rp-ai-list { margin:0; padding-left:18px; color: var(--text-secondary); font-size:0.84rem; line-height:1.45; }
+.rp-ai-empty { font-size:0.8rem; color: #94A3B8; }
 .rp-ai-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
-.rp-ai-note { border:1px solid rgba(0,0,0,0.07); border-radius:10px; background:#F8FAFC; padding:8px 10px; }
-.rp-ai-note-k { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:#64748B; margin-bottom:4px; font-weight:700; }
-.rp-ai-note-v { font-size:0.82rem; color:#334155; line-height:1.4; }
-.rp-ai-section--tile { border-top:1px dashed rgba(15,23,42,0.12); padding-top:10px; }
+.rp-ai-note { border: 1px solid var(--legacy-border); border-radius: 10px; background: var(--bg-inset); padding:8px 10px; }
+.rp-ai-note-k { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color: #64748B; margin-bottom:4px; font-weight:700; }
+.rp-ai-note-v { font-size:0.82rem; color: var(--text-secondary); line-height:1.4; }
+.rp-ai-section--tile { border-top: 1px dashed rgba(15,23,42,0.12); padding-top:10px; }
 .rp-ai-placard-list { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
-.rp-ai-placard { border-radius:10px; padding:8px 10px; font-size:0.82rem; line-height:1.35; border:1px solid rgba(15,23,42,0.1); border-left-width:4px; background:#F8FAFC; color:#334155; }
-.rp-ai-placard--good { background:rgba(16,185,129,0.10); border-color:rgba(16,185,129,0.28); }
-.rp-ai-placard--focus { background:rgba(245,158,11,0.10); border-color:rgba(245,158,11,0.28); }
-.rp-ai-placard--drill { background:rgba(59,130,246,0.09); border-color:rgba(59,130,246,0.25); }
-.rp-ai-placard--posture { background:rgba(14,165,233,0.09); border-color:rgba(14,165,233,0.25); }
+.rp-ai-placard { border-radius: 10px; padding:8px 10px; font-size:0.82rem; line-height:1.35; border: 1px solid rgba(15,23,42,0.1); border-left-width:4px; background: var(--bg-inset); color: var(--text-secondary); }
+.rp-ai-placard--good { background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.28); }
+.rp-ai-placard--focus { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.28); }
+.rp-ai-placard--drill { background: rgba(59,130,246,0.09); border-color: rgba(59,130,246,0.25); }
+.rp-ai-placard--posture { background: rgba(14,165,233,0.09); border-color: rgba(14,165,233,0.25); }
 
 /* ── Optional original video block (player session reports) ── */
 .rp-video-block {
   margin: 2px 2px 12px;
   border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  background: linear-gradient(180deg, var(--bg-panel), var(--bg-inset));
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
   padding: 12px;
 }
@@ -1272,13 +1278,13 @@ const ReportModal = (() => {
   margin-top: 3px;
   font-family: Inter, sans-serif;
   font-size: 0.78rem;
-  color: #475569;
+  color: var(--text-muted);
 }
 .rp-video-name {
   font-family: Inter, sans-serif;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--text-secondary);
   text-align: right;
   word-break: break-word;
 }
@@ -1286,7 +1292,7 @@ const ReportModal = (() => {
   border-radius: 12px;
   overflow: hidden;
   background: #020617;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--legacy-border);
 }
 .rp-video-el {
   display: block;
@@ -1313,7 +1319,9 @@ const ReportModal = (() => {
   .rp-ai-placard-list { grid-template-columns: 1fr; }
   .rp-tabs { gap: 0; overflow-x: auto; }
   .rp-tab { white-space: nowrap; }
-}`;
+}
+} /* end @layer legacy */
+`;
     document.head.appendChild(style);
   }
 
@@ -1541,17 +1549,17 @@ const ReportModal = (() => {
                     };
                     for (const f of s.flags || []) {
                       const base = String(f).split(':')[0];
-                      const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: '#64748B', desc: '' };
+                      const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
                       pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
                     }
                     if (s.footwork_flag) {
                       const ff = String(s.footwork_flag);
-                      const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: '#64748B', desc: '' };
+                      const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
                       pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
                     }
                     const chips = flagRows.length
-                      ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:${r.color}18;color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
-                      : '<span class="rp-shots-chip" style="background:rgba(16,185,129,0.12);color:#059669;font-weight:700">Clean delivery</span>';
+                      ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:color-mix(in srgb, ${r.color} 12%, transparent);color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
+                      : '<span class="rp-shots-chip" style="background:color-mix(in srgb, var(--tone-strong) 14%, transparent);color:var(--tone-strong);font-weight:700">Clean delivery</span>';
                     const flagDetails = flagRows.length
                       ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
                       : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
@@ -1580,12 +1588,12 @@ const ReportModal = (() => {
                     const llmFocus = llmFocusRaw || llmInsights?.improvements?.[0] || clarifyCoachCue(cueMetricKey, aiMetricHint);
                     const aiCue = clarifyCoachCue(cueMetricKey, aiMetricHint);
                     const llmDetailRows = [];
-                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0EA5E9">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
-                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#F59E0B">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
-                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0F766E">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
+                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:var(--tone-strong)">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
+                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:var(--tone-moderate)">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
+                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:var(--color-primary)">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
                     const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
                     const exec = s.shot_score != null ? Number(s.shot_score) : 0;
-                    const execCol = exec >= 7 ? '#10B981' : exec >= 5 ? '#06B6D4' : exec >= 3 ? '#EAB308' : '#EF4444';
+                    const execCol = scoreColor(exec);
                     return `
                     <tr>
                       <td class="rp-col-num">${s.shot_num}</td>
@@ -1730,140 +1738,56 @@ const ReportModal = (() => {
   }
 
   const METRIC_INFO_PLAYCARD = [
-    { key: 'head', label: 'Head Position', color: '#14B8A6', title: 'Head position', sublabel: 'Axis-aware head quality for your shot mix', tip: 'Axis-aware head quality (0–100): lateral drift is penalised; vertical movement uses shot-type rules so pull/sweep are not misread.' },
-    { key: 'stance', label: 'Batting Stance', color: '#9333EA', title: 'Batting stance', sublabel: 'Pre-shot shoulder and hip symmetry', tip: 'Pre-shot shoulder and hip line tilt vs horizontal (0–100). Level shoulders before release.' },
-    { key: 'foot', label: 'Foot Movement', color: '#22C55E', title: 'Foot movement', sublabel: 'Pre-shot feet and plant timing vs contact', tip: 'Pre-shot foot activity and front-foot plant timing relative to contact (0–100).' },
-    { key: 'swing', label: 'Swing Arc', color: '#F97316', title: 'Swing arc', sublabel: 'Average hand path quality into contact', tip: 'Smooth hand path into the ball (0–100), from both wrists on your video.' },
-    { key: 'exec', label: 'Shot Execution', color: '#EF4444', title: 'Shot execution', sublabel: 'Did your stroke match the ball length? (0–100)', tip: 'Did you play the right shot for that ball length (0–100)? Coach matrix per length × shot type.' },
+    { key: 'head', icon: 'visibility', title: 'Head position', tip: 'Axis-aware head quality (0–100): lateral drift is penalised; vertical movement uses shot-type rules so pull/sweep are not misread.' },
+    { key: 'stance', icon: 'accessibility_new', title: 'Batting stance', tip: 'Pre-shot shoulder and hip line tilt vs horizontal (0–100). Level shoulders before release.' },
+    { key: 'foot', icon: 'footprint', title: 'Foot movement', tip: 'Pre-shot foot activity and front-foot plant timing relative to contact (0–100).' },
+    { key: 'swing', icon: 'sports_cricket', title: 'Swing arc', tip: 'Smooth hand path into the ball (0–100), from both wrists on your video.' },
+    { key: 'exec', icon: 'adjust', title: 'Shot execution', tip: 'Did you play the right shot for that ball length (0–100)? Coach matrix per length × shot type.' },
   ];
 
-  function metricQualityLabel(pct) {
-    const v = Math.min(100, Math.max(0, Number(pct) || 0));
-    if (v >= 70) return { text: 'Good', color: '#10B981' };
-    if (v >= 45) return { text: 'Average', color: '#EAB308' };
-    return { text: 'Needs Attention', color: '#EF4444' };
-  }
+  // Kept as names so existing call sites stay put; both defer to tone.js,
+  // which these previously disagreed with (80/50 and 8/5 thresholds).
+  function scoreColor100(n) { return metricColor(n); }
+  function scoreColor10(n) { return scoreColor(n); }
 
-  function buildPlayCardMetricDetailHtml(value, color, label, sublabel) {
-    const pct = Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
-    const R = 44;
-    const cx = 56;
-    const cy = 56;
-    const circ = 2 * Math.PI * R;
-    const offset = circ * (1 - pct / 100);
-    const { text: quality, color: qc } = metricQualityLabel(pct);
+  /* Five independent 0–100 ratings. They are not shares of a whole, so a
+     donut sized by score/sum misread them (a low score became a thin slice
+     and looked "small", not "weak"). Each gets its own track, coloured by
+     the shared range scale instead of the metric's identity. */
+  function buildPlayCardMetricBars(summary) {
+    const read = (v) => (v == null || !Number.isFinite(Number(v))
+      ? null
+      : Math.max(0, Math.min(100, Math.round(Number(v)))));
+    const values = {
+      head: read(summary.avgHead),
+      stance: read(summary.avgStability),
+      foot: read(summary.avgFootwork),
+      swing: read(summary.avgSwingPath),
+      exec: read(summary.avgExecution),
+    };
     return `
-      <div class="pc-metric-detail-card">
-        <div class="pc-metric-detail-ring">
-          <svg width="112" height="112" viewBox="0 0 112 112" aria-hidden="true">
-            <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(0,0,0,0.07)" stroke-width="9"/>
-            <circle cx="${cx}" cy="${cy}" r="${R}" fill="none"
-              stroke="${color}" stroke-width="9" stroke-linecap="round"
-              stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
-              transform="rotate(-90 ${cx} ${cy})"
-              class="rp-pie-arc pc-metric-detail-arc" data-offset="${offset}"/>
-            <text x="${cx}" y="${cy - 6}" text-anchor="middle"
-              style="font-family:Manrope,sans-serif;font-size:20px;font-weight:800;fill:${color}">${pct}</text>
-            <text x="${cx}" y="${cy + 10}" text-anchor="middle"
-              style="font-family:Inter,sans-serif;font-size:9px;fill:#94A3B8">out of 100</text>
-          </svg>
-        </div>
-        <div class="pc-metric-detail-label">${escapeHtml(label)}</div>
-        <div class="pc-metric-detail-quality" style="color:${qc}">${escapeHtml(quality)}</div>
-        <div class="pc-metric-detail-sublabel">${escapeHtml(sublabel)}</div>
-      </div>`;
-  }
-
-  function scoreColor100(n) {
-    if (n == null || !Number.isFinite(Number(n))) return '#94A3B8';
-    const v = Number(n);
-    if (v >= 80) return '#10B981';
-    if (v >= 50) return '#F97316';
-    return '#EF4444';
-  }
-
-  function scoreColor10(n) {
-    if (n == null || !Number.isFinite(Number(n))) return '#94A3B8';
-    const v = Number(n);
-    if (v >= 8) return '#10B981';
-    if (v >= 5) return '#F97316';
-    return '#EF4444';
-  }
-
-  function buildPlayCardDonutSvg(summary, avgScore10) {
-    const head = Math.max(0, Math.min(100, Math.round(summary.avgHead || 0)));
-    const stance = Math.max(0, Math.min(100, Math.round(summary.avgStability || 0)));
-    const foot = Math.max(0, Math.min(100, Math.round(summary.avgFootwork || 0)));
-    const swing = Math.max(0, Math.min(100, Math.round(summary.avgSwingPath || 0)));
-    const exec = Math.max(0, Math.min(100, Math.round(summary.avgExecution || 0)));
-    const scores = [
-      { v: head, c: '#14B8A6', label: 'Head Position' },
-      { v: stance, c: '#9333EA', label: 'Batting Stance' },
-      { v: foot, c: '#22C55E', label: 'Foot Movement' },
-      { v: swing, c: '#F97316', label: 'Swing Arc' },
-      { v: exec, c: '#EF4444', label: 'Shot Execution' },
-    ];
-    const sumW = scores.reduce((a, s) => a + Math.max(1, s.v), 0);
-    const cx = 72;
-    const cy = 72;
-    const R = 52;
-    const rIn = 34;
-    const gapRad = 0.06;
-    let a0 = -Math.PI / 2;
-    const paths = [];
-    scores.forEach((s) => {
-      const sweep = (Math.max(1, s.v) / sumW) * (2 * Math.PI - gapRad * scores.length);
-      const a1 = a0 + sweep;
-      const large = sweep > Math.PI ? 1 : 0;
-      const x0o = cx + R * Math.cos(a0);
-      const y0o = cy + R * Math.sin(a0);
-      const x1o = cx + R * Math.cos(a1);
-      const y1o = cy + R * Math.sin(a1);
-      const x0i = cx + rIn * Math.cos(a0);
-      const y0i = cy + rIn * Math.sin(a0);
-      const x1i = cx + rIn * Math.cos(a1);
-      const y1i = cy + rIn * Math.sin(a1);
-      const d = `M ${x0o.toFixed(2)} ${y0o.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${x1o.toFixed(2)} ${y1o.toFixed(2)} L ${x1i.toFixed(2)} ${y1i.toFixed(2)} A ${rIn} ${rIn} 0 ${large} 0 ${x0i.toFixed(2)} ${y0i.toFixed(2)} Z`;
-      paths.push(
-        `<path class="pc-donut-seg" d="${d}" fill="${s.c}" stroke="#fff" stroke-width="2" data-pc-metric="${escapeHtml(s.label)}" data-pc-score="${s.v}" style="cursor:pointer"/>`,
-      );
-      a0 = a1 + gapRad;
-    });
-    const overall = Math.round((Number(avgScore10) || 0) * 10);
-    return `
-      <div class="pc-donut-wrap">
-        <svg width="144" height="144" viewBox="0 0 144 144" class="pc-donut-svg" aria-hidden="true">
-          ${paths.join('')}
-        </svg>
-        <div class="pc-donut-center">
-          <span class="pc-donut-overall">${overall}</span>
-          <span class="pc-donut-sub">/ 100</span>
-        </div>
-        <div id="pcDonutTooltip" class="pc-donut-tooltip" hidden></div>
-      </div>
-      <div class="pc-metric-legend">
+      <ul class="pc-metrics" aria-label="Technique breakdown">
         ${METRIC_INFO_PLAYCARD.map((m) => {
-          const score = { head, stance, foot, swing, exec }[m.key] ?? 0;
+          const v = values[m.key];
+          // Stored 0–100; shown out of 10 so it matches the headline and shot scores.
+          const outOf10 = v == null ? null : Math.round(v) / 10;
+          const tone = metricColor(v);
           return `
-          <div class="pc-metric-legend-item" data-pc-metric-key="${m.key}">
-            <div class="pc-metric-legend-row">
-              <span class="pc-metric-dot" style="background:${m.color}"></span>
-              <span class="pc-metric-name">${escapeHtml(m.label)}</span>
-              <button type="button" class="pc-metric-info"
-                data-pc-metric-key="${m.key}"
-                aria-expanded="false"
-                aria-controls="pc-metric-detail-${m.key}"
-                title="${escapeHtml(m.tip)}"
-                aria-label="Show ${escapeHtml(m.title)} score">ℹ️</button>
+          <li class="pc-metric" title="${escapeHtml(m.tip)}">
+            <div class="pc-metric-top">
+              <span class="pc-metric-label">
+                <span class="material-symbols-outlined pc-metric-ico" aria-hidden="true">${m.icon}</span>
+                <span class="pc-metric-name">${escapeHtml(m.title)}</span>
+              </span>
+              <span class="pc-metric-val" style="color:${tone}">${outOf10 == null ? '—' : outOf10.toFixed(1)}</span>
             </div>
-            <div class="pc-metric-detail" id="pc-metric-detail-${m.key}" role="region" aria-hidden="true">
-              <div class="pc-metric-detail-inner">
-                ${buildPlayCardMetricDetailHtml(score, m.color, m.title, m.sublabel)}
-              </div>
+            <div class="pc-metric-track" role="meter" aria-label="${escapeHtml(m.title)} out of 10"
+                 aria-valuemin="0" aria-valuemax="10" aria-valuenow="${outOf10 == null ? 0 : outOf10}">
+              <div class="pc-metric-fill" style="width:${v || 0}%;background:${tone}"></div>
             </div>
-          </div>`;
+          </li>`;
         }).join('')}
-      </div>`;
+      </ul>`;
   }
 
   function buildPlayCardDeliveriesRows(confirmedShots, ballByShot) {
@@ -2045,16 +1969,16 @@ const ReportModal = (() => {
         };
         for (const f of s.flags || []) {
           const base = String(f).split(':')[0];
-          const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: '#64748B', desc: '' };
+          const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
           pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
         }
         if (s.footwork_flag) {
           const ff = String(s.footwork_flag);
-          const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: '#64748B', desc: '' };
+          const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
           pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
         }
         const chips = flagRows.length
-          ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:${r.color}18;color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
+          ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:color-mix(in srgb, ${r.color} 12%, transparent);color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
           : '<span class="rp-shots-chip" style="background:rgba(16,185,129,0.12);color:#059669;font-weight:700">Clean delivery</span>';
         const flagDetails = flagRows.length
           ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
@@ -2091,7 +2015,7 @@ const ReportModal = (() => {
         const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
 
         const exec = s.shot_score != null ? Number(s.shot_score) : 0;
-        const execCol = exec >= 7 ? '#10B981' : exec >= 5 ? '#06B6D4' : exec >= 3 ? '#EAB308' : '#EF4444';
+        const execCol = scoreColor(exec);
 
         return `
           <tr>
@@ -2150,131 +2074,65 @@ const ReportModal = (() => {
   function buildLivePlayCardHtml(data) {
     const m = derivePlayCardModel(data);
     const { summary, best, worst, totalShots, avgScore } = m;
-    const bestLabel = escapeHtml((SHOT_LABELS[best.label] || best.label || '—').toUpperCase());
-    const worstLabel = escapeHtml((SHOT_LABELS[worst.label] || worst.label || '—').toUpperCase());
-    const bestMeta = `Score: ${best.shot_score != null ? best.shot_score : '—'}/10 · ${escapeHtml(best.shot_quality || '—')} · ${escapeHtml(best.timestamp || '—')}`;
-    const worstMeta = `Score: ${worst.shot_score != null ? worst.shot_score : '—'}/10 · ${escapeHtml(worst.shot_quality || '—')} · ${escapeHtml(worst.timestamp || '—')}`;
+    const shots = summary.shotsConfirmed || totalShots;
+    const avg = Number(avgScore);
+
+    const highlight = (s, kind, tag) => {
+      const label = escapeHtml((SHOT_LABELS[s.label] || s.label || '—').toUpperCase());
+      const score = s.shot_score != null ? s.shot_score : null;
+      return `
+        <div class="pc-hl-card pc-hl-card--${kind}">
+          <div class="pc-hl-tag">${tag}</div>
+          <div class="pc-hl-title pc-hl-title--${kind}" title="#${s.shot_num || '—'} ${label}">#${s.shot_num || '—'} ${label}</div>
+          <div class="pc-hl-sub">
+            <span class="pc-hl-score" style="color:${scoreColor(score)}">${score != null ? score : '—'}<span class="pc-hl-denom">/10</span></span>
+            <span class="pc-hl-time">${escapeHtml(s.timestamp || '—')}</span>
+          </div>
+        </div>`;
+    };
+
+    const links = [
+      ['ai', 'auto_awesome', 'AI insights'],
+      ['length', 'straighten', 'Ball length analysis'],
+      ['deliveries', 'format_list_numbered', 'Deliveries'],
+      ['zones', 'radar', 'Scoring zones'],
+    ];
 
     return `
       <div class="pc-inner">
-        <div class="pc-score-surface">
-          <div class="pc-head-row">
-            <span class="pc-badge">${escapeHtml(data.stance || 'RHB')}</span>
-            <span class="pc-head-meta">${summary.shotsConfirmed || totalShots} shots · Avg ${avgScore}/10</span>
+        <div class="pc-summary">
+          <div class="pc-summary-score">
+            <span class="pc-summary-val" style="color:${scoreColor(avg)}">${Number.isFinite(avg) ? avgScore : '—'}</span><span class="pc-summary-denom">/10</span>
           </div>
-          <div class="pc-donut-row">
-            ${buildPlayCardDonutSvg(summary, avgScore)}
-          </div>
-          <div class="pc-hl-section">
-            <div class="pc-hl-section-title">Shot Highlights</div>
-            <div class="pc-highlights-grid">
-              <div class="pc-hl-card pc-hl-card--best">
-                <span class="pc-hl-ico" aria-hidden="true">🔥</span>
-                <div class="pc-hl-card-body">
-                  <div class="pc-hl-tag">Signature Shot</div>
-                  <div class="pc-hl-title pc-hl-title--best">#${best.shot_num || '—'} ${bestLabel}</div>
-                  <div class="pc-hl-sub">${bestMeta}</div>
-                </div>
-              </div>
-              <div class="pc-hl-card pc-hl-card--work">
-                <span class="pc-hl-ico" aria-hidden="true">⚠️</span>
-                <div class="pc-hl-card-body">
-                  <div class="pc-hl-tag">Work-On Shot</div>
-                  <div class="pc-hl-title pc-hl-title--work">#${worst.shot_num || '—'} ${worstLabel}</div>
-                  <div class="pc-hl-sub">${worstMeta}</div>
-                </div>
-              </div>
-            </div>
+          <div class="pc-summary-meta">
+            <span class="pc-summary-label">Avg shot score</span>
+            <span class="pc-summary-sub">${shots} shots
+              <span class="pc-badge" title="Batting stance">${escapeHtml(data.stance || 'RHB')}</span></span>
           </div>
         </div>
 
-        <div class="pc-scroll-extra">
-        <div class="pc-acc">
-          <button type="button" class="pc-acc-btn" data-pc-open="ai">
-            <span class="pc-acc-ico" aria-hidden="true">🧠</span><span class="pc-acc-label">AI Insights</span>
-          </button>
-          <button type="button" class="pc-acc-btn" data-pc-open="length">
-            <span class="pc-acc-ico" aria-hidden="true">📏</span><span class="pc-acc-label">Ball length analysis</span>
-          </button>
-          <button type="button" class="pc-acc-btn" data-pc-open="deliveries">
-            <span class="pc-acc-ico" aria-hidden="true">📋</span><span class="pc-acc-label">Deliveries</span>
-          </button>
-          <button type="button" class="pc-acc-btn" data-pc-open="zones">
-            <span class="pc-acc-ico" aria-hidden="true">🎯</span><span class="pc-acc-label">Scoring zones</span>
-          </button>
+        ${buildPlayCardMetricBars(summary)}
+
+        <div class="pc-hl-section">
+          <div class="pc-hl-section-title">Shot highlights</div>
+          <div class="pc-highlights-grid">
+            ${highlight(best, 'best', 'Signature shot')}
+            ${highlight(worst, 'work', 'Work-on shot')}
+          </div>
         </div>
+
+        <div class="pc-links">
+          ${links.map(([key, icon, label]) => `
+          <button type="button" class="pc-acc-btn" data-pc-open="${key}">
+            <span class="material-symbols-outlined pc-acc-ico" aria-hidden="true">${icon}</span>
+            <span class="pc-acc-label">${label}</span>
+            <span class="material-symbols-outlined pc-acc-chev" aria-hidden="true">chevron_right</span>
+          </button>`).join('')}
         </div>
       </div>`;
   }
 
   function bindPlayCardInteractions(root, getReportData, openSectionModal) {
-    const tip = root.querySelector('#pcDonutTooltip');
-    root.querySelectorAll('.pc-donut-seg').forEach((path) => {
-      path.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const label = path.getAttribute('data-pc-metric') || '';
-        const score = path.getAttribute('data-pc-score') || '';
-        if (!tip) return;
-        tip.textContent = `${label}: ${score}/100`;
-        tip.hidden = false;
-        const wrap = root.querySelector('.pc-donut-wrap');
-        const r = wrap?.getBoundingClientRect();
-        if (r && wrap) {
-          const cx = e.clientX - r.left;
-          const cy = e.clientY - r.top;
-          tip.style.left = `${Math.min(Math.max(8, cx - 40), (wrap.clientWidth || 144) - 100)}px`;
-          tip.style.top = `${Math.min(Math.max(8, cy - 36), (wrap.clientHeight || 144) - 8)}px`;
-        }
-      });
-    });
-    root.addEventListener('click', (e) => {
-      if (tip && !e.target.closest('.pc-donut-seg')) tip.hidden = true;
-    });
-
-    function closeAllMetricDetails() {
-      root.querySelectorAll('.pc-metric-detail.is-open').forEach((panel) => {
-        panel.classList.remove('is-open');
-        panel.setAttribute('aria-hidden', 'true');
-      });
-      root.querySelectorAll('.pc-metric-info').forEach((b) => {
-        b.setAttribute('aria-expanded', 'false');
-        b.classList.remove('is-active');
-      });
-    }
-
-    function animateMetricDetailArc(panel) {
-      const arc = panel?.querySelector('.pc-metric-detail-arc');
-      if (!arc) return;
-      const target = parseFloat(arc.getAttribute('data-offset'));
-      if (!Number.isFinite(target)) return;
-      arc.style.strokeDashoffset = String(2 * Math.PI * 44);
-      requestAnimationFrame(() => {
-        arc.style.strokeDashoffset = String(target);
-      });
-    }
-
-    root.querySelectorAll('.pc-metric-info').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const key = btn.getAttribute('data-pc-metric-key');
-        const item = btn.closest('.pc-metric-legend-item');
-        const panel = item?.querySelector('.pc-metric-detail');
-        if (!key || !panel) return;
-
-        const wasOpen = panel.classList.contains('is-open');
-        closeAllMetricDetails();
-        if (!wasOpen) {
-          panel.setAttribute('aria-hidden', 'false');
-          requestAnimationFrame(() => {
-            panel.classList.add('is-open');
-            btn.setAttribute('aria-expanded', 'true');
-            btn.classList.add('is-active');
-            animateMetricDetailArc(panel);
-          });
-        }
-      });
-    });
-
     root.querySelectorAll('.pc-acc-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const key = btn.getAttribute('data-pc-open');
@@ -2297,7 +2155,7 @@ const ReportModal = (() => {
   function open(appState, analysis) {
     if (document.getElementById('rpOverlay')) return; // already open
     if (!analysis) {
-      alert('No session analysis available yet. Run the pipeline first.');
+      window.showAppToast?.('No session analysis available yet. Run the pipeline first.', 'error');
       return;
     }
 

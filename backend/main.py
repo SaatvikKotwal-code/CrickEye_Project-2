@@ -340,11 +340,100 @@ async def serve_upload(filepath: str, request: Request):
     return _range_response(UPLOADS_DIR / filepath, request)
 
 
+class WebSocketHub:
+    def __init__(self):
+        self.active_ws = None
+        self.last_complete_payload = None
+        self.current_stage = None
+        self.shots = []
+
+    def set_active(self, ws):
+        self.active_ws = ws
+
+    def clear_active(self, ws):
+        if self.active_ws == ws:
+            self.active_ws = None
+
+    async def send_json(self, payload: dict):
+        t = payload.get("type")
+        if t == "complete":
+            self.last_complete_payload = payload
+        elif t == "shot":
+            self.shots.append(payload)
+        elif t == "stage":
+            self.current_stage = payload
+            if payload.get("stage") == "loading":
+                self.shots = []
+                self.last_complete_payload = None
+
+        ws = self.active_ws
+        if ws is not None:
+            try:
+                await ws.send_json(payload)
+            except Exception as e:
+                print(f"[Hub send error] {e}")
+
+hub = WebSocketHub()
+
+
+def _get_last_session_payload():
+    report_path = BASE_DIR / "data" / "session_report.json"
+    if not report_path.exists():
+        return None
+    try:
+        with open(report_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        analysed_videos = sorted(
+            (BASE_DIR / "assets").glob("analysed_*.mp4"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+        video_url = f"/assets/{analysed_videos[0].name}" if analysed_videos else "/assets/analysed_out.mp4"
+
+        shots = data.get("shots", [])
+        confirmed = [s for s in shots if s.get("confirmed", True)]
+        shot_counts = {}
+        for s in confirmed:
+            lbl = s.get("label", "unknown")
+            shot_counts[lbl] = shot_counts.get(lbl, 0) + 1
+
+        return {
+            "type": "complete",
+            "total_shots": len(shots),
+            "confirmed": len(confirmed),
+            "unclear": len(shots) - len(confirmed),
+            "output_video": video_url,
+            "handedness": data.get("session_handedness", "RHB"),
+            "stance_conf": data.get("stance_conf", 1.0),
+            "shot_counts": shot_counts,
+            "avg_conf": round(float(sum(s.get("confidence", 0) for s in confirmed) / max(len(confirmed), 1)), 3),
+            "total_frames": data.get("total_frames", 0),
+            "fps": data.get("fps", 30.0),
+            "analysis": data.get("analysis", {}),
+            "speed_unit": "km/h",
+            "camera_calibration": data.get("camera_calibration", {}),
+            "ball_analytics": data.get("ball_analytics"),
+        }
+    except Exception as e:
+        print(f"[CrickEye Server] Error loading last session payload: {e}")
+        return None
+
+
+@app.get("/api/last-session")
+async def get_last_session():
+    payload = hub.last_complete_payload or _get_last_session_payload()
+    if payload:
+        return JSONResponse(payload)
+    return JSONResponse(status_code=404, content={"error": "No previous session found"})
+
+
 # ── WebSocket pipeline endpoint ────────────────────────────────────────────────
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    hub.set_active(websocket)
     print("[CrickEye Server] Client connected")
 
     try:
@@ -366,15 +455,24 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json({"type": "error", "message": f"Video not found: {video_path}"})
                     continue
 
-                await _run_pipeline(video_path, websocket)
+                await _run_pipeline(video_path, hub)
+
+            elif msg.get("action") == "sync":
+                payload = hub.last_complete_payload or _get_last_session_payload()
+                if payload:
+                    await websocket.send_json(payload)
+                elif hub.current_stage:
+                    await websocket.send_json(hub.current_stage)
 
             elif msg.get("action") == "ping":
                 await websocket.send_json({"type": "pong"})
 
     except WebSocketDisconnect:
         print("[CrickEye Server] Client disconnected")
+        hub.clear_active(websocket)
     except Exception as e:
         print(f"[CrickEye Server] Error: {e}")
+        hub.clear_active(websocket)
         try:
             await websocket.send_json({"type": "error", "message": str(e)})
         except Exception:
@@ -383,7 +481,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # ── Real pipeline runner ───────────────────────────────────────────────────────
 
-async def _run_pipeline(video_path: str, websocket: WebSocket):
+async def _run_pipeline(video_path: str, ws_target):
     try:
         import analyse_session as ce
     except Exception as e:
@@ -395,7 +493,7 @@ async def _run_pipeline(video_path: str, websocket: WebSocket):
             )
         print(f"[CrickEye Server] Pipeline import error: {err_msg}")
         try:
-            await websocket.send_json({"type": "error", "message": err_msg})
+            await ws_target.send_json({"type": "error", "message": err_msg})
         except Exception:
             pass
         return
@@ -406,7 +504,7 @@ async def _run_pipeline(video_path: str, websocket: WebSocket):
         # Quieter server console: progress still sent over the WebSocket.
         os.environ.setdefault("CRICKEYE_QUIET", "1")
         os.environ.setdefault("YOLO_VERBOSE", "false")
-        ce.run_pipeline_ws_sync(video_path, websocket, loop)
+        ce.run_pipeline_ws_sync(video_path, ws_target, loop)
 
     try:
         await loop.run_in_executor(_executor, _blocking)
@@ -414,6 +512,6 @@ async def _run_pipeline(video_path: str, websocket: WebSocket):
         import traceback
         traceback.print_exc()
         try:
-            await websocket.send_json({"type": "error", "message": f"Pipeline error: {str(e)}"})
+            await ws_target.send_json({"type": "error", "message": f"Pipeline error: {str(e)}"})
         except Exception:
             pass

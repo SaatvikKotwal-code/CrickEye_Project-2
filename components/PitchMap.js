@@ -137,6 +137,7 @@ function PitchMap({
   width      = 680,
   height     = 600,
   animated   = true,
+  selectedId = null,
   onBallClick,
 }) {
   const canvasRef  = useRef(null);
@@ -303,9 +304,11 @@ function PitchMap({
         const zH  = (z.yF[1] - z.yF[0]) * (PB.y - PT.y);
         if (zH < 18) return;
         const sc = 0.9 + mfy * 0.6;
-        ctx.font        = `900 ${Math.round(16 * sc)}px 'Trebuchet MS', sans-serif`;
-        ctx.fillStyle   = 'rgba(255,255,255,0.98)';
-        ctx.strokeStyle = 'rgba(0,0,0,0.82)';
+        // Keep the length bands readable without competing with delivery markers.
+        const hasDeliveries = deliveries.length > 0;
+        ctx.font        = `900 ${Math.round((hasDeliveries ? 14 : 16) * sc)}px 'Trebuchet MS', sans-serif`;
+        ctx.fillStyle   = hasDeliveries ? 'rgba(255,255,255,0.66)' : 'rgba(255,255,255,0.98)';
+        ctx.strokeStyle = hasDeliveries ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.82)';
         ctx.lineWidth   = Math.max(2, 2.3 * sc);
         ctx.shadowColor = 'rgba(0,0,0,0.78)';
         ctx.shadowBlur  = 7;
@@ -338,7 +341,7 @@ function PitchMap({
       // 8. ball markers (dynamic layer only — static pitch already drawn above)
       if (animRef.current && deliveries.length > 0) frameRef.current++;
       const laidOut = computeBallLayout(deliveries, pX, pY);
-      drawBalls(ctx, frameRef.current, laidOut);
+      drawBalls(ctx, frameRef.current, laidOut, selectedId);
 
       if (animRef.current && deliveries.length > 0) {
         rafRef.current = requestAnimationFrame(render);
@@ -349,7 +352,7 @@ function PitchMap({
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
-  }, [deliveries, W, H, pX, pY]);
+  }, [deliveries, selectedId, W, H, pX, pY]);
 
   // ── mouse handlers ─────────────────────────────────────────────────────
   const handleMouseMove = useCallback((e) => {
@@ -508,7 +511,7 @@ function drawStumps(ctx, fy, pX, pY) {
   ctx.restore();
 }
 
-function drawBalls(ctx, t, deliveries) {
+function drawBalls(ctx, t, deliveries, selectedId) {
   deliveries.forEach(b => {
     const pulse = Math.sin(t * 0.055 + b.id * 1.9) * 0.5 + 0.5;
     const sx    = b.sx;
@@ -546,6 +549,13 @@ function drawBalls(ctx, t, deliveries) {
     ctx.textBaseline = 'middle';
     ctx.strokeText(b.id, sx, sy + 0.5);
     ctx.fillText(b.id, sx, sy + 0.5);
+    if (String(b.id) === String(selectedId)) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.5 * sc;
+      ctx.shadowColor = core;
+      ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(sx, sy, bR + 8 * sc, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.restore();
   });
 }

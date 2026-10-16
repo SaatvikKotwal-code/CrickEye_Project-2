@@ -1,0 +1,935 @@
+/* ═══════════════════════════════════════════════════════════════
+   CrickEye Pro — Tailwind v4 design system (no component library)
+   Build:  npm run build:css      Watch:  npm run watch:css
+   Output: components/tailwind.css
+   ═══════════════════════════════════════════════════════════════ */
+
+/* style.css loads first and declares this same order, so `legacy` sits
+   above Tailwind's reset (the old sheet keeps styling its own widgets)
+   but below our components and utilities, which therefore always win. */
+@layer theme, base, legacy, bridge, components, utilities;
+
+@import "tailwindcss" source(none);
+
+@source "./index.html";
+@source "./App.js";
+@source "./components/*.js";
+@source "./config.js";
+
+/* ── Design tokens ─────────────────────────────────────────────
+   Tailwind generates bg-/text-/border-/rounded- utilities from these. */
+@theme {
+  --color-base-100: #12161e;   /* panel surface */
+  --color-base-200: #0b0e14;   /* page ground   */
+  --color-base-300: #1e2532;   /* borders, hover, inset */
+  --color-base-content: #e8ecf3;
+
+  --color-primary: #06b6d4;
+  --color-primary-content: #00232c;
+  --color-accent: #f5a623;
+  --color-accent-content: #2a1a00;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #fb7185;
+  --color-info: #818cf8;
+
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+
+  --font-display: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Shell metrics — one source of truth for the sidebar ladder. */
+  --sidebar-rail: 4.5rem;
+  --sidebar-full: 16rem;
+}
+
+/* ── Legacy bridge ─────────────────────────────────────────────
+   style.css still styles the playcard, biomech feed, ball analytics,
+   modals and coach dashboard. Repointing its custom properties at the
+   tokens above re-themes all of it from one source of truth. */
+@layer bridge {
+  :root {
+    --bg-base:   var(--color-base-200);
+    --bg-panel:  var(--color-base-100);
+    --bg-card:   var(--color-base-100);
+    --bg-inset:  color-mix(in oklab, var(--color-base-300) 55%, transparent);
+
+    --legacy-border: var(--color-base-300);
+    --border-bright: color-mix(in oklab, var(--color-primary) 40%, transparent);
+    --border-subtle: color-mix(in oklab, var(--color-base-300) 60%, transparent);
+
+    --cyan:   var(--color-primary);
+    --green:  var(--color-success);
+    --orange: var(--color-accent);
+    --purple: #a855f7;
+    --yellow: #eab308;
+
+    --text-primary:   var(--color-base-content);
+    --text-secondary: color-mix(in oklab, var(--color-base-content) 88%, transparent);
+    --text-muted:     #9aa3b5;
+    --text-dim:       #6b7488;
+
+    --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.28);
+    --shadow-card:  0 1px 2px rgb(0 0 0 / 0.35);
+
+    /* Range scale (see components/tone.js). Variables, not hex, so a theme
+       switch recolours values that are already on screen. */
+    --tone-strong:   #34d399;
+    --tone-moderate: #fbbf24;
+    --tone-weak:     #fb7185;
+    --tone-neutral:  #6b7488;
+
+    color-scheme: dark;
+  }
+
+  /* ── Light theme ──────────────────────────────────────────────
+     Only the tokens change. Every utility and every legacy rule reads
+     through them, so this one block re-themes the whole app. Accents
+     are darkened because the dark-mode values are unreadable on white. */
+  :root[data-theme="light"] {
+    --color-base-100: #ffffff;
+    --color-base-200: #f2f5f9;
+    --color-base-300: #dde3ec;
+    --color-base-content: #0f1724;
+
+    --color-primary: #0e7490;
+    --color-primary-content: #ffffff;
+    --color-accent: #b45309;
+    --color-accent-content: #ffffff;
+    --color-success: #047857;
+    --color-warning: #b45309;
+    --color-error: #be123c;
+    --color-info: #4338ca;
+
+    --text-muted: #56607a;
+    --text-dim:   #7b869c;
+
+    --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.06), 0 6px 20px rgb(15 23 42 / 0.07);
+    --shadow-card:  0 1px 2px rgb(15 23 42 / 0.06);
+
+    --tone-strong:   #047857;
+    --tone-moderate: #b45309;
+    --tone-weak:     #be123c;
+    --tone-neutral:  #64748b;
+
+    color-scheme: light;
+  }
+
+  body {
+    background: var(--color-base-200);
+    background-image: none;
+    color: var(--color-base-content);
+  }
+
+  /* ── Card body type scale ──────────────────────────────────────
+     Four roles, separated by size, weight, family AND colour so they read
+     as different things at a glance:
+       eyebrow  small mono caps, dimmest   — section labels, table heads
+       title    display face, brightest    — the heading of a block
+       body     text face, near-primary    — the actual content
+       caption  small, muted               — explanations and footnotes
+     Mapped onto the legacy class names below so the HTML that App.js,
+     PlayCard.js and ballAnalytics.js build picks it up unchanged. */
+  :root {
+    --type-eyebrow: 10.5px;
+    --type-title:   14px;
+    --type-body:    13px;
+    --type-caption: 11.5px;
+  }
+
+  /* The video stage stays dark in both themes, so everything inside it
+     reads the dark palette even when the page is light. Without this the
+     role-mapped labels (e.g. "Choose a video file") went dark-on-dark. */
+  .live-feed-panel .video-wrapper {
+    --text-primary:   #e8ecf3;
+    --text-secondary: color-mix(in oklab, #e8ecf3 88%, transparent);
+    --text-muted:     #9aa3b5;
+    --text-dim:       #6b7488;
+    --bg-inset:       color-mix(in oklab, #1e2532 55%, transparent);
+    --legacy-border:  #1e2532;
+    color-scheme: dark;
+  }
+
+  /* Biomechanics alone swapped in Plus Jakarta Sans; bring it back in line. */
+  .biomech-section {
+    --font-display: 'Manrope', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  .timeline-label, .pc-hl-section-title, .pc-hl-tag, .biomech-metric-title,
+  .shot-number, .ball-th-shot, .ball-th-pace, .ball-th-length, .ball-th-speed {
+    font-family: var(--font-mono);
+    font-size: var(--type-eyebrow);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    color: var(--text-dim);
+  }
+
+  .ball-speed-session-title, .ball-split-title, .upload-zone-label,
+  .pc-metric-detail-label, .biomech-shot-label, .pc-hl-title {
+    font-family: var(--font-display);
+    font-size: var(--type-title);
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+  }
+  .ball-speed-session-title, .ball-split-title, .upload-zone-label,
+  .pc-metric-detail-label, .biomech-shot-label {
+    color: var(--text-primary);
+  }
+
+  .ball-speed-session-range, .pc-hl-sub, .pc-metric-name, .ball-split-label,
+  #ballInsights li, .session-item-empty {
+    font-family: var(--font-body);
+    font-size: var(--type-body);
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  .ball-speed-session-range, .pc-hl-sub, .pc-metric-name,
+  #ballInsights li, .session-item-empty {
+    color: var(--text-secondary);
+  }
+
+  .ball-split-hint, .ball-speed-session-sub, .ball-table-caption,
+  .upload-zone-sub, .pc-metric-detail-sublabel, .biomech-metric-desc,
+  .pc-head-meta, .ball-pitch-title {
+    font-family: var(--font-body);
+    font-size: var(--type-caption);
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: 0;
+    color: var(--text-muted);
+  }
+
+  /* Panels toggle via the `hidden` attribute, which a display utility
+     would otherwise silently defeat. */
+  [hidden] { display: none !important; }
+
+  .auth-gate {
+    background:
+      radial-gradient(circle at 15% 20%, color-mix(in oklab, var(--color-primary) 16%, transparent), transparent 45%),
+      radial-gradient(circle at 80% 75%, color-mix(in oklab, var(--color-info) 12%, transparent), transparent 40%),
+      var(--color-base-200);
+  }
+}
+
+@layer components {
+
+  /* ══════════ App shell ══════════
+     Three states, driven by one checkbox and two media queries:
+       < 768px   off-canvas overlay (hamburger)
+       768–1279  icon rail (labels hidden)
+       ≥ 1280px  full sidebar with labels                            */
+  .app-sidebar {
+    @apply fixed inset-y-0 left-0 z-50 flex flex-col
+           border-r border-base-300 bg-base-100;
+    width: var(--sidebar-full);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-out, width 0.2s ease-out;
+  }
+  .sidebar-toggle:checked ~ .app-sidebar { transform: none; }
+
+  .sidebar-scrim {
+    @apply pointer-events-none fixed inset-0 z-40 cursor-pointer bg-black/60 opacity-0
+           transition-opacity duration-200;
+  }
+  .sidebar-toggle:checked ~ .sidebar-scrim { @apply pointer-events-auto opacity-100; }
+
+  .app-main {
+    @apply flex min-h-screen flex-col;
+    transition: margin-inline-start 0.2s ease-out;
+  }
+
+
+  /* From 768px up the sidebar is always on screen; whether it shows as a
+     full panel or an icon rail is one state, `data-sidebar`, set by
+     App.js (viewport default, overridden by the user's saved choice).
+     Keyed off an attribute rather than utilities so the same rules cover
+     the automatic breakpoint AND the manual toggle. */
+  @media (min-width: 768px) {
+    .app-sidebar { transform: none; }
+    .sidebar-scrim { display: none; }
+    .app-main { margin-inline-start: var(--sidebar-full); }
+
+    :root[data-sidebar="rail"] .app-sidebar { width: var(--sidebar-rail); }
+    :root[data-sidebar="rail"] .app-main { margin-inline-start: var(--sidebar-rail); }
+    :root[data-sidebar="rail"] .sidebar-label { display: none; }
+    :root[data-sidebar="rail"] .sidebar-brand { @apply justify-center px-0; }
+    :root[data-sidebar="rail"] .sidebar-tools { grid-template-columns: 1fr; }
+    :root[data-sidebar="rail"] .ce-nav-link,
+    :root[data-sidebar="rail"] .ce-status { @apply justify-center gap-0 px-0; }
+    :root[data-sidebar="rail"] .ce-account { @apply justify-center border-transparent bg-transparent p-0; }
+    /* With headings hidden, a hairline keeps the icon groups distinct. */
+    :root[data-sidebar="rail"] .ce-nav-group { @apply mb-3; }
+    :root[data-sidebar="rail"] .ce-nav-group ~ .ce-nav-group {
+      @apply mt-3 border-t border-base-300 pt-3;
+    }
+    /* Tooltips replace the hidden labels. The nav must not clip them. */
+    :root[data-sidebar="rail"] .ce-nav { @apply overflow-visible; }
+    :root[data-sidebar="rail"] [data-tip]:hover::after,
+    :root[data-sidebar="rail"] [data-tip]:focus-visible::after {
+      content: attr(data-tip);
+      @apply pointer-events-none absolute left-full top-1/2 z-[60] ml-2 -translate-y-1/2
+             whitespace-nowrap rounded-md border border-base-300 bg-base-100 px-2 py-1
+             text-xs font-medium text-base-content shadow-lg;
+    }
+    :root[data-sidebar="rail"] .ce-status,
+    :root[data-sidebar="rail"] .ce-account { @apply relative; }
+  }
+
+  /* ══════════ Dashboard grid ══════════
+     The grid gap is the only spacing between cards. style.css still gives
+     some of them their own margins (Live Feed mb 10px, My Sessions mt 12px),
+     which stacked on the gap and made the rhythm uneven on phones. */
+  main > .grid > * { margin: 0; }
+
+  /* ══════════ Live Feed ══════════ */
+
+  /* No session yet: the timeline, the current-shot row and the playback
+     controls have nothing to show. #timelineTrack is emptied both on first
+     load and on reset, so it is a dependable "no session" signal — no JS. */
+  .live-feed-panel:has(#timelineTrack:empty) .timeline-section,
+  .live-feed-panel:has(#timelineTrack:empty) .current-shot-display,
+  .live-feed-panel:has(#timelineTrack:empty) #btnSpeed,
+  .live-feed-panel:has(#timelineTrack:empty) #btnLoop { display: none; }
+  /* While the capture panel is on stage, a second "New Capture" is noise. */
+  .live-feed-panel:has(#startPanel) #btnNewCapture { display: none; }
+
+  /* aspect-ratio + min-height: when the min-height wins (phones), the
+     browser keeps 16:9 by growing the WIDTH — the stage became 660px wide
+     inside a 364px card and got clipped, video included. A definite width
+     makes min-height grow the height instead. */
+  .live-feed-panel .video-wrapper { width: 100%; max-width: 100%; }
+
+  /* Capture panel: was a 320px column in a ~880px stage. `safe` keeps the
+     top reachable when the panel is taller than a short stage. */
+  #startPanel { justify-content: safe center; align-items: safe center; }
+  #startPanel { gap: 18px; padding: 24px; }
+  .start-header { max-width: 560px; gap: 14px; }
+  .start-tab-content { max-width: 560px; }
+  .start-tabs, .start-form { max-width: none; width: 100%; }
+  .start-form { gap: 12px; }
+  .upload-zone { padding: 34px 24px; gap: 6px; border-radius: var(--radius-box); }
+  @media (max-width: 640px) {
+    #startPanel { padding: 14px; gap: 10px; }
+    .start-header { gap: 10px; }
+    .upload-zone { padding: 18px 16px; }
+  }
+
+  /* Phones, inline (not full screen), capture panel showing: the stage
+     was a fixed 16:9 / 44vh box with the panel absolutely positioned
+     inside, so on a short viewport the panel scrolled internally and
+     clipped the Run button. Let the stage size to the panel instead.
+     Once the panel is removed for the result video, :has() stops
+     matching and the stage is 16:9 again. */
+  @media (max-width: 767px) {
+    .live-feed-panel:not(.is-fullscreen) .video-wrapper:has(#startPanel) {
+      aspect-ratio: auto;
+      min-height: 0;
+      height: auto;
+    }
+    .live-feed-panel:not(.is-fullscreen) .video-wrapper:has(#startPanel) #startPanel {
+      position: relative;
+      inset: auto;
+      overflow: visible;
+    }
+    /* Nothing plays in the main video while the panel is up; an empty
+       <video> in flow would add a blank 2:1 block above it. */
+    .live-feed-panel:not(.is-fullscreen) .video-wrapper:has(#startPanel) .main-video { display: none; }
+  }
+
+  /* Close control for the phone full-screen stage. The stage stays dark in
+     both themes, so it uses fixed light-on-dark colours. */
+  .feed-fs-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 20;                  /* above #startPanel (15) and the HUD */
+    display: none;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 0.16);
+    background: rgb(8 12 20 / 0.75);
+    color: #e8ecf3;
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+  }
+  .feed-fs-btn .material-symbols-outlined { font-size: 20px; }
+  .feed-fs-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+  @media (max-width: 767px) {
+    .live-feed-panel.is-fullscreen #feedFullscreenClose {
+      display: inline-flex;
+      top: calc(10px + env(safe-area-inset-top, 0px));
+    }
+    /* z-index 1000: over the header, nav and drawer, still under modals (10000). */
+    .live-feed-panel.is-fullscreen .video-wrapper {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      width: 100%;
+      max-width: none;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      aspect-ratio: auto;
+    }
+    body.feed-fullscreen { overflow: hidden; }
+  }
+
+  /* Timeline: align with the header gutter; one scrolling row instead of
+     wrapping into more rows as the shot count grows. */
+  .timeline-section { padding: 14px 16px 12px; }
+  .timeline-label { margin-bottom: 10px; }
+  .timeline-track {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .timeline-track::-webkit-scrollbar { display: none; }
+  .shot-circle { width: 34px; height: 34px; }
+  .timeline-bar { height: 3px; background: var(--bg-inset); }
+
+  /* Current shot: one flat row, not a box inside the card, and the loose
+     vertical colour bar becomes a legend-style dot beside the name. */
+  .current-shot-display { padding: 12px 16px; gap: 10px; }
+  .shot-badge { background: none; border: 0; padding: 0; gap: 12px; }
+  .shot-color-bar { order: -1; width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ══════════ Session Score ══════════
+     Order of reading: headline score → five technique ratings → the two
+     shots worth looking at → links to the detail views. */
+  .pc-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 16px;
+    container-type: inline-size;
+  }
+
+  .pc-summary { display: flex; align-items: center; gap: 14px; }
+  .pc-summary-score { display: flex; align-items: baseline; line-height: 1; }
+  .pc-summary-val {
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .pc-summary-denom {
+    margin-left: 3px;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dim);
+  }
+  .pc-summary-meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .pc-summary-label {
+    font-family: var(--font-mono);
+    font-size: var(--type-eyebrow);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .pc-summary-sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--type-body);
+    color: var(--text-secondary);
+  }
+
+  .pc-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pc-metric-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .pc-metric-label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  /* Neutral on purpose: colour on this row belongs to the value's range. */
+  .pc-metric-ico { font-size: 18px; color: var(--text-muted); }
+  .pc-metric-val {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .pc-metric-track {
+    margin-left: 26px;           /* 18px icon + 8px gap: align with the label text */
+    height: 6px;
+    border-radius: 999px;
+    background: var(--bg-inset);
+    overflow: hidden;
+  }
+  .pc-metric-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s ease-out;
+  }
+
+  .pc-hl-section { display: flex; flex-direction: column; gap: 10px; }
+  .pc-highlights-grid { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @container (min-width: 320px) {
+    .pc-highlights-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .pc-hl-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;         /* style.css centred these */
+    text-align: left;
+    gap: 4px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--legacy-border);
+    border-radius: var(--radius-field);
+    background: var(--bg-inset);
+  }
+  .pc-hl-card::before, .pc-hl-card::after { content: none; }
+  /* Colour means range everywhere else; a red "work-on" title beside an
+     amber 6.2 said two different things. The label carries the role. */
+  .pc-hl-title--best, .pc-hl-title--work { color: var(--text-primary); }
+  /* One line whatever the shot name, so the card (and its skeleton) keep a
+     fixed height; the full name is in the title tooltip. */
+  .pc-hl-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pc-hl-sub {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .pc-hl-score {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .pc-hl-denom { margin-left: 1px; font-size: 0.7em; font-weight: 700; opacity: 0.6; }
+  .pc-hl-time {
+    font-family: var(--font-mono);
+    font-size: var(--type-caption);
+    color: var(--text-dim);
+  }
+
+  /* Detail views are navigation, not four equal calls to action. */
+  .pc-links {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--legacy-border);
+    margin: 0 -16px -16px;
+  }
+  .pc-acc-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 16px;
+    border: 0;
+    border-bottom: 1px solid var(--legacy-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: var(--type-body);
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .pc-acc-btn:last-child { border-bottom: 0; }
+  .pc-acc-btn:hover { background: var(--bg-inset); color: var(--text-primary); }
+  .pc-acc-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .pc-acc-ico { font-size: 19px; color: var(--text-muted); }
+  .pc-acc-label { flex: 1; font-size: var(--type-body); font-weight: 500; color: inherit; }
+  .pc-acc-chev { font-size: 18px; color: var(--text-dim); }
+
+  /* ══════════ Dialog shell ══════════
+     Header (back · title · close), a body that scrolls on its own, and a
+     footer for actions. Centred on desktop; takes the whole screen on
+     phones. Used via .ce-dialog inside a .ce-modal. */
+  .ce-modal:has(> .ce-dialog) { padding: 32px 24px; }
+  .ce-dialog {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: min(960px, 100%);
+    max-height: min(86vh, 920px);
+    overflow: hidden;
+    border: 1px solid var(--color-base-300);
+    border-radius: var(--radius-box);
+    background: var(--color-base-100);
+    box-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
+    animation: ce-dialog-in 0.18s ease-out;
+  }
+  .ce-dialog-head {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 56px;
+    padding: 8px;
+    border-bottom: 1px solid var(--color-base-300);
+    background: var(--color-base-100);
+  }
+  .ce-dialog-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    outline: none;
+  }
+  .ce-dialog-icon-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .ce-dialog-icon-btn:hover { background: var(--bg-inset); color: var(--text-primary); }
+  .ce-dialog-icon-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .ce-dialog-icon-btn .material-symbols-outlined { font-size: 22px; }
+  .ce-dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 20px;
+  }
+  .ce-dialog-foot {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-base-300);
+  }
+
+  /* Inside a dialog only the dialog body scrolls vertically; wide tables
+     keep their own sideways scroll. (The report view's 62vh cap made a
+     second vertical scrollbar inside the first.) */
+  .ce-dialog-body .rp-shots-table-wrap { max-height: none; }
+
+  /* Session comparison lives in the shared dialog shell. Its controls
+     reflow instead of widening the dialog body and creating an x-scroll. */
+  .ce-modal--compare .ce-dialog-body {
+    overflow-x: hidden;
+  }
+  .ce-modal--compare .compare-picker-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .ce-modal--compare .compare-picker-field {
+    flex: 1 1 240px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .ce-modal--compare .compare-picker-field select,
+  .ce-modal--compare .compare-month-row,
+  .ce-modal--compare .compare-month-all-btn,
+  .ce-modal--compare .session-compare-body {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Settings uses the same dialog shell and keeps every control within the
+     independently scrolling body at narrow widths. */
+  #serverSettingsModal .ce-dialog-body {
+    overflow-x: hidden;
+  }
+  #serverSettingsModal .server-input-wrap,
+  #serverSettingsModal .apk-download-box {
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+  #serverSettingsModal .server-input {
+    flex: 1 1 280px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  #serverSettingsModal .server-preset-chips,
+  #serverSettingsModal .preset-chip,
+  #serverSettingsModal .apk-download-info {
+    min-width: 0;
+    max-width: 100%;
+  }
+  #serverSettingsModal .preset-chip,
+  #serverSettingsModal .server-hint,
+  #serverSettingsModal .apk-download-info p {
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 767px) {
+    .ce-modal:has(> .ce-dialog) { padding: 0; align-items: stretch; }
+    .ce-dialog {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      max-height: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      animation-name: ce-dialog-in-sheet;
+    }
+    .ce-dialog-head { padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
+    .ce-dialog-body { padding: 16px; }
+    .ce-dialog-foot { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+    .ce-dialog-foot .btn { flex: 1; min-height: 44px; }
+    .ce-modal--compare .compare-picker-field { flex-basis: 100%; }
+    #serverSettingsModal .server-input-wrap { flex-direction: column; }
+    #serverSettingsModal .server-input { flex-basis: auto; }
+    #serverSettingsModal #btnTestServerConnection,
+    #serverSettingsModal .apk-download-box > .btn { width: 100%; justify-content: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ce-dialog { animation: none; }
+  }
+
+  /* ══════════ Panels ══════════ */
+  .ce-panel {
+    @apply flex flex-col overflow-hidden rounded-box border border-base-300 bg-base-100;
+  }
+  /* Fixed height so dividers line up across cards sharing a row, whatever
+     each header holds (buttons, tags, toggles). min-h rather than h lets
+     a header that must wrap on a phone grow instead of clipping. */
+  .ce-panel-head {
+    @apply flex min-h-[52px] shrink-0 items-center justify-between gap-3 border-b border-base-300 px-4 py-2;
+  }
+  .ce-panel-title {
+    @apply font-mono text-[0.8rem] font-bold uppercase tracking-[0.1em] text-base-content/90;
+  }
+  .ce-eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--type-eyebrow);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    color: var(--text-dim);
+  }
+  .ce-title   { font-family: var(--font-display); font-size: var(--type-title); font-weight: 700; line-height: 1.3; color: var(--text-primary); }
+  .ce-body    { font-family: var(--font-body); font-size: var(--type-body); line-height: 1.5; color: var(--text-secondary); }
+  .ce-caption { font-family: var(--font-body); font-size: var(--type-caption); line-height: 1.45; color: var(--text-muted); }
+
+  .ce-tag {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border
+           border-base-300 px-2.5 py-1 font-mono text-[0.6rem] font-bold uppercase
+           tracking-[0.14em] text-base-content/55;
+  }
+
+  /* ══════════ Sidebar navigation ══════════ */
+  .ce-nav { @apply flex-1 overflow-y-auto px-3 py-4; }
+  .ce-nav-heading {
+    @apply px-3 pb-1.5 font-mono text-[0.55rem] font-bold uppercase
+           tracking-[0.18em] text-base-content/30;
+  }
+  .ce-nav-group { @apply mb-5 flex list-none flex-col gap-0.5 last:mb-0; }
+
+  .ce-nav-link {
+    @apply relative flex h-10 w-full shrink-0 cursor-pointer items-center gap-3 rounded-field px-3
+           text-sm font-medium text-base-content/60 transition-colors
+           hover:bg-base-300/50 hover:text-base-content
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+  }
+  .ce-nav-link .material-symbols-outlined { @apply shrink-0 text-[20px]; }
+  .ce-nav-link.is-active { @apply bg-primary/10 text-primary; }
+  /* Accent bar reads as "you are here" even when labels are hidden. */
+  .ce-nav-link.is-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary;
+  }
+
+  /* ══════════ Sidebar footer ══════════ */
+  .sidebar-foot {
+    @apply mt-auto flex shrink-0 flex-col gap-2 border-t border-base-300 p-3;
+  }
+  .ce-status {
+    @apply flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-field border border-base-300
+           bg-base-200/60 px-3 text-left transition-colors
+           hover:border-primary/40 hover:bg-base-200
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+  }
+  .ce-status .material-symbols-outlined { @apply shrink-0 text-[17px] text-base-content/50; }
+  .ce-status-dot {
+    @apply size-1.5 shrink-0 rounded-full bg-success;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-success) 22%, transparent);
+  }
+  .ce-account {
+    @apply flex w-full cursor-pointer items-center gap-2.5 rounded-field border border-base-300
+           bg-base-200/60 p-2 text-left transition-colors hover:border-primary/40
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+  }
+  .ce-avatar {
+    @apply flex size-7 shrink-0 items-center justify-center rounded-full bg-primary
+           text-[0.7rem] font-bold text-primary-content;
+  }
+
+  /* ══════════ Controls ══════════ */
+  .btn {
+    @apply inline-flex cursor-pointer select-none items-center justify-center gap-1.5
+           whitespace-nowrap rounded-field border border-transparent px-3.5 py-2
+           text-sm font-semibold transition-colors
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+           disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary { @apply bg-primary text-primary-content hover:bg-primary/85; }
+  .btn-ghost   { @apply text-base-content/70 hover:bg-base-300/60 hover:text-base-content; }
+  .btn-outline { @apply border-base-300 text-base-content/80 hover:border-primary hover:text-primary; }
+  .btn-error   { @apply bg-error/12 text-error hover:bg-error/20; }
+  .btn-sm      { @apply px-3 py-1.5 text-xs; }
+  .btn-xs      { @apply gap-1 px-2.5 py-1 text-[0.7rem]; }
+  .btn-square  { @apply aspect-square p-0; }
+
+  .input, .select {
+    @apply w-full rounded-field border border-base-300 bg-base-200 px-3.5 py-2.5
+           text-sm text-base-content outline-none transition-colors
+           placeholder:text-base-content/35 focus:border-primary;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5
+           font-mono text-[0.58rem] font-bold uppercase tracking-wider;
+  }
+  .badge-success { @apply bg-success/15 text-success; }
+
+  /* Native checkbox styled as a switch — no extra markup. */
+  .toggle {
+    @apply relative h-4 w-7 shrink-0 cursor-pointer appearance-none rounded-full
+           bg-base-300 transition-colors;
+  }
+  .toggle::after {
+    content: '';
+    @apply absolute left-0.5 top-0.5 size-3 rounded-full bg-base-content/60 transition-transform;
+  }
+  .toggle:checked { @apply bg-primary; }
+  .toggle:checked::after { @apply bg-primary-content; transform: translateX(0.75rem); }
+
+  .table { @apply w-full text-left text-[0.72rem]; }
+  .table th {
+    @apply border-b border-base-300 pb-1.5;
+    font-family: var(--font-mono);
+    font-size: var(--type-eyebrow);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .table td {
+    @apply border-b border-base-300/50 py-1.5;
+    font-size: var(--type-body);
+    color: var(--text-secondary);
+  }
+
+  /* ══════════ Skeletons ══════════
+     Every data section has three states — loading / ready / empty —
+     toggled with the `hidden` attribute so the bridge's
+     [hidden]{display:none!important} beats any display utility. */
+  .sk, .sk-line, .sk-title, .sk-block, .sk-circle, .sk-chip {
+    @apply relative overflow-hidden rounded-field;
+    background: color-mix(in oklab, var(--color-base-300) 70%, transparent);
+  }
+  .sk::after, .sk-line::after, .sk-title::after,
+  .sk-block::after, .sk-circle::after, .sk-chip::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--color-base-content) 8%, transparent),
+      transparent
+    );
+    animation: ce-shimmer 1.5s ease-in-out infinite;
+  }
+  .sk-line   { @apply h-3; }
+  .sk-title  { @apply h-4 w-1/3; }
+  .sk-block  { @apply w-full; }
+  .sk-circle { @apply rounded-full; }
+  .sk-chip   { @apply h-5 w-16 rounded-full; }
+  .sk-group  { @apply flex flex-col gap-2.5; }
+
+  /* Text-shaped placeholder: the element keeps its real class, font and
+     line-height (so the skeleton is the card's exact geometry) while the
+     glyphs go transparent and the text box shimmers. */
+  .sk-text {
+    color: transparent !important;
+    border-color: transparent !important;
+    border-radius: 4px;
+    background: linear-gradient(90deg,
+      color-mix(in oklab, var(--color-base-300) 70%, transparent) 0%,
+      color-mix(in oklab, var(--color-base-content) 10%, var(--color-base-300)) 50%,
+      color-mix(in oklab, var(--color-base-300) 70%, transparent) 100%) !important;
+    background-size: 200% 100% !important;
+    animation: ce-shimmer-bg 1.5s ease-in-out infinite;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .sk-text.sk-round { border-radius: 999px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk::after, .sk-line::after, .sk-title::after,
+    .sk-block::after, .sk-circle::after, .sk-chip::after { animation: none; }
+    .sk-text { animation: none; }
+  }
+}
+
+@keyframes ce-shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+@keyframes ce-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes ce-dialog-in-sheet {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes ce-shimmer-bg {
+  from { background-position: 100% 0; }
+  to   { background-position: -100% 0; }
+}
