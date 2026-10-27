@@ -154,7 +154,7 @@ function getCandidateServerUrls() {
     list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
   }
   // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
-  list.push('http://10.253.6.138:8000');
+  list.push('http://10.253.6.214:8000');
   if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
     list.push(window.location.origin);
   }
@@ -4191,7 +4191,7 @@ function connectWebSocket() {
     wsUrl = base.replace(/^http:/, 'ws:') + '/ws';
   } else {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host || '10.253.6.138:8000';
+    const host = window.location.host || '10.253.6.214:8000';
     wsUrl = `${protocol}//${host}/ws`;
   }
 
@@ -5868,12 +5868,12 @@ function initServerSettingsModal() {
     openDialog(modal);
   });
 
-  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.6.138:8000'; });
+  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.6.214:8000'; });
   presetLocalhost?.addEventListener('click', () => { if (input) input.value = 'http://localhost:8000'; });
   presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://const-unto-pipe-norfolk.trycloudflare.com'; });
   presetEmulator?.addEventListener('click', () => { if (input) input.value = 'http://10.0.2.2:8000'; });
   presetOrigin?.addEventListener('click', () => {
-    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.6.138:8000';
+    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.6.214:8000';
   });
 
   pingBtn?.addEventListener('click', async () => {

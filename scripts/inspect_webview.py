@@ -1,27 +1,28 @@
 import asyncio
 import json
+import urllib.request
 import websockets
 
 async def inspect():
-    uri = "ws://127.0.0.1:9222/devtools/page/E8E40D525E27969732F4218BF9761BCF"
+    targets = json.loads(urllib.request.urlopen("http://127.0.0.1:9222/json").read().decode())
+    page = next(t for t in targets if t.get("type") == "page")
+    uri = page["webSocketDebuggerUrl"]
+    
     async with websockets.connect(uri) as ws:
-        # Enable console and runtime
         await ws.send(json.dumps({"id": 1, "method": "Runtime.enable"}))
         await ws.send(json.dumps({"id": 2, "method": "Log.enable"}))
 
-        # Evaluate state
         expr = """
         ({
             wsExists: typeof ws !== 'undefined' && ws !== null,
             wsReadyState: typeof ws !== 'undefined' && ws ? ws.readyState : null,
             wsUrl: typeof ws !== 'undefined' && ws ? ws.url : null,
+            wsDot: document.getElementById('wsDot')?.className,
+            wsText: document.getElementById('wsText')?.textContent,
             apiBaseUrl: typeof getApiBaseUrl === 'function' ? getApiBaseUrl() : null,
-            wsUrlConfig: typeof getWsUrl === 'function' ? getWsUrl() : null,
-            procOverlay: !!document.getElementById('procOverlay'),
-            procStage: document.getElementById('procStage')?.textContent,
-            procSubtext: document.getElementById('procSubtext')?.textContent,
-            procProgressText: document.getElementById('procProgressText')?.textContent,
-            currentVideoPath: typeof currentVideoPath !== 'undefined' ? currentVideoPath : null
+            candidates: typeof getCandidateServerUrls === 'function' ? getCandidateServerUrls() : null,
+            title: document.title,
+            bodyPreview: document.body.innerText.substring(0, 150)
         })
         """
         await ws.send(json.dumps({
