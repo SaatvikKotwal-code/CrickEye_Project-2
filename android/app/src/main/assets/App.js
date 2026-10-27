@@ -725,11 +725,11 @@ function setAuthMode(mode) {
   if (signupFields) signupFields.hidden = !signup;
   if (gateTitle) gateTitle.textContent = signup ? 'Create Player Account' : 'CrickEye Login';
   if (gateSubtitle) gateSubtitle.textContent = signup
-    ? 'Register to start tracking your cricket sessions.'
-    : 'Login to continue your batting analytics.';
-  if (gatePrimaryBtn) gatePrimaryBtn.textContent = signup ? 'Create Account' : 'Login';
+    ? 'Sign up to continue'
+    : 'Sign in to continue';
+  if (gatePrimaryBtn) gatePrimaryBtn.textContent = signup ? 'Create Account' : 'Sign in';
   if (gateSwitchMode) gateSwitchMode.textContent = signup
-    ? 'Already have an account? Login'
+    ? 'Already have an account? Sign in'
     : 'Need an account? Sign up';
   if (gatePassword) gatePassword.autocomplete = signup ? 'new-password' : 'current-password';
   setGateMessage('', true);
@@ -5617,6 +5617,44 @@ function init() {
   gateSwitchMode?.addEventListener('click', () => {
     setAuthMode(state.authMode === 'signup' ? 'login' : 'signup');
   });
+
+  const gateTogglePassword = document.getElementById('gateTogglePassword');
+  gateTogglePassword?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!gatePassword) return;
+    const isPass = gatePassword.type === 'password';
+    gatePassword.type = isPass ? 'text' : 'password';
+    gateTogglePassword.textContent = isPass ? 'Hide' : 'Show';
+  });
+
+  const gateRememberMe = document.getElementById('gateRememberMe');
+  if (gateRememberMe && gateEmail) {
+    try {
+      const savedUser = localStorage.getItem('crickeye_remember_username');
+      if (savedUser) {
+        gateEmail.value = savedUser;
+        gateRememberMe.checked = true;
+      }
+    } catch (e) {}
+
+    gateRememberMe.addEventListener('change', () => {
+      try {
+        if (gateRememberMe.checked && gateEmail.value.trim()) {
+          localStorage.setItem('crickeye_remember_username', gateEmail.value.trim());
+        } else {
+          localStorage.removeItem('crickeye_remember_username');
+        }
+      } catch (e) {}
+    });
+
+    gateEmail.addEventListener('input', () => {
+      try {
+        if (gateRememberMe.checked && gateEmail.value.trim()) {
+          localStorage.setItem('crickeye_remember_username', gateEmail.value.trim());
+        }
+      } catch (e) {}
+    });
+  }
   coachLogoutBtn?.addEventListener('click', () => { logout(); });
   coachDashboard?.addEventListener('change', (e) => {
     const t = e.target;
