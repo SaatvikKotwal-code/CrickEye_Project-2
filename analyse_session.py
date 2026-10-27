@@ -160,7 +160,7 @@ BILATERAL_VEL_THRESHOLD  = 12.0
 MIN_SWING_FRAMES         = 5
 BILATERAL_FRAME_FRAC     = 0.6
 MIN_TRAVEL_PX            = 50
-MIN_SHOT_GAP_FRAMES      = 60
+MIN_SHOT_GAP_FRAMES      = 45
 
 # Population baseline for swing intensity normalisation.
 # P90 of wrist rolling-mean at which a batter is considered "making good contact effort".
@@ -184,7 +184,7 @@ PRESHOT_END              = 3
 
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
-CONF_THRESHOLD           = 0.35
+CONF_THRESHOLD           = 0.28
 
 # Composite shot score weights (must sum to 100). Diagnostic: swing_intensity, peak_swing_speed.
 SCORE_W_HEAD         = 28
@@ -466,9 +466,20 @@ def resolve_session_shoulder_and_scale(all_keypoints):
     return med, scale
 
 
-# Swing windows drive which frames go to the shot classifier — must stay aligned
-# with the original fixed-px detector. Biomechanics (below) still use pixel_scale.
-SWING_DETECTION_PIXEL_SCALE = 1.0
+def resolve_detection_pixel_scale(pixel_scale=None):
+    """
+    Detection pixel scale for find_swing_windows.
+    Ensures distant / wide-angle camera recordings (where session shoulder is small)
+    have their travel threshold scaled down safely so all real swings are detected,
+    without allowing noise (clamped between 0.75 and 1.0).
+    """
+    if not pixel_scale or pixel_scale <= 0:
+        return 0.80
+    return float(np.clip(pixel_scale * 1.8, 0.75, 1.0))
+
+
+# Default baseline detection pixel scale
+SWING_DETECTION_PIXEL_SCALE = 0.80
 
 # -- COCO keypoint indices
 KP_NOSE                  = 0
@@ -894,11 +905,12 @@ def find_swing_windows(bilateral, pixel_scale=1.0):
 
 
 def find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws=None, loop=None,
-                     pixel_scale=1.0):
+                     pixel_scale=None):
     ws_emit(ws, loop, {"type": "stage", "stage": "detection",
                        "message": "Detecting swing windows..."})
 
-    swing_valid, swing_score = find_swing_windows(bilateral, pixel_scale=pixel_scale)
+    eff_scale = resolve_detection_pixel_scale(pixel_scale) if pixel_scale is not None else SWING_DETECTION_PIXEL_SCALE
+    swing_valid, swing_score = find_swing_windows(bilateral, pixel_scale=eff_scale)
     candidates = [(i, float(swing_score[i]))
                   for i in range(len(swing_valid)) if swing_valid[i]]
 
@@ -919,7 +931,8 @@ def find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws=None, loop=None,
             grouped.append([frame_i, score_i])
 
     shots = []
-    effective_min_gap = max(int((fps or 30) * 2.2), MIN_SHOT_GAP_FRAMES, 65)
+    # 1.6s minimum gap between consecutive distinct cricket shots
+    effective_min_gap = max(int((fps or 30) * 1.6), MIN_SHOT_GAP_FRAMES, 45)
     for frame_i, score_i in grouped:
         if not shots:
             shots.append([frame_i, score_i]); continue
@@ -2813,7 +2826,7 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
 
         ws_emit(ws, loop, {
             "type": "stage", "stage": "classifying",
-            "message": f"Classified shot {i+1}/{len(shot_onsets)}: {label.replace('_', ' ').upper()} ({round(conf*100)}%)",
+            "message": f"Classifying shot {i+1}/{len(shot_onsets)}...",
             "current_shot": i + 1,
             "total_shots": len(shot_onsets),
         })
@@ -2881,6 +2894,34 @@ def assign_display_numbers(shot_log):
             e['_display_num'] = display_num
         else:
             e['_display_num'] = None
+
+
+def compute_annotated_timestamps(shot_log, fps, total_frames, slow_factor=3):
+    """Compute annotated-video timestamps for each shot.
+
+    pass2_render duplicates peak frames (slow_factor−1) extra times, making
+    the output video longer than the original.  Shot timestamps are based on
+    original frame indices, so the frontend cannot simply multiply by a
+    linear scale factor — the stretching is non-uniform.
+
+    For each shot we compute:
+        annotated_frame = peak_frame + (# peak frames strictly before it) × (slow_factor − 1)
+        annotated_timestamp_sec = annotated_frame / fps
+
+    Returns the total number of output frames in the annotated video.
+    Side-effect: sets ``_annotated_timestamp_sec`` on every entry in *shot_log*.
+    """
+    # ALL shots (confirmed or not) get slow-mo in pass2_render
+    peak_frames_sorted = sorted({e['peak_frame'] for e in shot_log})
+    annotated_total = total_frames + len(peak_frames_sorted) * max(0, slow_factor - 1)
+
+    for e in shot_log:
+        onset = e['peak_frame']
+        peaks_before = sum(1 for p in peak_frames_sorted if p < onset)
+        annotated_frame = onset + peaks_before * max(0, slow_factor - 1)
+        e['_annotated_timestamp_sec'] = round(annotated_frame / fps, 4)
+
+    return annotated_total
 
 
 # -----------------------------------------------------------------
@@ -3216,13 +3257,14 @@ def save_csv(shot_log, csv_path, handedness, conf):
     print(f"[CrickEye] CSV -> {csv_path}")
 
 
-def save_json(shot_log, fps, total_frames, session_info, analysis, json_path, ball_analytics=None):
+def save_json(shot_log, fps, total_frames, session_info, analysis, json_path, ball_analytics=None, annotated_total_frames=None):
     payload = {
-            'total_frames'      : total_frames,
-            'fps'               : fps,
-            'session_handedness': session_info['handedness'],
-            'stance_conf'       : session_info['conf'],
-            'speed_unit'        : 'km/h',   # CALIBRATION: document unit
+            'total_frames'          : total_frames,
+            'annotated_total_frames': annotated_total_frames,
+            'fps'                   : fps,
+            'session_handedness'    : session_info['handedness'],
+            'stance_conf'           : session_info['conf'],
+            'speed_unit'            : 'km/h',   # CALIBRATION: document unit
             'camera_calibration': {
                 'mode': 'shoulder_median_scale',
                 'description': (
@@ -3244,6 +3286,7 @@ def save_json(shot_log, fps, total_frames, session_info, analysis, json_path, ba
                 'confidence'           : round(e['conf'], 4),
                 'confirmed'            : e['conf'] >= CONF_THRESHOLD,
                 'timestamp'            : e['timestamp'],
+                'annotated_timestamp_sec': e.get('_annotated_timestamp_sec'),
                 'peak_frame'           : e['peak_frame'],
                 'travel_px'            : e['onset_score'],
                 'swing_intensity'      : e.get('swing_intensity'),
@@ -3566,7 +3609,7 @@ def run_pipeline(video_path=None, output_path=None):
     else:
         print("[CrickEye] Camera scale: shoulder unknown → pixel_scale=1.00")
     shot_onsets = find_shot_onsets(
-        lw_vels, rw_vels, bilateral, fps, pixel_scale=SWING_DETECTION_PIXEL_SCALE)
+        lw_vels, rw_vels, bilateral, fps, pixel_scale=pixel_scale)
 
     if len(shot_onsets) > 0:
         shot_classifier = load_shot_classifier(MODEL_PATH, device)
@@ -3605,9 +3648,11 @@ def run_pipeline(video_path=None, output_path=None):
                  fps, total_frames, orig_w, orig_h, session_info,
                  ball_frame_overlays=ball_analytics.get('frame_overlays', []),
                  ball_trajectories=ball_analytics.get('video_trajectories', []))
+    annotated_total_frames = compute_annotated_timestamps(
+        shot_log, fps, total_frames, slow_factor=3)
     save_csv(shot_log, CSV_PATH, session_info['handedness'], session_info['conf'])
     save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH,
-              ball_analytics=ball_analytics)
+              ball_analytics=ball_analytics, annotated_total_frames=annotated_total_frames)
     print_summary(shot_log, session_info, analysis)
 
 
@@ -3636,7 +3681,7 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             print("[CrickEye] Camera scale: shoulder unknown → pixel_scale=1.00")
         shot_onsets = find_shot_onsets(
             lw_vels, rw_vels, bilateral, fps, ws, loop,
-            pixel_scale=SWING_DETECTION_PIXEL_SCALE)
+            pixel_scale=pixel_scale)
 
         if len(shot_onsets) > 0:
             shot_classifier = load_shot_classifier(MODEL_PATH, device)
@@ -3716,12 +3761,14 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
                 "head_confidence"      : e.get('head_confidence'),
                 "probs": {cls: round(p, 4) for cls, p in zip(SHOT_CLASSES, e['probs'])},
                 "early_classified"     : early,
+                "annotated_timestamp_sec": e.get('_annotated_timestamp_sec'),
             }
 
-        # ── IMMEDIATE STREAMING: Emit classified shots right now so the user sees them during processing ──
-        early_confirmed = [e for e in shot_log if e['conf'] >= CONF_THRESHOLD]
-        for e in early_confirmed:
-            ws_emit(ws, loop, _make_shot_message(e, early=True))
+        ws_emit(ws, loop, {
+            "type": "stage", "stage": "classifying",
+            "message": f"Classified {len(shot_log)} shots. Running ball tracking...",
+            "total_shots": len(shot_log),
+        })
 
         print(
             "\n[CrickEye] Ball analytics: running YOLO track() on the full video "
@@ -3741,14 +3788,20 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
                      ball_frame_overlays=ball_analytics.get('frame_overlays', []),
                      ball_trajectories=ball_analytics.get('video_trajectories', []))
 
+        # ── Compute annotated-video timestamps (after slow-mo render) ──
+        annotated_total_frames = compute_annotated_timestamps(
+            shot_log, fps, total_frames, slow_factor=3)
+        print(f"[CrickEye] Annotated video: {annotated_total_frames} frames "
+              f"(original {total_frames} + {annotated_total_frames - total_frames} slow-mo)")
+
         save_csv(shot_log, CSV_PATH, session_info['handedness'], session_info['conf'])
         save_json(shot_log, fps, total_frames, session_info, analysis, JSON_PATH,
-                  ball_analytics=ball_analytics)
+                  ball_analytics=ball_analytics, annotated_total_frames=annotated_total_frames)
         print_summary(shot_log, session_info, analysis)
 
         confirmed_shots = [e for e in shot_log if e['conf'] >= CONF_THRESHOLD]
 
-        # Emit final shots with ball-aware scores
+        # Emit final shots with ball-aware + annotated-timestamp scores
         for e in confirmed_shots:
             ws_emit(ws, loop, _make_shot_message(e, early=False))
 
@@ -3780,8 +3833,10 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             "avg_conf":     round(float(np.mean([e['conf'] for e in confirmed_shots])), 3)
                             if confirmed_shots else 0.0,
             "total_frames": total_frames,
+            "annotated_total_frames": annotated_total_frames,
             "fps":          round(fps, 3),
             "analysis":     analysis,
+            "shots":        [_make_shot_message(e, early=False) for e in confirmed_shots],
             "speed_unit":   "km/h",   # CALIBRATION: tell frontend the unit
             "camera_calibration": {
                 "ref_shoulder_px": REF_SHOULDER_PX,

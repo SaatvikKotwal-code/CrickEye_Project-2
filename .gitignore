@@ -65,4 +65,9 @@ local.properties
 # Scratch & temporary visual verification captures
 scratch/
 mobile_screen*.png
-mobile_screenshot.png
+mobile_screenshot*.png
+mobile_current*.png
+mobile_ready_check*.png
+current_phone_*.png
+screen_*.png
+ui.xml

@@ -2590,7 +2590,7 @@ body {
 .footer-sub  { color: var(--text-muted); font-weight: 400; }
 .footer-copy { color: var(--text-dim); }
 
-/* ═══════════════════ PROCESSING OVERLAY (Universal Fullscreen) ═══════════════════ */
+/* ═══════════════════ PROCESSING OVERLAY (Light Theme) ═══════════════════ */
 #processingOverlay {
   position: fixed !important;
   inset: 0 !important;
@@ -2598,9 +2598,9 @@ body {
   height: 100vh !important;
   height: 100dvh !important;
   z-index: 9999999 !important;
-  background: rgba(10, 15, 29, 0.94) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(241, 245, 249, 0.86) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2612,25 +2612,50 @@ body {
 
 .proc-inner {
   display: flex; flex-direction: column; align-items: center; gap: 16px;
-  padding: 32px 28px; max-width: 400px; width: 100%;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1.5px solid rgba(6, 182, 212, 0.35); border-radius: 24px;
-  box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.7), 0 0 32px rgba(6, 182, 212, 0.15);
+  padding: 32px 28px; max-width: 420px; width: 100%;
+  background: #FFFFFF;
+  border: 1.5px solid rgba(6, 182, 212, 0.3); border-radius: 26px;
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.12), 0 0 32px rgba(6, 182, 212, 0.14), 0 1px 3px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
 }
-.proc-logo svg { filter: drop-shadow(0 0 16px #06B6D4); animation: logoPulse 2s ease-in-out infinite; }
-.proc-title { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: #F8FAFC; letter-spacing: 0.02em; text-align: center; }
-.proc-stage { font-family: var(--font-mono); font-size: 0.74rem; font-weight: 600; color: #38BDF8; letter-spacing: 0.04em; text-align: center; min-height: 1.4em; line-height: 1.4; transition: opacity .2s ease; }
+.proc-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.14), rgba(16, 185, 129, 0.08));
+  border: 1.5px solid rgba(6, 182, 212, 0.3);
+  box-shadow: 0 8px 24px -4px rgba(6, 182, 212, 0.22);
+}
+.proc-logo svg { filter: drop-shadow(0 2px 8px rgba(6, 182, 212, 0.35)); animation: logoPulse 2.4s ease-in-out infinite; }
+.proc-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; color: #0F172A; letter-spacing: -0.01em; text-align: center; }
+.proc-stage {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #0891B2;
+  letter-spacing: 0.03em;
+  text-align: center;
+  min-height: 1.4em;
+  line-height: 1.45;
+  padding: 6px 14px;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.22);
+  border-radius: 999px;
+  transition: opacity .2s ease, background-color .2s ease, color .2s ease;
+}
 .proc-bar-wrap { width: 100%; display: flex; align-items: center; gap: 12px; }
-.proc-bar-track { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); position: relative; overflow: visible; }
-.proc-bar-fill { height: 100%; border-radius: 4px; width: 0%; background: linear-gradient(90deg,#06B6D4,#10B981); transition: width .35s ease; position: relative; z-index: 1; }
-.proc-bar-glow { position: absolute; top: 50%; right: 0; width: 14px; height: 14px; background: #38BDF8; border-radius: 50%; transform: translate(50%,-50%); box-shadow: 0 0 12px #06B6D4, 0 0 24px #06B6D4; transition: right .35s ease; z-index: 2; }
-.proc-pct { font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: #38BDF8; min-width: 42px; text-align: right; }
-.proc-stats { display: flex; gap: 20px; width: 100%; justify-content: space-around; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08); }
-.proc-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.proc-stat-val { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: #F8FAFC; }
-.proc-stat-lbl { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; color: #94A3B8; }
-.error-text { color: #EF4444 !important; }
+.proc-bar-track { flex: 1; height: 8px; border-radius: 999px; background: #E2E8F0; position: relative; overflow: visible; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06); }
+.proc-bar-fill { height: 100%; border-radius: 999px; width: 0%; background: linear-gradient(90deg,#06B6D4,#10B981); box-shadow: 0 0 10px rgba(6, 182, 212, 0.45); transition: width .35s ease; position: relative; z-index: 1; }
+.proc-bar-glow { position: absolute; top: 50%; right: 100%; width: 14px; height: 14px; background: #0891B2; border: 2.5px solid #FFFFFF; border-radius: 50%; transform: translate(50%,-50%); box-shadow: 0 2px 10px rgba(8, 145, 178, 0.5); transition: right .35s ease; z-index: 2; }
+.proc-pct { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 800; color: #0891B2; min-width: 44px; text-align: right; }
+.proc-stats { display: flex; gap: 12px; width: 100%; justify-content: space-around; padding: 12px 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; box-sizing: border-box; }
+.proc-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+.proc-stat-val { font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #0F172A; }
+.proc-stat-lbl { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; color: #64748B; }
+.error-text { color: #DC2626 !important; background: rgba(220, 38, 38, 0.08) !important; border-color: rgba(220, 38, 38, 0.3) !important; }
 
 /* ── Live Shot Cards in Processing Overlay ── */
 .proc-live-shots {
@@ -2643,17 +2668,16 @@ body {
   overflow-y: auto;
 }
 .proc-shot-card {
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(6, 182, 212, 0.4);
-  border-left: 1px solid var(--legacy-border);
-  border-radius: 10px;
+  background: #FFFFFF;
+  border: 1px solid rgba(6, 182, 212, 0.28);
+  border-left: 3px solid #06B6D4;
+  border-radius: 12px;
   padding: 10px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
   animation: procShotPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  backdrop-filter: blur(8px);
 }
 @keyframes procShotPop {
   0% { opacity: 0; transform: translateY(10px) scale(0.95); }
@@ -2671,14 +2695,15 @@ body {
   letter-spacing: 0.08em;
   padding: 2px 7px;
   border-radius: 4px;
-  border: 1px solid #06B6D4;
-  background: rgba(6, 182, 212, 0.14);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  background: rgba(6, 182, 212, 0.1);
+  color: #0891B2;
 }
 .proc-shot-conf {
   font-family: var(--font-mono);
   font-size: 0.65rem;
-  color: #10B981;
-  font-weight: 700;
+  color: #059669;
+  font-weight: 800;
 }
 .proc-shot-main {
   display: flex;
@@ -2691,7 +2716,8 @@ body {
   font-family: var(--font-display);
   font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  color: #0F172A;
 }
 .proc-shot-tags {
   display: flex;
@@ -2701,27 +2727,44 @@ body {
   font-size: 0.65rem;
 }
 .proc-tag-speed {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #FBBF24;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  color: #B45309;
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
 }
 .proc-tag-stance {
-  background: rgba(148, 163, 184, 0.15);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  color: #CBD5E1;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  color: #334155;
   padding: 2px 6px;
   border-radius: 4px;
+  font-weight: 600;
 }
 .proc-tag-score {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  color: #34D399;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #047857;
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
+}
+#procDismissBtn {
+  font-family: var(--font-display);
+  color: #DC2626 !important;
+  background: rgba(220, 38, 38, 0.08) !important;
+  border: 1px solid rgba(220, 38, 38, 0.25) !important;
+  border-radius: 8px !important;
+  padding: 5px 14px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+#procDismissBtn:hover {
+  background: rgba(220, 38, 38, 0.15) !important;
+  border-color: rgba(220, 38, 38, 0.4) !important;
 }
 
 .ctrl-btn--accent {

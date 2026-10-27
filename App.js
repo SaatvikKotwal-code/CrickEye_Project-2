@@ -145,16 +145,16 @@ function getCandidateServerUrls() {
   const list = [];
   // USB reverse proxy port (instant & stable via USB adb reverse) - Primary candidate
   list.push('http://localhost:8000');
+  list.push('http://127.0.0.1:8000');
   const saved = localStorage.getItem('crickeye_server_url');
-  if (saved && saved.trim() && saved.trim() !== 'http://localhost:8000') {
+  if (saved && saved.trim() && saved.trim() !== 'http://localhost:8000' && saved.trim() !== 'http://127.0.0.1:8000') {
     list.push(saved.trim().replace(/\/+$/, ''));
   }
   if (window.CRICKEYE_DEFAULT_BACKEND_URL && window.CRICKEYE_DEFAULT_BACKEND_URL.trim()) {
     list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
   }
   // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
-  list.push('http://10.253.18.57:8000');
-  list.push('http://10.253.13.192:8000');
+  list.push('http://10.253.6.138:8000');
   if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
     list.push(window.location.origin);
   }
@@ -173,10 +173,6 @@ function getApiBaseUrl() {
   const saved = localStorage.getItem('crickeye_server_url');
   if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
   const candidates = getCandidateServerUrls();
-  if (window.AndroidBridge && candidates.length > 1) {
-    const lan = candidates.find(c => c.includes('10.') || c.includes('192.168.'));
-    if (lan) return lan;
-  }
   return candidates[0] || 'http://localhost:8000';
 }
 
@@ -307,6 +303,7 @@ let state = {
   pendingSpokes:  [],
   drawnSpokes:    new Set(),
   originalVideoDuration: null,
+  annotatedVideoDuration: null,
   sessionAnalysis:       null,
   completePayload:       null,
   videoFlushed:          false,
@@ -383,10 +380,10 @@ function createProcessingOverlay(title = 'CrickEye AI Processing') {
   overlay.innerHTML = `
     <div class="proc-inner">
       <div class="proc-logo">
-        <svg width="52" height="52" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.8"/>
-          <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.3" stroke="#06B6D4" stroke-width="1.2"/>
-          <circle cx="16" cy="16" r="2.8" fill="#06B6D4"/>
+        <svg width="42" height="42" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14" stroke="#0891B2" stroke-width="2"/>
+          <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.3" stroke="#0891B2" stroke-width="1.3"/>
+          <circle cx="16" cy="16" r="2.8" fill="#0891B2"/>
         </svg>
       </div>
       <div class="proc-title">${title}</div>
@@ -394,7 +391,7 @@ function createProcessingOverlay(title = 'CrickEye AI Processing') {
       <div class="proc-bar-wrap">
         <div class="proc-bar-track">
           <div class="proc-bar-fill" id="procBarFill"></div>
-          <div class="proc-bar-glow" id="procBarGlow"></div>
+          <div class="proc-bar-glow" id="procBarGlow" style="right: 100%;"></div>
         </div>
         <span class="proc-pct" id="procPct">0%</span>
       </div>
@@ -403,8 +400,7 @@ function createProcessingOverlay(title = 'CrickEye AI Processing') {
         <div class="proc-stat"><span class="proc-stat-val" id="procEta">—</span><span class="proc-stat-lbl">ETA</span></div>
         <div class="proc-stat"><span class="proc-stat-val" id="procShots">0</span><span class="proc-stat-lbl">SHOTS FOUND</span></div>
       </div>
-      <div class="proc-live-shots" id="procLiveShots"></div>
-      <button type="button" id="procDismissBtn" class="btn btn-ghost btn-xs text-red-400 mt-2" style="display:none;" onclick="this.closest('#processingOverlay').remove();">Dismiss</button>
+      <button type="button" id="procDismissBtn" class="btn btn-xs mt-2" style="display:none;" onclick="this.closest('#processingOverlay').remove();">Dismiss</button>
     </div>`;
   document.body.appendChild(overlay);
   injectOverlayStyles();
@@ -3914,7 +3910,7 @@ function rebuildDerivedShotStateFromShots(shots) {
   state.pendingSpokes = [];
   state.countedShotNums = new Set();
   for (const msg of state.shotLog) {
-    if (msg.confirmed === false || (msg.conf != null && msg.conf < 0.35)) continue;
+    if (msg.confirmed === false || (msg.conf != null && msg.conf < 0.28)) continue;
     if (!state.shotStats[msg.label]) state.shotStats[msg.label] = { count: 0 };
     state.shotStats[msg.label].count++;
     const zone = SHOT_ZONE[msg.label];
@@ -3923,12 +3919,13 @@ function rebuildDerivedShotStateFromShots(shots) {
     const parts = ts.split(':');
     state.pendingSpokes.push({
       timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
+      annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
       label: msg.label,
       shot_num: msg.shot_num,
       msg,
     });
   }
-  state.pendingSpokes.sort((a, b) => a.timestamp_sec - b.timestamp_sec);
+  state.pendingSpokes.sort((a, b) => (a.annotated_timestamp_sec ?? a.timestamp_sec) - (b.annotated_timestamp_sec ?? b.timestamp_sec));
 }
 
 /** Restore dashboard from a completed session row (same file hash). */
@@ -4194,7 +4191,7 @@ function connectWebSocket() {
     wsUrl = base.replace(/^http:/, 'ws:') + '/ws';
   } else {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host || '10.253.13.192:8000';
+    const host = window.location.host || '10.253.6.138:8000';
     wsUrl = `${protocol}//${host}/ws`;
   }
 
@@ -4295,6 +4292,7 @@ function onProgress(msg) {
 }
 
 function onShotReceived(msg) {
+  const isConfirmed = msg.confirmed !== false && ((msg.conf ?? msg.confidence) == null || (msg.conf ?? msg.confidence) >= 0.28);
   const existingIdx = state.shotLog.findIndex(s => s.shot_num === msg.shot_num);
   if (existingIdx >= 0) {
     state.shotLog[existingIdx] = msg;
@@ -4302,10 +4300,27 @@ function onShotReceived(msg) {
     if (spokeIdx >= 0) {
       state.pendingSpokes[spokeIdx].msg = msg;
       state.pendingSpokes[spokeIdx].label = msg.label;
+      // Update annotated timestamp when the final (post-render) shot message arrives
+      if (msg.annotated_timestamp_sec != null) {
+        state.pendingSpokes[spokeIdx].annotated_timestamp_sec = msg.annotated_timestamp_sec;
+      }
+    } else if (isConfirmed) {
+      if (!state.shotStats[msg.label]) state.shotStats[msg.label] = {count:0};
+      state.shotStats[msg.label].count++;
+      const zone = SHOT_ZONE[msg.label];
+      if (zone) state.zoneCounts[zone]++;
+      const ts = msg.timestamp || '00:00.00';
+      const parts = ts.split(':');
+      state.pendingSpokes.push({
+        timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
+        annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+        label: msg.label,
+        shot_num: msg.shot_num,
+        msg
+      });
     }
   } else {
     state.shotLog.push(msg);
-    const isConfirmed = msg.confirmed !== false && (msg.conf == null || msg.conf >= 0.35);
     if (isConfirmed) {
       if (!state.shotStats[msg.label]) state.shotStats[msg.label] = {count:0};
       state.shotStats[msg.label].count++;
@@ -4315,6 +4330,7 @@ function onShotReceived(msg) {
       const parts = ts.split(':');
       state.pendingSpokes.push({
         timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
+        annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
         label: msg.label,
         shot_num: msg.shot_num,
         msg
@@ -4324,45 +4340,11 @@ function onShotReceived(msg) {
 
   const confirmedCount = state.shotLog.filter(s => s.confirmed !== false).length;
   updateProcStat('procShots', `${confirmedCount} confirmed`);
-  renderLiveProcShotCard(msg);
 }
 
 function renderLiveProcShotCard(shot) {
-  const container = document.getElementById('procLiveShots');
-  if (!container) return;
-
-  let card = document.getElementById(`procShotCard-${shot.shot_num}`);
-  const shotLabel = (SHOT_LABELS[shot.label] || shot.label || 'Shot').toUpperCase();
-  const color = SHOT_COLORS[shot.label] || '#06B6D4';
-  const confPct = Math.round((shot.conf || 0) * 100);
-  const scoreVal = shot.shot_score != null ? Number(shot.shot_score).toFixed(1) : '—';
-  const speedVal = shot.peak_swing_speed != null ? `${Math.round(shot.peak_swing_speed)} km/h` : '';
-  const stanceVal = shot.handedness || '';
-
-  const html = `
-    <div class="proc-shot-header">
-      <span class="proc-shot-pill" style="border-color:${color}; color:${color};"><span class="material-symbols-outlined proc-pill-icon">bolt</span> SHOT #${shot.shot_num} ANALYSED</span>
-      <span class="proc-shot-conf">${confPct}% CONF</span>
-    </div>
-    <div class="proc-shot-main">
-      <span class="proc-shot-name" style="color:${color};">${shotLabel}</span>
-      <div class="proc-shot-tags">
-        ${speedVal ? `<span class="proc-tag-speed"><span class="material-symbols-outlined proc-pill-icon">speed</span> ${speedVal}</span>` : ''}
-        ${stanceVal ? `<span class="proc-tag-stance">${stanceVal}</span>` : ''}
-        <span class="proc-tag-score">SCORE: ${scoreVal}/10</span>
-      </div>
-    </div>
-  `;
-
-  if (card) {
-    card.innerHTML = html;
-  } else {
-    card = document.createElement('div');
-    card.id = `procShotCard-${shot.shot_num}`;
-    card.className = 'proc-shot-card';
-    card.innerHTML = html;
-    container.appendChild(card);
-  }
+  // Predictions are displayed during video playback, not during processing
+  return;
 }
 
 function onComplete(msg, opts = {}) {
@@ -4377,6 +4359,7 @@ function onComplete(msg, opts = {}) {
     state.latestLlmInsights = null;
   }
   if (msg.total_frames && msg.fps) state.originalVideoDuration = msg.total_frames / msg.fps;
+  if (msg.annotated_total_frames && msg.fps) state.annotatedVideoDuration = msg.annotated_total_frames / msg.fps;
   if (msg.analysis && !state.sessionAnalysis) state.sessionAnalysis = msg.analysis;
   if (msg.fps) state.videoFps = msg.fps;
 
@@ -4387,25 +4370,21 @@ function onComplete(msg, opts = {}) {
 
   if (typeof Skeleton !== 'undefined') Skeleton.setAll(Skeleton.ANALYSIS, 'ready');
 
-  state.pendingSpokes.sort((a,b) => a.timestamp_sec - b.timestamp_sec);
+  if (Array.isArray(msg.shots) && msg.shots.length > 0) {
+    for (const s of msg.shots) {
+      onShotReceived(s);
+    }
+  }
+
+  state.pendingSpokes.sort((a,b) => (a.annotated_timestamp_sec ?? a.timestamp_sec) - (b.annotated_timestamp_sec ?? b.timestamp_sec));
 
   const handLower = msg.handedness==='LHB'?'left':'right';
   WagonWheel.clearAll();
   forceHand(handLower, msg.handedness||'RHB', msg.stance_conf||1.0);
   state.drawnSpokes.clear();
 
-  // Flush dashboard to build timeline and UI elements first
+  // Flush dashboard to build timeline and clean UI elements
   flushDashboard();
-
-  // Pre-render the first shot right away into HUD and Biomech Card so the user sees results immediately
-  if (state.pendingSpokes.length > 0) {
-    const firstSpoke = state.pendingSpokes[0];
-    drawSpokeNow(firstSpoke);
-    // Must be marked drawn: playback and drawAllSpokesWithoutPlayback both
-    // replay the spoke list, and shot 1 would otherwise render twice —
-    // a duplicate biomech card plus double-counted spokes and shot totals.
-    state.drawnSpokes.add(firstSpoke.shot_num);
-  }
 
   const startPanel = document.getElementById('startPanel');
   if (startPanel) startPanel.remove();
@@ -4489,7 +4468,7 @@ function flushDashboard() {
     const sm = getAnalysisSummary(state.sessionAnalysis);
     let avgScore = sm.avgShotScore != null ? sm.avgShotScore : null;
     if (avgScore === null && state.shotLog.length > 0) {
-      const confirmed = state.shotLog.filter(s => Number(s.conf ?? s.confidence) >= 0.3);
+      const confirmed = state.shotLog.filter(s => Number(s.conf ?? s.confidence) >= 0.28);
       if (confirmed.length > 0) {
         avgScore = confirmed.reduce((sum, s) => sum + (s.shot_score || 0), 0) / confirmed.length;
       }
@@ -4509,9 +4488,11 @@ function flushDashboard() {
     el.addEventListener('click', () => {
       const spoke = state.pendingSpokes.find(s => s.shot_num === shot.shot_num);
       if (spoke && video && video.duration) {
-        const origDur = state.originalVideoDuration || video.duration;
-        const scale = video.duration / origDur;
-        video.currentTime = Math.max(0, spoke.timestamp_sec * scale - 0.2);
+        // Use annotated timestamp for accurate seeking in slow-mo video
+        const seekTime = spoke.annotated_timestamp_sec != null
+          ? spoke.annotated_timestamp_sec
+          : spoke.timestamp_sec * (video.duration / (state.originalVideoDuration || video.duration));
+        video.currentTime = Math.max(0, seekTime - 0.2);
         drawSpokeNow(spoke);
       }
     });
@@ -4521,7 +4502,7 @@ function flushDashboard() {
 
   const feed = document.getElementById('biomech-feed');
   if (feed) {
-    feed.innerHTML = '';
+    feed.innerHTML = '<div class="biomech-empty">AWAITING VIDEO PLAYBACK…</div>';
     biomechPage = 0;
     updateBiomechPagination();
   }
@@ -4533,13 +4514,29 @@ function flushDashboard() {
   state.displayedShotStats  = {};
   state.displayedZoneCounts = { offside:0, straight:0, legside:0 };
   updateDistributionLive();
+
+  shotCount.textContent = '0';
+  shotIndex.textContent = '—';
+  shotName.textContent  = 'AWAITING PLAYBACK';
+  shotTime.textContent  = '—';
+  hudShot.textContent   = '—';
+  if (shotColorBar) {
+    shotColorBar.style.background = 'var(--legacy-border)';
+    shotColorBar.style.boxShadow = 'none';
+  }
 }
 
 function showCompleteOverlay(msg) {
   if (document.getElementById('completeOverlay')) return;
   const div = document.createElement('div'); div.id='completeOverlay';
   div.innerHTML=`<div class="complete-badge">✓ Analysis Complete &nbsp;·&nbsp; ${msg.confirmed} Confirmed &nbsp;·&nbsp; ${msg.unclear} Unclear &nbsp;·&nbsp; ${msg.handedness}</div>`;
-  document.querySelector('.video-wrapper').appendChild(div);
+  const vw = document.querySelector('.video-wrapper');
+  if (vw) vw.appendChild(div);
+  setTimeout(() => {
+    div.style.transition = 'opacity 0.6s ease';
+    div.style.opacity = '0';
+    setTimeout(() => div.remove(), 600);
+  }, 2800);
 }
 
 function onError(msg) {
@@ -4617,7 +4614,7 @@ function clearWheelAndReset() {
   state.displayedShotStats  = {};
   state.displayedZoneCounts = { offside:0, straight:0, legside:0 };
   state.currentHand='left'; state.pendingSpokes=[]; state.drawnSpokes.clear();
-  state.originalVideoDuration=null; state.sessionAnalysis=null;
+  state.originalVideoDuration=null; state.annotatedVideoDuration=null; state.sessionAnalysis=null;
   state.completePayload=null; state.videoFlushed=false;
   state.latestLlmInsights = null;
   state.videoFps = 30;
@@ -5471,15 +5468,29 @@ async function startAnalysis(overrideFile = null) {
 function cycleSpeed() { state.speedIdx=(state.speedIdx+1)%SPEEDS.length; const sp=SPEEDS[state.speedIdx]; video.playbackRate=sp; btnSpeed.textContent=sp+'×'; }
 function toggleLoop()  { state.looping=!state.looping; video.loop=state.looping; btnLoop.style.color=state.looping?'var(--green)':''; btnLoop.style.borderColor=state.looping?'var(--green)':''; }
 
+/**
+ * Compute the effective sync time for a spoke in the output video.
+ * Prefers the backend's annotated_timestamp_sec (exact, accounts for slow-mo
+ * frame duplication). Falls back to linear scale if not available.
+ */
+function getSpokeVideoTime(spoke) {
+  if (spoke.annotated_timestamp_sec != null) return spoke.annotated_timestamp_sec;
+  // Fallback: linear scale (inexact when slow-mo is present)
+  const origDur = state.annotatedVideoDuration || state.originalVideoDuration || (video ? video.duration : null);
+  if (video && video.duration && origDur) {
+    const scale = video.duration / origDur;
+    return spoke.timestamp_sec * scale;
+  }
+  return spoke.timestamp_sec;
+}
+
 /** Max shot # whose replay timestamp has been reached — drives progressive ball analytics (pitch / bars / table). */
 function computeBallPlaybackShotCap(t) {
   if (!video || !video.duration || !state.pendingSpokes.length) return 0;
-  const origDur = state.originalVideoDuration || video.duration;
-  const scale = video.duration / origDur;
-  const AHEAD = 0.4;
+  const AHEAD = 0.5;
   let maxN = 0;
   state.pendingSpokes.forEach((spoke) => {
-    if (t >= spoke.timestamp_sec * scale - AHEAD) {
+    if (t >= getSpokeVideoTime(spoke) - AHEAD) {
       maxN = Math.max(maxN, spoke.shot_num);
     }
   });
@@ -5498,9 +5509,7 @@ function onVideoTimeUpdate() {
     state.ballPlaybackCap = cap;
     if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(cap);
   }
-  const origDur = state.originalVideoDuration || video.duration;
-  const scale   = video.duration / origDur;
-  const AHEAD   = 0.4;
+  const AHEAD   = 0.5;
   if (state._lastVideoTime !== undefined && t < state._lastVideoTime - 1.0) {
     // Video looped back or scrubbed backwards — keep drawnSpokes so spokes are never duplicated!
     document.querySelectorAll('.shot-circle').forEach(el => el.classList.remove('active'));
@@ -5508,14 +5517,25 @@ function onVideoTimeUpdate() {
   state._lastVideoTime = t;
   state.pendingSpokes.forEach(spoke => {
     if (state.drawnSpokes.has(spoke.shot_num)) return;
-    if (t >= spoke.timestamp_sec * scale - AHEAD) {
+    if (t >= getSpokeVideoTime(spoke) - AHEAD) {
       state.drawnSpokes.add(spoke.shot_num);
       drawSpokeNow(spoke);
     }
   });
+
+  // End-of-video safety net: if near video end (within 0.3s), flush any remaining undrawn spokes
+  if (t >= video.duration - 0.3) {
+    state.pendingSpokes.forEach(spoke => {
+      if (!state.drawnSpokes.has(spoke.shot_num)) {
+        state.drawnSpokes.add(spoke.shot_num);
+        drawSpokeNow(spoke);
+      }
+    });
+  }
 }
 
 function drawSpokeNow(spoke, onSpokeDrawn) {
+  state.drawnSpokes.add(spoke.shot_num);
   const circle = document.getElementById(`shot-circle-${spoke.shot_num}`);
   if (circle) {
     document.querySelectorAll('.shot-circle').forEach(el=>el.classList.remove('active'));
@@ -5559,7 +5579,7 @@ function drawSpokeNow(spoke, onSpokeDrawn) {
 /** When the output MP4 cannot play in-browser, still paint wagon-wheel spokes in order. */
 function drawAllSpokesWithoutPlayback() {
   const spokes = [...state.pendingSpokes]
-    .sort((a, b) => a.timestamp_sec - b.timestamp_sec)
+    .sort((a, b) => (a.annotated_timestamp_sec ?? a.timestamp_sec) - (b.annotated_timestamp_sec ?? b.timestamp_sec))
     .filter((spoke) => !state.drawnSpokes.has(spoke.shot_num));
   let i = 0;
   function next() {
@@ -5740,6 +5760,20 @@ function init() {
   video.addEventListener('click', ()=>{ if(video.paused) video.play(); else video.pause(); });
   // Reveal session results after a short compile delay when the analysed video finishes.
   video.addEventListener('ended', () => {
+    // Fix 5: flush any remaining undrawn spokes on video end so no shots are ever missed
+    const undrawn = state.pendingSpokes.filter(s => !state.drawnSpokes.has(s.shot_num));
+    if (undrawn.length > 0) {
+      console.log(`[CrickEye] Video ended with ${undrawn.length} undrawn spoke(s) — flushing now.`);
+      undrawn.sort((a, b) => (a.annotated_timestamp_sec ?? a.timestamp_sec) - (b.annotated_timestamp_sec ?? b.timestamp_sec));
+      let i = 0;
+      function flushNext() {
+        if (i >= undrawn.length) return;
+        const spoke = undrawn[i++];
+        state.drawnSpokes.add(spoke.shot_num);
+        drawSpokeNow(spoke, () => setTimeout(flushNext, 90));
+      }
+      flushNext();
+    }
     if (typeof PlayCard !== 'undefined' && PlayCard.revealAfterDelay) {
       PlayCard.revealAfterDelay(state);
     }
@@ -5834,12 +5868,12 @@ function initServerSettingsModal() {
     openDialog(modal);
   });
 
-  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.18.57:8000'; });
+  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.6.138:8000'; });
   presetLocalhost?.addEventListener('click', () => { if (input) input.value = 'http://localhost:8000'; });
-  presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://suggestion-apartment-plane-yet.trycloudflare.com'; });
+  presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://const-unto-pipe-norfolk.trycloudflare.com'; });
   presetEmulator?.addEventListener('click', () => { if (input) input.value = 'http://10.0.2.2:8000'; });
   presetOrigin?.addEventListener('click', () => {
-    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.18.57:8000';
+    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.6.138:8000';
   });
 
   pingBtn?.addEventListener('click', async () => {

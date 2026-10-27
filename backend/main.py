@@ -359,7 +359,15 @@ class WebSocketHub:
         if t == "complete":
             self.last_complete_payload = payload
         elif t == "shot":
-            self.shots.append(payload)
+            sn = payload.get("shot_num")
+            updated = False
+            for idx, existing in enumerate(self.shots):
+                if existing.get("shot_num") == sn:
+                    self.shots[idx] = payload
+                    updated = True
+                    break
+            if not updated:
+                self.shots.append(payload)
         elif t == "stage":
             self.current_stage = payload
             if payload.get("stage") == "loading":
@@ -385,7 +393,7 @@ def _get_last_session_payload():
             data = json.load(f)
 
         analysed_videos = sorted(
-            (BASE_DIR / "assets").glob("analysed_*.mp4"),
+            [p for p in (BASE_DIR / "assets").glob("analysed_*.mp4") if p.is_file() and p.stat().st_size > 1000 and not p.name.endswith("_h264.mp4")],
             key=lambda p: p.stat().st_mtime,
             reverse=True
         )
@@ -409,8 +417,10 @@ def _get_last_session_payload():
             "shot_counts": shot_counts,
             "avg_conf": round(float(sum(s.get("confidence", 0) for s in confirmed) / max(len(confirmed), 1)), 3),
             "total_frames": data.get("total_frames", 0),
+            "annotated_total_frames": data.get("annotated_total_frames") or data.get("total_frames", 0),
             "fps": data.get("fps", 30.0),
             "analysis": data.get("analysis", {}),
+            "shots": shots,
             "speed_unit": "km/h",
             "camera_calibration": data.get("camera_calibration", {}),
             "ball_analytics": data.get("ball_analytics"),

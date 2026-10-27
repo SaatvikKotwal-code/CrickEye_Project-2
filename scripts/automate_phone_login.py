@@ -45,5 +45,5 @@ print("7. Waiting 7 seconds for login and dashboard...")
 time.sleep(7)
 
 data = subprocess.check_output([adb, '-s', dev, 'exec-out', 'screencap', '-p'])
-open(r'C:\Users\HP\.gemini\antigravity-ide\brain\aa8b31bf-c56d-4e92-b303-0724d1d86575\phone_logged_in_final.png', 'wb').write(data)
+open(r'C:\Users\HP\.gemini\antigravity-ide\brain\f0106936-e01c-4c5b-b10d-67847f25e6ff\phone_logged_in_final.png', 'wb').write(data)
 print("SUCCESS: phone_logged_in_final.png captured!")

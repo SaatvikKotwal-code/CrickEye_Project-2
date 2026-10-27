@@ -22,11 +22,14 @@ timeout /t 2 /nobreak >nul
 echo [Node] Starting Node API on port 8080...
 start "CrickEye Node API (Port 8080)" node backend/server.js
 
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -like '*Wi-Fi*' -or $_.InterfaceAlias -like '*Wireless*' -or $_.InterfaceAlias -like '*Ethernet*' } | Where-Object { $_.IPAddress -notlike '169.254*' -and $_.IPAddress -notlike '127.*' } | Select-Object -ExpandProperty IPAddress -First 1)"`) do set "LAN_IP=%%i"
+if "%LAN_IP%"=="" set "LAN_IP=10.253.6.138"
+
 echo.
 echo ===================================================
 echo  SERVICES ARE RUNNING:
 echo   - Localhost / USB: http://localhost:8000
-echo   - Wi-Fi LAN:       http://10.253.13.192:8000
+echo   - Wi-Fi LAN:       http://%LAN_IP%:8000
 echo   - Node API:        http://localhost:8080
 echo ===================================================
 echo.

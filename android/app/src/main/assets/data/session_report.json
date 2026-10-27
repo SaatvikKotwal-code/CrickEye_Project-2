@@ -1,6 +1,7 @@
 {
-  "total_frames": 146,
-  "fps": 29.433505812781398,
+  "total_frames": 1,
+  "annotated_total_frames": 1,
+  "fps": 90000.0,
   "session_handedness": "UNKNOWN",
   "stance_conf": 0.0,
   "speed_unit": "km/h",
@@ -8,9 +9,9 @@
     "mode": "shoulder_median_scale",
     "description": "pixel_scale = session_median_shoulder_px / ref_shoulder_px; used for biomechanics (bat speed, foot plant, swing intensity baseline). Swing detection / shot clip boundaries use swing_pixel_scale (fixed 1.0) so the video shot classifier always sees the same framing as the legacy detector.",
     "ref_shoulder_px": 85.0,
-    "session_shoulder_px": 71.97683435652374,
-    "pixel_scale": 0.8467862865473381,
-    "swing_pixel_scale": 1.0
+    "session_shoulder_px": 134.3198657785305,
+    "pixel_scale": 1.55,
+    "swing_pixel_scale": 0.8
   },
   "analysis": {
     "error": "No confirmed shots to analyse."
@@ -62,21 +63,7 @@
       "use_very_fast": false
     },
     "deliveries": [],
-    "frame_overlays": [
-      {
-        "frame": 55,
-        "boxes": [
-          {
-            "cx": 1046.35,
-            "cy": 30.23,
-            "w": 109.48,
-            "h": 60.47,
-            "conf": 0.5937,
-            "track_id": 0
-          }
-        ]
-      }
-    ],
+    "frame_overlays": [],
     "video_trajectories": [],
     "insights": {
       "batsman": {

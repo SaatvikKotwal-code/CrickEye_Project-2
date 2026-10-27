@@ -7,4 +7,4 @@ the same video bytes.
 """
 
 # Integer; must match what the frontend compares against (from GET /api/public-config).
-ANALYSIS_CACHE_VERSION = 7
+ANALYSIS_CACHE_VERSION = 8
