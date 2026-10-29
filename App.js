@@ -5832,6 +5832,7 @@ function init() {
   initMobileNavigation();
   initSidebarToggle();
   initThemeToggle();
+  initFontSizeSwitcher();
   initFeedFullscreen();
   if (typeof Skeleton !== 'undefined') {
     Skeleton.mount();
@@ -6134,6 +6135,33 @@ function applyTheme(mode) {
   btn.setAttribute('aria-label', `Switch to ${next.toLowerCase()}`);
   btn.dataset.tip = next;
   btn.setAttribute('aria-pressed', String(dark));
+}
+
+const FONT_SIZE_KEY = 'ce-font-size';
+
+function applyFontSize(size) {
+  const validSize = size === 'sm' || size === 'lg' ? size : 'md';
+  document.documentElement.dataset.fontSize = validSize;
+  try { localStorage.setItem(FONT_SIZE_KEY, validSize); } catch (e) {}
+
+  document.querySelectorAll('.font-size-btn').forEach((btn) => {
+    const isTarget = btn.getAttribute('data-font-size') === validSize;
+    btn.classList.toggle('is-active', isTarget);
+    btn.setAttribute('aria-pressed', String(isTarget));
+  });
+}
+
+function initFontSizeSwitcher() {
+  let saved = 'md';
+  try { saved = localStorage.getItem(FONT_SIZE_KEY) || 'md'; } catch (e) {}
+  applyFontSize(saved);
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.font-size-btn');
+    if (!btn) return;
+    const size = btn.getAttribute('data-font-size');
+    if (size) applyFontSize(size);
+  });
 }
 
 function initThemeToggle() {

@@ -26,6 +26,10 @@
         t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       }
       document.documentElement.dataset.theme = t;
+
+      var fs = 'md';
+      try { fs = localStorage.getItem('ce-font-size') || 'md'; } catch (e) {}
+      document.documentElement.dataset.fontSize = fs;
     })();
   </script>
 </head>
@@ -216,6 +220,13 @@
           <div class="verdict-pill hidden items-center gap-1.5 rounded-full border border-base-300 bg-base-200/60 px-3 py-1.5 lg:inline-flex" hidden>
             <span class="material-symbols-outlined text-[16px] text-accent">sports_cricket</span>
             <span class="verdict-text text-xs font-medium text-base-content/70" id="batsmanLabel">AWAITING ANALYSIS</span>
+          </div>
+
+          <!-- Font Size Adjuster (A- A A+) -->
+          <div class="font-size-switcher" role="group" aria-label="Font Size">
+            <button type="button" class="font-size-btn font-size-btn-sm" data-font-size="sm" title="Small text" aria-label="Small text">A</button>
+            <button type="button" class="font-size-btn font-size-btn-md is-active" data-font-size="md" title="Default text" aria-label="Default text" aria-pressed="true">A</button>
+            <button type="button" class="font-size-btn font-size-btn-lg" data-font-size="lg" title="Large text" aria-label="Large text">A</button>
           </div>
 
           <div class="session-info flex flex-row items-center gap-2 rounded-field border border-base-300 bg-base-200/60 px-3 py-1.5">
