@@ -8016,3 +8016,32 @@ html[data-font-size="lg"] {
 }
 
 } /* end @layer legacy */
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   FONT AWESOME INTEGRATION OVERRIDES
+   ═══════════════════════════════════════════════════════════════════ */
+
+.fa-icon-replaced {
+  font-family: inherit !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  font-style: normal !important;
+}
+
+.fa-icon-replaced i {
+  font-style: normal;
+  line-height: 1;
+}
+
+.mobile-nav-item .fa-icon-replaced,
+.mobile-nav-icon.fa-icon-replaced {
+  font-size: 1.25rem !important;
+}
+
+.status-badge .fa-icon-replaced,
+.header-tool-icon.fa-icon-replaced {
+  font-size: 1rem !important;
+}
