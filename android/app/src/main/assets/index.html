@@ -39,7 +39,22 @@
     <!-- ═══════════════ AUTH GATE ═══════════════ -->
   <div id="authGate" class="auth-gate auth-gate--pending">
     <div class="auth-restore-status" role="status" aria-live="polite">
-      <span class="auth-restore-spinner" aria-hidden="true"></span>
+      <div class="flutter-loader-container" aria-hidden="true">
+        <div class="flutter-loader-pulse"></div>
+        <div class="flutter-loader-ring">
+          <svg class="flutter-circular-progress" viewBox="22 22 44 44">
+            <circle class="flutter-progress-track" cx="44" cy="44" r="18" fill="none" stroke-width="4"></circle>
+            <circle class="flutter-progress-indicator" cx="44" cy="44" r="18" fill="none" stroke-width="4"></circle>
+          </svg>
+        </div>
+        <div class="flutter-loader-icon">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="14" stroke="#0891B2" stroke-width="2"/>
+            <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#0891B2" fill-opacity="0.2" stroke="#0891B2" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3" fill="#0891B2"/>
+          </svg>
+        </div>
+      </div>
       <strong>Restoring your session</strong>
       <span>Please wait a moment…</span>
     </div>
