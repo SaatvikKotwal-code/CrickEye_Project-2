@@ -31,10 +31,12 @@ export const ServerModal: React.FC<ServerModalProps> = ({ visible, onClose }) =>
     latencyMs,
     lastPingError,
     checkHealth,
+    autoDetect,
   } = useServerUrl();
 
   const [inputUrl, setInputUrl] = useState<string>(serverUrl);
   const [isPinging, setIsPinging] = useState<boolean>(false);
+  const [isAutoDetecting, setIsAutoDetecting] = useState<boolean>(false);
 
   const handleTestPing = async () => {
     setIsPinging(true);
@@ -51,6 +53,14 @@ export const ServerModal: React.FC<ServerModalProps> = ({ visible, onClose }) =>
     setInputUrl(url);
     selectPreset(presetId);
   };
+
+  const handleAutoDetect = async () => {
+    setIsAutoDetecting(true);
+    const detectedUrl = await autoDetect();
+    setInputUrl(detectedUrl);
+    setIsAutoDetecting(false);
+  };
+
 
   return (
     <Modal
@@ -94,6 +104,19 @@ export const ServerModal: React.FC<ServerModalProps> = ({ visible, onClose }) =>
             })}
           </View>
 
+          {/* Auto-Detect Button */}
+          <TouchableOpacity
+            style={styles.autoDetectBtn}
+            onPress={handleAutoDetect}
+            disabled={isAutoDetecting}
+          >
+            {isAutoDetecting ? (
+              <ActivityIndicator size="small" color="#10b981" />
+            ) : (
+              <Text style={styles.autoDetectText}>🔍 Auto-Detect Network</Text>
+            )}
+          </TouchableOpacity>
+
           {/* Custom URL Input */}
           <Text style={styles.sectionLabel}>CUSTOM BACKEND URL</Text>
           <View style={styles.inputContainer}>
@@ -124,8 +147,8 @@ export const ServerModal: React.FC<ServerModalProps> = ({ visible, onClose }) =>
                 {status === 'CONNECTED'
                   ? `Connected (${latencyMs !== null ? `${latencyMs} ms` : 'OK'})`
                   : status === 'CONNECTING'
-                  ? 'Testing Link...'
-                  : 'Unreachable'}
+                    ? 'Testing Link...'
+                    : 'Unreachable'}
               </Text>
             </View>
 
@@ -295,6 +318,20 @@ const styles = StyleSheet.create({
   pingBtnText: {
     color: '#06b6d4',
     fontSize: 11,
+    fontWeight: '800',
+  },
+  autoDetectBtn: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: '#10b981',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  autoDetectText: {
+    color: '#10b981',
+    fontSize: 12,
     fontWeight: '800',
   },
   errorText: {

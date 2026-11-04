@@ -44,7 +44,7 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 
 # Load backend/.env so SUPABASE_* (and other vars) are available to FastAPI.
 load_dotenv(BASE_DIR / "backend" / ".env")
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,garbage_collection_threshold:0.8")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128,garbage_collection_threshold:0.8")
 
 sys.path.insert(0, str(BASE_DIR))
 
@@ -128,6 +128,59 @@ async def public_config():
         "supabaseAnonKey": os.getenv("SUPABASE_ANON_KEY", "").strip(),
         # Single source of truth: pipeline_cache_version.py (bump when analyser changes).
         "analysisCacheVersion": ANALYSIS_CACHE_VERSION,
+    }
+
+
+@app.get("/api/mobile-health")
+async def mobile_health():
+    """
+    Mobile-specific health probe returning server readiness, capabilities,
+    and local network info so the React Native app can verify full connectivity.
+    """
+    import socket
+    import time
+
+    # Detect LAN IP for mobile connection guidance
+    lan_ip = "unknown"
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        lan_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pass
+
+    # Check Node backend availability (port 8080)
+    node_ok = False
+    try:
+        import urllib.request
+        node_port = int(os.getenv("PORT", "8080"))
+        req = urllib.request.Request(f"http://127.0.0.1:{node_port}/health", method="GET")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            node_ok = resp.status == 200
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "server": "CrickEye Pro FastAPI",
+        "version": "6.4",
+        "lan_ip": lan_ip,
+        "fastapi_port": 8000,
+        "node_backend": node_ok,
+        "node_port": int(os.getenv("PORT", "8080")),
+        "websocket_endpoint": "/ws",
+        "upload_endpoint": "/upload",
+        "supabase_configured": bool(os.getenv("SUPABASE_URL", "").strip()),
+        "llm_enabled": os.getenv("LLM_INSIGHTS_ENABLED", "false").lower() == "true",
+        "capabilities": [
+            "video_upload",
+            "websocket_telemetry",
+            "yolov8_pose",
+            "ball_tracking",
+            "llm_coaching",
+            "session_persistence",
+        ],
     }
 
 
@@ -524,4 +577,4 @@ async def _run_pipeline(video_path: str, ws_target):
         try:
             await ws_target.send_json({"type": "error", "message": f"Pipeline error: {str(e)}"})
         except Exception:
-            pass
+            pass

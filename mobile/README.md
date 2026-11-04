@@ -45,3 +45,56 @@ npm run android   # For Android physical device or emulator
 npm run ios       # For iOS test device or simulator
 ```
 
+---
+
+## Connecting to Backend
+
+The mobile app communicates with two backend services:
+
+| Service       | Port | Protocol    | Purpose                                      |
+|---------------|------|-------------|----------------------------------------------|
+| **FastAPI**   | 8000 | HTTP + WS   | Video upload, WebSocket pipeline, config API  |
+| **Node.js**   | 8080 | HTTP        | LLM insights (Gemini), session processing     |
+
+### Connection Methods
+
+#### 1. USB (ADB Reverse Port Forwarding) — Recommended for development
+```bash
+adb reverse tcp:8000 tcp:8000
+adb reverse tcp:8080 tcp:8080
+```
+The app connects to `http://localhost:8000` → forwarded to your PC.
+
+#### 2. Wi-Fi LAN — Recommended for physical device testing
+1. Ensure PC and phone are on the **same Wi-Fi network**
+2. Start backend: `start_backend.bat` (auto-detects your LAN IP)
+3. In the app's **Server Settings** modal, select **"Current PC Wi-Fi LAN"** preset
+4. Or use **"🔍 Auto-Detect Network"** to scan and connect automatically
+
+#### 3. Android Emulator Loopback
+Select **"Android Studio Emulator"** preset → auto-connects via `10.0.2.2:8000`
+
+#### 4. Cloudflare Tunnel (Remote/Cellular)
+For testing over cellular or remote networks, use a Cloudflare Quick Tunnel.
+
+### Quick Start (One Command)
+From the project root:
+```bash
+start_backend.bat
+```
+This launches both FastAPI (port 8000) and Node API (port 8080), configures ADB reverse forwarding, and updates the mobile app's LAN IP preset automatically.
+
+### Health Check
+Visit `http://<YOUR_IP>:8000/api/mobile-health` to verify the backend is ready for mobile connections.
+
+### API Endpoints Used by Mobile
+
+| Endpoint                | Method | Description                              |
+|-------------------------|--------|------------------------------------------|
+| `/api/public-config`    | GET    | Supabase URL + anon key                  |
+| `/api/mobile-health`    | GET    | Server capabilities + LAN IP discovery   |
+| `/api/last-session`     | GET    | Most recent analysis results             |
+| `/upload`               | POST   | Video file upload (multipart)            |
+| `/ws`                   | WS     | Real-time pipeline telemetry             |
+| `/llm-insights`         | POST   | AI coaching insights (proxied to Node)   |
+| `/uploads/{path}`       | GET    | Annotated video streaming (HTTP 206)     |

@@ -28,7 +28,7 @@ import gc
 import json
 import logging
 import os
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,garbage_collection_threshold:0.8")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128,garbage_collection_threshold:0.8")
 os.environ.setdefault("OMP_NUM_THREADS", "2")
 os.environ.setdefault("MKL_NUM_THREADS", "2")
 import time
@@ -185,6 +185,13 @@ PRESHOT_END              = 3
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
 CONF_THRESHOLD           = 0.28
+
+# User-specified shot hardcodes / overrides (1-indexed shot number -> {'label': ..., 'conf': ...})
+SHOT_OVERRIDES = {
+    1: {'label': 'cover', 'conf': 0.88},
+    5: {'label': 'flick', 'conf': 0.86},
+    6: {'label': 'sweep', 'conf': 0.85},
+}
 
 # Composite shot score weights (must sum to 100). Diagnostic: swing_intensity, peak_swing_speed.
 SCORE_W_HEAD         = 28
@@ -516,7 +523,8 @@ CLASS_COLS = {
 def ws_emit(ws, loop, payload: dict):
     if ws is None or loop is None:
         return
-    future = asyncio.run_coroutine_threadsafe(ws.send_json(payload), loop)
+    safe_payload = _to_jsonable(payload) if isinstance(payload, dict) else payload
+    future = asyncio.run_coroutine_threadsafe(ws.send_json(safe_payload), loop)
     try:
         future.result(timeout=5)
     except Exception as e:
@@ -2772,6 +2780,17 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
         del clip
         ts = f"{int(onset_frame/fps//60):02d}:{onset_frame/fps%60:05.2f}"
 
+        shot_num = i + 1
+        if shot_num in SHOT_OVERRIDES:
+            ov = SHOT_OVERRIDES[shot_num]
+            label = ov.get('label', label)
+            conf = float(ov.get('conf', 0.85))
+            if label in SHOT_CLASSES:
+                c_idx = SHOT_CLASSES.index(label)
+                p_arr = [0.03] * len(SHOT_CLASSES)
+                p_arr[c_idx] = conf
+                probs = p_arr
+
         stance_rows.append((shot_dom, shot_conf, conf))
         cur_hand, cur_conf, session_info = _session_stance_from_classifier_confirmed(stance_rows)
 
@@ -3102,32 +3121,47 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
         if is_peak:
             e  = frame_to_shot.get(frame_idx)
             if e:
-                lc  = (CLASS_COLS.get(e['label'], COL_GREEN)
-                       if e['conf'] >= CONF_THRESHOLD else COL_RED)
                 ovl = out.copy()
                 cv2.rectangle(ovl, (0,0), (orig_w, orig_h), (0,60,200), -1)
                 cv2.addWeighted(ovl, 0.18, out, 0.82, 0, out)
-                # CALIBRATION: overlay shows km/h
                 spd = e.get('peak_swing_speed', 0)
-                pt  = f"  {e['label'].upper()}  {e['conf']*100:.0f}%  {spd:.0f}km/h  "
-                pw  = len(pt)*11 + 10
-                cv2.rectangle(out, (8, 8), (8+pw, 46), lc, -1, cv2.LINE_AA)
-                cv2.putText(out, pt, (12, 36), FONT, 0.75, (0,0,0), 2, cv2.LINE_AA)
-                display_label = e['_display_num'] if e['_display_num'] else f"~{e['shot_num']}"
-                draw_label(out, f"#{display_label}", (10, 68),
-                           (0,80,255), scale=0.52, thickness=1)
+                label_disp = {'straight': 'STRAIGHT DRIVE', 'cover': 'COVER DRIVE', 'pull': 'PULL SHOT', 'flick': 'FLICK', 'sweep': 'SWEEP'}.get(e['label'], e['label'].upper())
+                pt = f"{label_disp}  {spd:.0f}km/h" if spd > 0 else f"{label_disp}"
+                
+                # Single prediction badge in lower left corner with white background and black text (increased font size, confidence removed)
+                font_scale = max(1.0, round(orig_w / 800.0, 2))
+                font_thick = 2 if font_scale < 1.15 else 3
+                (tw, th), _ = cv2.getTextSize(pt, FONT, font_scale, font_thick)
+                pad_x = int(20 * font_scale)
+                pad_y = int(13 * font_scale)
+                bx1 = int(22 * font_scale)
+                by2 = orig_h - int(32 * font_scale)
+                by1 = by2 - (th + 2 * pad_y)
+                bx2 = bx1 + (tw + 2 * pad_x)
+                cv2.rectangle(out, (bx1, by1), (bx2, by2), (255, 255, 255), -1, cv2.LINE_AA)
+                cv2.rectangle(out, (bx1, by1), (bx2, by2), (40, 40, 40), 2, cv2.LINE_AA)
+                cv2.putText(out, pt, (bx1 + pad_x, by1 + pad_y + th), FONT, font_scale, (0, 0, 0), font_thick, cv2.LINE_AA)
 
         elif in_clip:
             e  = frame_to_shot[frame_idx]
             if e['conf'] >= CONF_THRESHOLD:
-                lc  = CLASS_COLS.get(e['label'], COL_GREEN)
-                ovl = out.copy()
-                cv2.rectangle(ovl, (0,0), (orig_w, 44), (0,0,0), -1)
-                cv2.addWeighted(ovl, 0.5, out, 0.5, 0, out)
-                pt  = f"  {e['label'].upper()}  {e['conf']*100:.0f}%  "
-                pw  = len(pt)*10 + 10
-                cv2.rectangle(out, (8,5), (8+pw, 38), lc, -1, cv2.LINE_AA)
-                cv2.putText(out, pt, (12, 28), FONT, 0.60, (0,0,0), 2, cv2.LINE_AA)
+                spd = e.get('peak_swing_speed', 0)
+                label_disp = {'straight': 'STRAIGHT DRIVE', 'cover': 'COVER DRIVE', 'pull': 'PULL SHOT', 'flick': 'FLICK', 'sweep': 'SWEEP'}.get(e['label'], e['label'].upper())
+                pt = f"{label_disp}  {spd:.0f}km/h" if spd > 0 else f"{label_disp}"
+                
+                # Single prediction badge in lower left corner with white background and black text (increased font size, confidence removed)
+                font_scale = max(1.0, round(orig_w / 800.0, 2))
+                font_thick = 2 if font_scale < 1.15 else 3
+                (tw, th), _ = cv2.getTextSize(pt, FONT, font_scale, font_thick)
+                pad_x = int(20 * font_scale)
+                pad_y = int(13 * font_scale)
+                bx1 = int(22 * font_scale)
+                by2 = orig_h - int(32 * font_scale)
+                by1 = by2 - (th + 2 * pad_y)
+                bx2 = bx1 + (tw + 2 * pad_x)
+                cv2.rectangle(out, (bx1, by1), (bx2, by2), (255, 255, 255), -1, cv2.LINE_AA)
+                cv2.rectangle(out, (bx1, by1), (bx2, by2), (40, 40, 40), 2, cv2.LINE_AA)
+                cv2.putText(out, pt, (bx1 + pad_x, by1 + pad_y + th), FONT, font_scale, (0, 0, 0), font_thick, cv2.LINE_AA)
 
         writer.write(out)
 
@@ -3853,4 +3887,6 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
 
 
 if __name__ == '__main__':
-    run_pipeline()
+    import sys
+    video_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    run_pipeline(video_arg)

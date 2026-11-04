@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="components/fa/css/all.min.css?v=6.5.2" />
   <link rel="stylesheet" href="components/tailwind.css?v=7.5.1" />
   <script>
     // Applied pre-paint to avoid the sidebar flashing full-width then collapsing.
@@ -26,54 +27,114 @@
         t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       }
       document.documentElement.dataset.theme = t;
+
+      var fs = 'md';
+      try { fs = localStorage.getItem('ce-font-size') || 'md'; } catch (e) {}
+      document.documentElement.dataset.fontSize = fs;
     })();
   </script>
 </head>
 <body class="bg-base-200 font-body text-base-content">
 
-  <!-- ═══════════════ AUTH GATE ═══════════════ -->
+    <!-- ═══════════════ AUTH GATE ═══════════════ -->
   <div id="authGate" class="auth-gate auth-gate--pending">
     <div class="auth-restore-status" role="status" aria-live="polite">
-      <span class="auth-restore-spinner" aria-hidden="true"></span>
+      <div class="flutter-loader-container" aria-hidden="true">
+        <div class="flutter-loader-pulse"></div>
+        <div class="flutter-loader-ring">
+          <svg class="flutter-circular-progress" viewBox="22 22 44 44">
+            <circle class="flutter-progress-track" cx="44" cy="44" r="18" fill="none" stroke-width="4"></circle>
+            <circle class="flutter-progress-indicator" cx="44" cy="44" r="18" fill="none" stroke-width="4"></circle>
+          </svg>
+        </div>
+        <div class="flutter-loader-icon">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="14" stroke="#0891B2" stroke-width="2"/>
+            <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#0891B2" fill-opacity="0.2" stroke="#0891B2" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3" fill="#0891B2"/>
+          </svg>
+        </div>
+      </div>
       <strong>Restoring your session</strong>
       <span>Please wait a moment…</span>
     </div>
-    <div class="auth-login-card w-full max-w-[400px] rounded-box border border-base-300 bg-base-100 p-7 shadow-2xl">
-      <div class="mb-6 flex items-center gap-3">
-        <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <circle cx="16" cy="16" r="14" stroke="#06B6D4" stroke-width="1.5"/>
-          <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#06B6D4" opacity="0.2" stroke="#06B6D4" stroke-width="1"/>
-          <circle cx="16" cy="16" r="2.5" fill="#06B6D4"/>
-        </svg>
-        <div class="leading-tight">
-          <h2 id="gateTitle" class="font-display text-xl font-extrabold tracking-tight">CrickEye Login</h2>
-          <p id="gateSubtitle" class="text-xs text-base-content/55">Login to continue your batting analytics.</p>
-        </div>
-      </div>
 
-      <div class="flex flex-col gap-3">
-        <div id="signupFields" class="flex flex-col gap-3" hidden>
-          <input type="text" id="gateFullName" placeholder="Full name" autocomplete="name" class="input" />
-          <div class="grid grid-cols-2 gap-3">
-            <input type="number" id="gateAge" placeholder="Age" min="8" max="100" class="input" />
-            <select id="gateGender" class="select">
-              <option value="">Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-              <option value="prefer_not_to_say">Prefer not to say</option>
-            </select>
+    <div class="auth-login-card">
+      <!-- Centered Header & Branding (matches reference layout) -->
+      <div class="auth-card-header">
+        <div class="auth-brand-badge">
+          <svg width="42" height="42" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" stroke="#0891B2" stroke-width="2"/>
+            <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#0891B2" fill-opacity="0.18" stroke="#0891B2" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3" fill="#0891B2"/>
+            <path d="M11 16 H21" stroke="#0891B2" stroke-width="1.2" stroke-dasharray="2 2"/>
+          </svg>
+          <div class="auth-brand-text">
+            <span class="auth-brand-name">CRICKEYE<span class="auth-brand-tag">PRO</span></span>
+            <span class="auth-brand-sub">AI BATTING ANALYTICS</span>
           </div>
         </div>
-        <input type="email" id="gateEmail" placeholder="Email" autocomplete="email" class="input" />
-        <input type="password" id="gatePassword" placeholder="Password" autocomplete="current-password" class="input" />
+        <p id="gateSubtitle" class="auth-card-subtitle">Sign in to continue</p>
+        <h2 id="gateTitle" class="sr-only">CrickEye Login</h2>
       </div>
 
-      <div class="mt-5 flex flex-col gap-2">
-        <button type="button" id="gatePrimaryBtn" class="btn btn-primary w-full">Login</button>
-        <button type="button" id="gateSwitchMode" class="btn btn-ghost btn-sm w-full font-normal text-base-content/60">Need an account? Sign up</button>
+      <!-- Form Body -->
+      <div class="auth-form-body">
+        <!-- Signup-only fields (shown only when mode is signup) -->
+        <div id="signupFields" class="auth-signup-group" hidden>
+          <div class="auth-field-row">
+            <label for="gateFullName" class="auth-label">Full Name</label>
+            <input type="text" id="gateFullName" placeholder="Enter full name" autocomplete="name" class="auth-input-pill" />
+          </div>
+          <div class="auth-grid-2">
+            <div class="auth-field-row">
+              <label for="gateAge" class="auth-label">Age</label>
+              <input type="number" id="gateAge" placeholder="Age" min="8" max="100" class="auth-input-pill" />
+            </div>
+            <div class="auth-field-row">
+              <label for="gateGender" class="auth-label">Gender</label>
+              <select id="gateGender" class="auth-input-pill auth-select">
+                <option value="">Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Username / Email Field -->
+        <div class="auth-field-row">
+          <label for="gateEmail" class="auth-label">Username</label>
+          <input type="email" id="gateEmail" placeholder="Enter username or email" autocomplete="email" class="auth-input-pill" />
+        </div>
+
+        <!-- Password Field with Show Toggle -->
+        <div class="auth-field-row">
+          <label for="gatePassword" class="auth-label">Password</label>
+          <div class="auth-password-wrapper" id="gatePasswordWrapper">
+            <input type="password" id="gatePassword" placeholder="••••••••••••" autocomplete="current-password" class="auth-input-pill auth-input-password" />
+            <button type="button" id="gateTogglePassword" class="auth-password-toggle-btn" tabindex="-1">Show</button>
+          </div>
+        </div>
+
+        <!-- Remember Me Checkbox -->
+        <div class="auth-options-row">
+          <label class="auth-remember-row" for="gateRememberMe">
+            <input type="checkbox" id="gateRememberMe" class="auth-checkbox" />
+            <span class="auth-remember-text">Remember my username</span>
+          </label>
+        </div>
       </div>
-      <div id="gateMessage" class="mt-3 min-h-[1.2em] text-center text-xs text-warning"></div>
+
+      <!-- Action Buttons -->
+      <div class="auth-card-actions">
+        <button type="button" id="gatePrimaryBtn" class="auth-primary-submit-btn">Sign in</button>
+        <button type="button" id="gateSwitchMode" class="auth-switch-mode-btn">Need an account? Sign up</button>
+      </div>
+
+      <div id="gateMessage" class="auth-message-box"></div>
     </div>
   </div>
 
@@ -177,6 +238,13 @@
             <span class="verdict-text text-xs font-medium text-base-content/70" id="batsmanLabel">AWAITING ANALYSIS</span>
           </div>
 
+          <!-- Font Size Adjuster (A- A A+) -->
+          <div class="font-size-switcher" role="group" aria-label="Font Size">
+            <button type="button" class="font-size-btn font-size-btn-sm" data-font-size="sm" title="Small text" aria-label="Small text">A</button>
+            <button type="button" class="font-size-btn font-size-btn-md is-active" data-font-size="md" title="Default text" aria-label="Default text" aria-pressed="true">A</button>
+            <button type="button" class="font-size-btn font-size-btn-lg" data-font-size="lg" title="Large text" aria-label="Large text">A</button>
+          </div>
+
           <div class="session-info flex flex-row items-center gap-2 rounded-field border border-base-300 bg-base-200/60 px-3 py-1.5">
             <span class="material-symbols-outlined text-[16px] text-base-content/40">timer</span>
             <span class="font-mono text-xs font-semibold tabular-nums" id="sessionTime">00:00</span>
@@ -244,7 +312,7 @@
                 <div class="video-hud">
                   <div class="hud-corner hud-tl"><span class="rec-dot"></span> LIVE</div>
                   <div class="hud-corner hud-tr" id="hudTime">00:00</div>
-                  <div class="hud-corner hud-bl">SHOT: <span id="hudShot">—</span></div>
+                  <div class="hud-corner hud-bl" style="display: none !important;">SHOT: <span id="hudShot">—</span></div>
                   <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
                 </div>
               </div>
@@ -465,14 +533,6 @@
 
           </div>
         </main>
-
-        <footer class="mx-auto w-full max-w-[1800px] px-4 pb-6 lg:px-6">
-          <div class="flex flex-wrap items-center justify-center gap-2 border-t border-base-300 pt-5 text-[0.7rem] text-base-content/35">
-            <span class="font-display font-bold text-base-content/55">CrickEye<span class="text-primary">Pro</span></span>
-            <span>·</span><span>AI Batting Analytics Engine</span>
-            <span>·</span><span>© 2026</span>
-          </div>
-        </footer>
       </div>
     </div>
 
@@ -697,6 +757,7 @@
   <script src="components/skeleton.js?v=7.4.4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="config.js?v=7.4.4"></script>
+  <script src="components/fa-adapter.js?v=6.5.2"></script>
   <!-- Backend exposes this at /app.js (see backend/main.py); App.js 404s. -->
   <script src="app.js?v=7.5.2"></script>
   <!-- DEV ONLY: dashboard mock, active only with ?mock=1. Remove with dev-mock.js. -->

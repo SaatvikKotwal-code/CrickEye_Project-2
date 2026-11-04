@@ -1320,7 +1320,7 @@ body {
 }
 .hud-tl { top:0; left:0; border-bottom-right-radius: var(--radius-sm); color: #f87171; }
 .hud-tr { top:0; right:0; border-bottom-left-radius: var(--radius-sm); }
-.hud-bl { bottom:0; left:0; border-top-right-radius: var(--radius-sm); color: var(--green); }
+.hud-bl { bottom:0; left:0; border-top-right-radius: var(--radius-sm); color: var(--green); display: none !important; }
 .hud-br { bottom:0; right:0; border-top-left-radius: var(--radius-sm); color: #94A3B8; }
 
 .rec-dot {
@@ -5284,108 +5284,444 @@ body.ce-modal-open { overflow: hidden; }
   }
 }
 
+/* ═══════════════ NEW AUTH GATE & LOGIN CARD (REFERENCE DESIGN) ═══════════════ */
 .auth-gate {
-  position: fixed; inset: 0; z-index: 9999;
-  background: radial-gradient(circle at 15% 20%, rgba(6, 182, 212, 0.25), transparent 45%),
-    radial-gradient(circle at 80% 75%, rgba(16, 185, 129, 0.2), transparent 40%),
-    linear-gradient(155deg, #020617, #071126 40%, #0b1220);
-  display: flex; align-items: center; justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #f1f3f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
+
+.auth-gate.hidden {
+  display: none !important;
+}
+
 .auth-restore-status {
   display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #e2e8f0;
+  gap: 10px;
+  color: #1e293b;
   text-align: center;
 }
+
 .auth-restore-status strong {
-  font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
 }
+
 .auth-restore-status > span:last-child {
-  color: #94a3b8;
-  font-size: 0.8rem;
+  color: #64748b;
+  font-size: 0.85rem;
 }
-.auth-restore-spinner {
-  width: 30px;
-  height: 30px;
-  margin-bottom: 4px;
-  border: 3px solid rgba(148, 163, 184, 0.28);
-  border-top-color: var(--cyan);
+
+/* --- Flutter-like CircularProgressIndicator & Elevation --- */
+.flutter-loader-container {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.flutter-loader-pulse {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  animation: auth-restore-spin 0.8s linear infinite;
+  background: radial-gradient(circle, rgba(8, 145, 178, 0.22) 0%, rgba(8, 145, 178, 0) 70%);
+  animation: flutterPulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
 }
-.auth-gate--pending .auth-login-card { display: none; }
-.auth-gate--pending .auth-restore-status { display: flex; }
-@keyframes auth-restore-spin { to { transform: rotate(360deg); } }
+
+.flutter-loader-ring {
+  width: 58px;
+  height: 58px;
+  animation: flutterRotate 2s linear infinite;
+  filter: drop-shadow(0 4px 12px rgba(8, 145, 178, 0.25));
+}
+
+.flutter-circular-progress {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.flutter-progress-track {
+  stroke: rgba(148, 163, 184, 0.18);
+  stroke-linecap: round;
+}
+
+.flutter-progress-indicator {
+  stroke: #0891b2;
+  stroke-linecap: round;
+  stroke-dasharray: 100px;
+  stroke-dashoffset: 0;
+  transform-origin: 50% 50%;
+  animation: flutterDash 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.flutter-loader-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  animation: flutterSubtleBounce 2s ease-in-out infinite;
+}
+
+@keyframes flutterRotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes flutterDash {
+  0% {
+    stroke-dasharray: 1px, 200px;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 89px, 200px;
+    stroke-dashoffset: -35px;
+  }
+  100% {
+    stroke-dasharray: 89px, 200px;
+    stroke-dashoffset: -124px;
+  }
+}
+
+@keyframes flutterPulse {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.85;
+  }
+}
+
+@keyframes flutterSubtleBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.auth-gate--pending .auth-login-card {
+  display: none !important;
+}
+
+.auth-gate--pending .auth-restore-status {
+  display: flex !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .auth-restore-spinner { animation: none; }
+  .flutter-loader-ring, .flutter-progress-indicator, .flutter-loader-pulse, .flutter-loader-icon {
+    animation: none !important;
+  }
 }
-.auth-gate.hidden { display: none; }
-.auth-gate-card {
-  width: min(520px, 92vw);
-  background: linear-gradient(165deg, rgba(10, 18, 38, 0.95), rgba(7, 12, 28, 0.98));
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 18px;
-  padding: 26px;
+
+/* The login card */
+.auth-login-card {
+  background: #ffffff !important;
+  border-radius: 26px !important;
+  padding: 38px 34px 32px !important;
+  width: min(420px, 94vw) !important;
+  box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid #f1f5f9 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Header with Brand */
+.auth-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.auth-brand-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 10px;
+}
+
+.auth-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.auth-brand-name {
+  font-family: 'Manrope', 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.auth-brand-tag {
+  color: #0891b2;
+  margin-left: 2px;
+}
+
+.auth-brand-sub {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.auth-card-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin-top: 14px;
+  margin-bottom: 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Form layout */
+.auth-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.auth-signup-group {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.65);
 }
-.auth-gate-head h2 { margin: 0; color: #e2e8f0; font-size: 1.3rem; font-family: Manrope, sans-serif; }
-.auth-gate-head p { margin: 4px 0 0; color: #94a3b8; font-size: .9rem; }
-.auth-gate-form {
+
+.auth-signup-group[hidden] {
+  display: none !important;
+}
+
+.auth-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.auth-label {
+  font-size: 13px;
+  font-weight: 550;
+  color: #334155;
+  text-align: left;
+}
+
+.auth-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Soft light-blue pill input field matching reference */
+.auth-input-pill {
+  background: #eef4ff !important;
+  border: 1px solid #dbeafe !important;
+  border-radius: 12px !important;
+  padding: 13px 16px !important;
+  font-size: 14px !important;
+  color: #0f172a !important;
+  outline: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease !important;
+  font-family: inherit !important;
+}
+
+.auth-input-pill::placeholder {
+  color: #94a3b8 !important;
+  font-size: 13.5px !important;
+}
+
+.auth-input-pill:focus {
+  background: #ffffff !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+.auth-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+/* Password wrapper with right-side Show button */
+.auth-password-wrapper {
+  display: flex;
+  align-items: stretch;
+  background: #eef4ff;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-password-wrapper:focus-within {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.auth-input-password {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px !important;
+}
+
+.auth-password-toggle-btn {
+  background: #ffffff;
+  border: none;
+  border-left: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-weight: 550;
+  font-size: 13px;
+  padding: 0 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+
+.auth-password-toggle-btn:hover {
+  background: #f8fafc;
+}
+
+.auth-password-toggle-btn:active {
+  background: #f1f5f9;
+}
+
+/* Remember me row */
+.auth-options-row {
+  margin-top: -3px;
+  margin-bottom: 5px;
+}
+
+.auth-remember-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #0f172a;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.auth-remember-text {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 450;
+}
+
+/* Action button (Full width solid black pill button) */
+.auth-card-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 8px;
 }
-.auth-signup-fields { flex-direction: column; gap: 10px; }
-.auth-signup-fields[hidden] { display: none !important; }
-.auth-signup-fields:not([hidden]) { display: flex; }
-.auth-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.auth-gate-card input,
-.auth-gate-card select {
-  background: rgba(2, 6, 23, 0.86);
-  border: 1px solid #23314f;
-  color: #e2e8f0;
-  border-radius: 10px;
-  padding: 11px 12px;
-  font-size: .86rem;
-}
-.auth-gate-card input:focus,
-.auth-gate-card select:focus {
-  border-color: rgba(6, 182, 212, 0.7);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
-}
-.auth-gate-actions {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-.auth-gate-actions .auth-btn {
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  color: #e2e8f0;
-  border-radius: 10px;
-  padding: 11px 16px;
-  font-size: .86rem;
-  cursor: pointer;
-}
-.auth-gate-actions .auth-btn--primary {
-  background: linear-gradient(135deg, #0891b2, #0ea5e9);
-  border-color: rgba(14, 165, 233, 0.6);
-  font-weight: 600;
-}
-.auth-gate-actions .auth-btn--ghost {
-  background: rgba(15, 23, 42, 0.45);
-}
-.auth-gate-actions .auth-btn:hover { filter: brightness(1.08); }
-.auth-gate-msg { min-height: 18px; color: #fda4af; font-size: .78rem; }
 
-/* Role-based UI: coaches use #coachDashboard only; player analysis never shown (defense in depth with [hidden] on #playerAppShell). */
+.auth-primary-submit-btn {
+  background: #111827;
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 600;
+  padding: 14px 20px;
+  border-radius: 12px;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 10px rgba(17, 24, 39, 0.08);
+  font-family: inherit;
+}
+
+.auth-primary-submit-btn:hover {
+  background: #1f2937;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(17, 24, 39, 0.14);
+}
+
+.auth-primary-submit-btn:active {
+  transform: translateY(0);
+}
+
+.auth-primary-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-switch-mode-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: center;
+  transition: color 0.12s ease;
+  font-family: inherit;
+}
+
+.auth-switch-mode-btn:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
+.auth-message-box {
+  min-height: 18px;
+  font-size: 12.5px;
+  text-align: center;
+  margin-top: 10px;
+  font-weight: 500;
+  color: #ef4444;
+}
+
 body.criceye-role-coach #playerAppShell {
   display: none !important;
 }
@@ -7678,4 +8014,369 @@ body.criceye-role-coach .player-analysis-only {
   .biomech-chevron { transition: none; }
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   Font Size Scaling (A- A A+) Controls
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --app-font-scale: 1;
+}
+
+html[data-font-size="sm"] {
+  font-size: 13px !important;
+  --app-font-scale: 0.88;
+}
+
+html[data-font-size="md"] {
+  font-size: 15px !important;
+  --app-font-scale: 1;
+}
+
+html[data-font-size="lg"] {
+  font-size: 17.5px !important;
+  --app-font-scale: 1.16;
+}
+
+@media (max-width: 700px) {
+  html[data-font-size="sm"] {
+    font-size: 11.5px !important;
+  }
+  html[data-font-size="md"] {
+    font-size: 13px !important;
+  }
+  html[data-font-size="lg"] {
+    font-size: 15.5px !important;
+  }
+}
+
+/* Header Font Switcher Pill */
+.font-size-switcher {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-card, rgba(30, 37, 50, 0.6));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 9999px;
+  padding: 2px 3px;
+  gap: 2px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.font-size-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, rgba(232, 236, 243, 0.6));
+  cursor: pointer;
+  font-family: var(--font-display, inherit);
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.font-size-btn:hover {
+  color: var(--text-primary, #ffffff);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.font-size-btn[aria-pressed="true"],
+.font-size-btn.is-active {
+  background: var(--color-primary, #06b6d4) !important;
+  color: #00232c !important;
+  box-shadow: 0 1px 4px rgba(6, 182, 212, 0.35);
+}
+
+.font-size-btn-sm {
+  font-size: 0.72rem;
+}
+
+.font-size-btn-md {
+  font-size: 0.85rem;
+}
+
+.font-size-btn-lg {
+  font-size: 1.05rem;
+}
+
 } /* end @layer legacy */
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   FONT AWESOME INTEGRATION OVERRIDES
+   ═══════════════════════════════════════════════════════════════════ */
+
+.fa-icon-replaced {
+  font-family: inherit !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  font-style: normal !important;
+}
+
+.fa-icon-replaced i {
+  font-style: normal;
+  line-height: 1;
+}
+
+.mobile-nav-item .fa-icon-replaced,
+.mobile-nav-icon.fa-icon-replaced {
+  font-size: 1.25rem !important;
+}
+
+.status-badge .fa-icon-replaced,
+.header-tool-icon.fa-icon-replaced {
+  font-size: 1rem !important;
+}
+
+
+/* ==========================================================================
+   UI/UX PRO MAX - REFINED PROFESSIONAL MOBILE DESIGN
+   Sport-Tech Clean Theme, Elevated Touch Targets, Fluid Micro-interactions
+   ========================================================================== */
+
+/* 1. Seamless App Canvas & Viewport Optimization */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 2. Top Header - Clean, Balanced & Native Feel */
+.top-header {
+  height: 56px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 12px rgba(15, 23, 42, 0.02) !important;
+}
+
+#appScreenTitle {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Font size switcher subtle pill */
+.font-size-switcher {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 9999px !important;
+  padding: 2px !important;
+}
+
+.font-size-btn {
+  border-radius: 9999px !important;
+  color: #64748b !important;
+  font-weight: 700 !important;
+  transition: all 0.15s ease !important;
+}
+
+.font-size-btn:hover,
+.font-size-btn.active {
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Header Avatar Button with Pro Badge */
+#headerProfileBtn {
+  box-shadow: 0 2px 6px rgba(8, 145, 178, 0.25) !important;
+  border: 2px solid #ffffff !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+#headerProfileBtn:active {
+  transform: scale(0.92) !important;
+}
+
+/* 3. Delivery Capture - Premium Athletic Card Design */
+.minimal-capture-screen {
+  max-width: 520px !important;
+  padding: 24px 16px !important;
+}
+
+.minimal-capture-hero {
+  margin-bottom: 8px !important;
+}
+
+.minimal-capture-icon-ring {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 20px !important;
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.12) 0%, rgba(14, 165, 233, 0.06) 100%) !important;
+  border: 1.5px solid rgba(8, 145, 178, 0.25) !important;
+  box-shadow: 0 8px 24px -4px rgba(8, 145, 178, 0.2) !important;
+}
+
+.minimal-capture-title {
+  font-size: 1.45rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  color: #0f172a !important;
+  margin-top: 4px !important;
+}
+
+.minimal-capture-subtitle {
+  font-size: 0.85rem !important;
+  color: #64748b !important;
+  line-height: 1.4 !important;
+}
+
+.minimal-capture-options {
+  gap: 16px !important;
+}
+
+/* Pro Touch-Friendly Cards with Elevation & Micro-transitions */
+.minimal-card-btn {
+  padding: 20px !important;
+  border-radius: 20px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, border-color 0.18s ease !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.minimal-card-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.1) !important;
+}
+
+.minimal-card-btn:active {
+  transform: scale(0.975) !important;
+}
+
+.minimal-card-btn--live {
+  border-color: rgba(6, 182, 212, 0.35) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%) !important;
+}
+
+.minimal-card-btn--live:hover {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 12px 28px -6px rgba(6, 182, 212, 0.22) !important;
+}
+
+.minimal-card-btn--upload {
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%) !important;
+}
+
+.minimal-card-btn--upload:hover {
+  border-color: #a855f7 !important;
+  box-shadow: 0 12px 28px -6px rgba(168, 85, 247, 0.22) !important;
+}
+
+.minimal-card-icon-wrap {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 16px !important;
+}
+
+.minimal-card-title {
+  font-size: 1.12rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+}
+
+.minimal-card-desc {
+  font-size: 0.78rem !important;
+  color: #475569 !important;
+  line-height: 1.4 !important;
+}
+
+.minimal-card-arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+}
+
+.minimal-card-btn:hover .minimal-card-arrow {
+  transform: translateX(4px) scale(1.05) !important;
+  background: #ffffff !important;
+}
+
+/* 4. Refined Flutter-Style Floating Mobile Bottom Bar */
+@media (max-width: 960px) {
+  .mobile-nav-bar {
+    height: 68px !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    border-top: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 0 -4px 24px -2px rgba(15, 23, 42, 0.08) !important;
+    padding: 6px 8px max(8px, env(safe-area-inset-bottom)) 8px !important;
+  }
+
+  .mobile-nav-item {
+    min-height: 50px !important;
+    padding: 6px 4px !important;
+    border-radius: 16px !important;
+    color: #64748b !important;
+    font-size: 0.62rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em !important;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .mobile-nav-item .mobile-nav-icon {
+    font-size: 22px !important;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  /* Active Flutter Pill with Elevation */
+  .mobile-nav-item.active {
+    color: #0284c7 !important;
+    background: #e0f2fe !important;
+  }
+
+  .mobile-nav-item.active .mobile-nav-icon {
+    transform: scale(1.12) !important;
+    color: #0284c7 !important;
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.9) !important;
+    background: #f1f5f9 !important;
+  }
+}
+
+/* 5. Live Feed & Metrics Cards Polish */
+.ce-panel {
+  border-radius: 20px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden;
+}
+
+/* Connection Status indicator pill */
+.minimal-capture-screen .ws-status {
+  padding: 6px 14px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 9999px !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* Touch Accessibility & Focus Visibility */
+button, [role="button"], a {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid #0284c7 !important;
+  outline-offset: 2px !important;
+}

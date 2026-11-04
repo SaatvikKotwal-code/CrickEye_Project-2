@@ -1,4 +1,4 @@
-/**
+﻿/**
  * app.js — CrickEye Pro  (WebSocket real-time mode, v6.4)
  *
  * KEY CHANGES vs v6.3:
@@ -143,24 +143,25 @@ let activeApiBaseUrl = null;
 
 function getCandidateServerUrls() {
   const list = [];
-  // USB reverse proxy port (instant & stable via USB adb reverse) - Primary candidate
-  list.push('http://localhost:8000');
-  list.push('http://127.0.0.1:8000');
-  const saved = localStorage.getItem('crickeye_server_url');
-  if (saved && saved.trim() && saved.trim() !== 'http://localhost:8000' && saved.trim() !== 'http://127.0.0.1:8000') {
-    list.push(saved.trim().replace(/\/+$/, ''));
-  }
-  if (window.CRICKEYE_DEFAULT_BACKEND_URL && window.CRICKEYE_DEFAULT_BACKEND_URL.trim()) {
-    list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
-  }
-  // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
-  list.push('http://10.253.6.138:8000');
   if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
     list.push(window.location.origin);
   }
+  // USB reverse proxy (instant & reliable via adb reverse)
+  list.push('http://localhost:8000');
+  list.push('http://127.0.0.1:8000');
+  // Local Wi-Fi LAN
+  list.push('http://192.168.29.14:8000');
+  list.push('http://10.253.4.106:8000');
+  list.push('http://192.168.0.179:8000');
+  if (window.CRICKEYE_DEFAULT_BACKEND_URL && window.CRICKEYE_DEFAULT_BACKEND_URL.trim()) {
+    list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
+  }
+  const saved = localStorage.getItem('crickeye_server_url');
+  if (saved && saved.trim() && !saved.includes('10.253.6.138') && !saved.includes('10.222.156.209') && !saved.includes('10.253.18.57')) {
+    list.unshift(saved.trim().replace(/\/+$/, ''));
+  }
   return [...new Set(list.filter(Boolean))];
 }
-
 function getApiBaseUrl() {
   if (activeApiBaseUrl) return activeApiBaseUrl;
   if (ws && ws.url) {
@@ -169,6 +170,9 @@ function getApiBaseUrl() {
       const httpProto = u.protocol === 'wss:' ? 'https:' : 'http:';
       return `${httpProto}//${u.host}`;
     } catch(e) {}
+  }
+  if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
+    return window.location.origin;
   }
   const saved = localStorage.getItem('crickeye_server_url');
   if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
@@ -387,7 +391,7 @@ function createProcessingOverlay(title = 'CrickEye AI Processing') {
         </svg>
       </div>
       <div class="proc-title">${title}</div>
-      <div class="proc-stage" id="procStage">Initialising…</div>
+      <div class="proc-stage" id="procStage">Initialising...</div>
       <div class="proc-bar-wrap">
         <div class="proc-bar-track">
           <div class="proc-bar-fill" id="procBarFill"></div>
@@ -396,8 +400,8 @@ function createProcessingOverlay(title = 'CrickEye AI Processing') {
         <span class="proc-pct" id="procPct">0%</span>
       </div>
       <div class="proc-stats">
-        <div class="proc-stat"><span class="proc-stat-val" id="procFrame">—</span><span class="proc-stat-lbl">FRAMES</span></div>
-        <div class="proc-stat"><span class="proc-stat-val" id="procEta">—</span><span class="proc-stat-lbl">ETA</span></div>
+        <div class="proc-stat"><span class="proc-stat-val" id="procFrame">--</span><span class="proc-stat-lbl">FRAMES</span></div>
+        <div class="proc-stat"><span class="proc-stat-val" id="procEta">--</span><span class="proc-stat-lbl">ETA</span></div>
         <div class="proc-stat"><span class="proc-stat-val" id="procShots">0</span><span class="proc-stat-lbl">SHOTS FOUND</span></div>
       </div>
       <button type="button" id="procDismissBtn" class="btn btn-xs mt-2" style="display:none;" onclick="this.closest('#processingOverlay').remove();">Dismiss</button>
@@ -616,7 +620,7 @@ function renderSessionReport(analysis) {
     const lbl = LBL[key] || key;
     return `<div class="trend-row"><span class="trend-label">${lbl}</span><div class="trend-halves"><div class="trend-half" style="width:${w1}px;max-width:80px"></div><div class="trend-half second" style="width:${w2}px;max-width:80px"></div></div><span class="trend-arrow" style="color:${ac}">${arr}</span><span class="trend-val">${Math.round(f1||0)} → ${Math.round(f2||0)}</span></div>`;
   }
-  const ah = alerts.map((a,i)=>`<div class="report-alert ${a.severity}" style="animation-delay:${i*.1}s"><div class="report-alert-header"><span class="report-alert-sev">${escapeHtml(a.severity)}</span><span class="report-alert-metric">${escapeHtml(a.metric)}</span></div><div class="report-alert-msg">${escapeHtml(a.message)}</div>${a.player_cue ? `<div class="report-alert-cue">${escapeHtml(a.player_cue)}</div>` : ''}${a.drill ? `<div class="report-alert-drill">▸ ${escapeHtml(a.drill)}</div>` : (a.action ? `<div class="report-alert-action">▸ ${escapeHtml(a.action)}</div>` : '')}</div>`).join('');
+  const ah = alerts.map((a,i)=>`<div class="report-alert ${a.severity}" style="animation-delay:${i*.1}s"><div class="report-alert-header"><span class="report-alert-sev">${escapeHtml(a.severity)}</span><span class="report-alert-metric">${escapeHtml(a.metric)}</span></div><div class="report-alert-msg">${escapeHtml(a.message)}</div>${a.player_cue ? `<div class="report-alert-cue">${escapeHtml(a.player_cue)}</div>` : ''}${a.drill ? `<div class="report-alert-drill">â–¸ ${escapeHtml(a.drill)}</div>` : (a.action ? `<div class="report-alert-action">â–¸ ${escapeHtml(a.action)}</div>` : '')}</div>`).join('');
   const bc=SHOT_COLORS[best.label]||'#10B981'; const wc=SHOT_COLORS[worst.label]||'#EF4444';
   container.innerHTML = `
     <div class="report-section-title">SESSION SCORES</div>
@@ -725,11 +729,11 @@ function setAuthMode(mode) {
   if (signupFields) signupFields.hidden = !signup;
   if (gateTitle) gateTitle.textContent = signup ? 'Create Player Account' : 'CrickEye Login';
   if (gateSubtitle) gateSubtitle.textContent = signup
-    ? 'Register to start tracking your cricket sessions.'
-    : 'Login to continue your batting analytics.';
-  if (gatePrimaryBtn) gatePrimaryBtn.textContent = signup ? 'Create Account' : 'Login';
+    ? 'Sign up to continue'
+    : 'Sign in to continue';
+  if (gatePrimaryBtn) gatePrimaryBtn.textContent = signup ? 'Create Account' : 'Sign in';
   if (gateSwitchMode) gateSwitchMode.textContent = signup
-    ? 'Already have an account? Login'
+    ? 'Already have an account? Sign in'
     : 'Need an account? Sign up';
   if (gatePassword) gatePassword.autocomplete = signup ? 'new-password' : 'current-password';
   setGateMessage('', true);
@@ -844,7 +848,7 @@ function isPlayerHiddenFromCoachDashboard(p) {
   return Boolean(p && p.hidden_from_coach_dashboard);
 }
 
-/** Per-session row on coach dashboard (mirrors player “My sessions” cards, light theme). */
+/** Per-session row on coach dashboard (mirrors player "My sessions" cards, light theme). */
 function coachSessionRowHtml(s) {
   const created = new Date(s.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
   const analysis = getSessionAnalysis(s.results);
@@ -1104,7 +1108,7 @@ function renderCoachDashboard(players, sessions) {
         <ul>
           <li>Choose Player A and Player B from the dropdowns.</li>
           <li>Click compare to open side-by-side strengths, weaknesses, and shot trends.</li>
-          <li>Use each player card’s Compare Sessions for within-player progress tracking.</li>
+          <li>Use each player card's Compare Sessions for within-player progress tracking.</li>
         </ul>
       </div>
     </section>`;
@@ -1620,7 +1624,7 @@ function getConfirmedTrendShotsFromResults(results) {
     }));
 }
 
-/** Confirmed replay shots for ball-length ↔ biomech join (same filter as trend charts). */
+/** Confirmed replay shots for ball-length â†” biomech join (same filter as trend charts). */
 function getConfirmedReplayShotsForLength(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return [];
@@ -2133,7 +2137,7 @@ function buildSessionDetailHtml(session) {
     if (Array.isArray(alerts) && alerts.length) {
       const lis = alerts.slice(0, 6).map((a) => {
         const cue = a.player_cue ? `<div class="session-alert-cue">${escapeHtml(a.player_cue)}</div>` : '';
-        const drill = a.drill ? `<div class="session-alert-drill">▸ ${escapeHtml(a.drill)}</div>` : (a.action ? `<em>${escapeHtml(a.action)}</em>` : '');
+        const drill = a.drill ? `<div class="session-alert-drill">â–¸ ${escapeHtml(a.drill)}</div>` : (a.action ? `<em>${escapeHtml(a.action)}</em>` : '');
         return `<li class="session-alert session-alert--${escapeHtml((a.severity || 'low').toLowerCase())}"><span class="session-alert-sev">${escapeHtml(a.severity || '')}</span> <strong>${escapeHtml(a.metric || '')}</strong> — ${escapeHtml(a.message || '')}${cue}${drill}</li>`;
       }).join('');
       metrics += `<section class="session-detail-section"><h3 class="session-detail-h3">Coaching focus</h3><ul class="session-alert-list">${lis}</ul></section>`;
@@ -2252,7 +2256,7 @@ function sessionLabel(s) {
   return `${dt} · ${sessionVideoFilename(s.video_url)}`;
 }
 
-/** Session rows used by the comparison modal: player’s list or coach’s selected player. */
+/** Session rows used by the comparison modal: player's list or coach's selected player. */
 function getCompareSessionsSource() {
   if (isCoachRole() && Array.isArray(state.coachCompareSessions)) {
     return state.coachCompareSessions;
@@ -2340,7 +2344,7 @@ const COMPARE_MULTI_COLORS = [
   '#84CC16',
 ];
 
-/** Plain-language summary for “this month · all sessions” (first vs last session + alerts + shot flags). */
+/** Plain-language summary for "this month · all sessions" (first vs last session + alerts + shot flags). */
 function buildMonthPlayerInsightHtml(monthSessions, analyses) {
   const n = analyses.length;
   if (n < 2) return '';
@@ -2407,7 +2411,7 @@ function buildMonthPlayerInsightHtml(monthSessions, analyses) {
     seenMetric.add(m);
     let msg = (a.message || '').replace(/\s+/g, ' ').trim();
     if (!msg) continue;
-    if (msg.length > 130) msg = `${msg.slice(0, 127)}…`;
+    if (msg.length > 130) msg = `${msg.slice(0, 127)}...`;
     bullets.push(`${m}: ${msg}`);
     coachingAdded += 1;
     if (coachingAdded >= 2) break;
@@ -2546,7 +2550,7 @@ function buildComparePlacardEmptyChart() {
   return `<div class="compare-placard-empty-chart" aria-hidden="true"><span>—</span></div>`;
 }
 
-/** One horizontal metric card: chart left, copy right (matches report “Core metrics” hierarchy). */
+/** One horizontal metric card: chart left, copy right (matches report "Core metrics" hierarchy). */
 function buildCompareMetricPlacard(chartHtml, label, qualityLabel, qualityColor, desc, metaHtml, isEmpty) {
   return `
     <div class="compare-placard${isEmpty ? ' compare-placard--empty' : ''}">
@@ -2568,7 +2572,7 @@ function compareMetricNote(used, total, noun) {
 }
 
 /**
- * Aggregate core metrics across compared sessions — donut layout like Generate Report “Core metrics”.
+ * Aggregate core metrics across compared sessions — donut layout like Generate Report "Core metrics".
  */
 function buildCompareAggregateCoreMetricsHtml(sessions, analyses) {
   if (!sessions.length) return '';
@@ -3249,7 +3253,7 @@ function renderMonthSessionsComparison() {
       .join('');
     sessionCompareBody.innerHTML = `
       <div class="compare-view-banner">
-        <button type="button" class="ce-btn ce-btn--ghost compare-back-pair-btn" data-compare-back>← Two-session compare</button>
+        <button type="button" class="ce-btn ce-btn--ghost compare-back-pair-btn" data-compare-back>â† Two-session compare</button>
         <span class="compare-view-banner-title">${escapeHtml(bannerTitle)}</span>
       </div>
       ${buildMonthPlayerInsightHtml(monthSessions, analyses)}
@@ -3288,7 +3292,7 @@ function renderMonthSessionsComparison() {
 
   sessionCompareBody.innerHTML = `
     <div class="compare-view-banner">
-      <button type="button" class="ce-btn ce-btn--ghost compare-back-pair-btn" data-compare-back>← Two-session compare</button>
+      <button type="button" class="ce-btn ce-btn--ghost compare-back-pair-btn" data-compare-back>â† Two-session compare</button>
       <span class="compare-view-banner-title">${escapeHtml(bannerTitle)}</span>
     </div>
     ${buildMonthPlayerInsightHtml(monthSessions, analyses)}
@@ -3459,7 +3463,7 @@ function renderSessions(items) {
           ${sum ? `<div class="session-card-summary">${escapeHtml(sum)}</div>` : '<div class="session-card-summary session-card-summary--muted">Open for session details</div>'}
           <span class="session-card-hint">View full session report</span>
         </button>
-        <button type="button" class="session-card-delete" data-session-delete="${sid}" title="Remove this session">×</button>
+        <button type="button" class="session-card-delete" data-session-delete="${sid}" title="Remove this session">x</button>
       </div>
     `;
   }).join('');
@@ -4191,7 +4195,7 @@ function connectWebSocket() {
     wsUrl = base.replace(/^http:/, 'ws:') + '/ws';
   } else {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host || '10.253.6.138:8000';
+    const host = window.location.host || '192.168.29.14:8000';
     wsUrl = `${protocol}//${host}/ws`;
   }
 
@@ -4240,7 +4244,7 @@ function updateWsStatus(s) {
   const dot=document.getElementById('wsDot'); const text=document.getElementById('wsText');
   if(!dot||!text) return;
   dot.className=`ws-dot ${s}`;
-  text.textContent=s==='connected'?'CONNECTED':s==='connecting'?'CONNECTING…':'DISCONNECTED — retrying';
+  text.textContent=s==='connected'?'CONNECTED':s==='connecting'?'CONNECTING...':'DISCONNECTED - retrying';
 }
 
 // ── Message handler ─────────────────────────────────────────
@@ -4259,10 +4263,10 @@ function handleMessage(msg) {
 }
 
 const STAGE_LABELS = {
-  loading:'Loading AI models…', keypoints:'Pass 1 — Extracting pose keypoints…',
-  detection:'Detecting swing windows…', classifying:'Classifying shots…',
-  rendering:'Pass 2 — Rendering annotated video…', encoding:'Re-encoding for browser playback…',
-  ball_tracking:'Ball tracking & speed (YOLO)…',
+  loading:'Loading AI models...', keypoints:'Pass 1 — Extracting pose keypoints...',
+  detection:'Detecting swing windows...', classifying:'Classifying shots...',
+  rendering:'Pass 2 — Rendering annotated video...', encoding:'Re-encoding for browser playback...',
+  ball_tracking:'Ball tracking & speed (YOLO)...',
 };
 function setAnalysisLoading() {
   if (typeof Skeleton === 'undefined') return;
@@ -4391,7 +4395,7 @@ function onComplete(msg, opts = {}) {
 
   const overlay = document.getElementById('processingOverlay');
   if (overlay) {
-    updateStageText('✓ Analysis complete! Loading dashboard…');
+    updateStageText('✓ Analysis complete! Loading dashboard...');
     setProgressBar(100);
     overlay.style.transition = 'opacity 0.7s ease';
     overlay.style.opacity = '0';
@@ -4502,7 +4506,7 @@ function flushDashboard() {
 
   const feed = document.getElementById('biomech-feed');
   if (feed) {
-    feed.innerHTML = '<div class="biomech-empty">AWAITING VIDEO PLAYBACK…</div>';
+    feed.innerHTML = '<div class="biomech-empty">AWAITING VIDEO PLAYBACK...</div>';
     biomechPage = 0;
     updateBiomechPagination();
   }
@@ -4627,7 +4631,7 @@ function clearWheelAndReset() {
   document.getElementById('completeOverlay')?.remove();
   const feed=document.getElementById('biomech-feed');
   if(feed) {
-    feed.innerHTML='<div class="biomech-empty">AWAITING FIRST SHOT…</div>';
+    feed.innerHTML='<div class="biomech-empty">AWAITING FIRST SHOT...</div>';
     biomechPage = 0;
     updateBiomechPagination();
   }
@@ -4641,7 +4645,7 @@ function clearWheelAndReset() {
   }
   const verdictText=document.querySelector('.verdict-text');
   if(verdictText){
-    verdictText.textContent='Awaiting analysis…';
+    verdictText.textContent='Awaiting analysis...';
     verdictText.closest('.verdict-pill')?.setAttribute('hidden','');
   }
   if (typeof Skeleton !== 'undefined') Skeleton.setAll(Skeleton.ANALYSIS, 'empty');
@@ -4814,7 +4818,7 @@ async function initWebcamInPortal(videoEl, infoBadgeEl) {
   }
 
   try {
-    if (infoBadgeEl) infoBadgeEl.textContent = 'Connecting camera…';
+    if (infoBadgeEl) infoBadgeEl.textContent = 'Connecting camera...';
     stopWebcamStream();
     await new Promise(r => setTimeout(r, 80));
 
@@ -4832,7 +4836,7 @@ async function initWebcamInPortal(videoEl, infoBadgeEl) {
       const w = settings.width || videoEl?.videoWidth || 1280;
       const h = settings.height || videoEl?.videoHeight || 720;
       const fps = settings.frameRate ? Math.round(settings.frameRate) : 60;
-      infoBadgeEl.textContent = `🟢 ${w}×${h} @ ${fps} FPS`;
+      infoBadgeEl.textContent = `ðŸŸ¢ ${w}x${h} @ ${fps} FPS`;
     }
   } catch (err) {
     console.error('[CrickEye Webcam] Camera access error:', err);
@@ -4919,7 +4923,7 @@ function openFullscreenCamera() {
       <button type="button" class="fs-cam-close-btn" id="fsCamCloseBtn" title="Back to Capture Screen">
         <span class="material-symbols-outlined text-[24px]">arrow_back</span>
       </button>
-      <div class="fs-cam-status-pill" id="webcamInfoBadge">🟢 Camera initializing…</div>
+      <div class="fs-cam-status-pill" id="webcamInfoBadge">ðŸŸ¢ Camera initializing...</div>
       <div class="fs-cam-top-actions">
         <button type="button" class="fs-cam-action-btn" id="webcamFlipCameraBtn" title="Flip Camera Front/Back">
           <span class="material-symbols-outlined text-[18px]">cameraswitch</span> Flip
@@ -5037,7 +5041,7 @@ function openFullscreenCamera() {
     recordWebcamStream(0, (file) => {
       closeFullscreenCamera();
       createProcessingOverlay('Analyzing Live Recording');
-      updateStageText('Recording finalized. Preparing delivery…');
+      updateStageText('Recording finalized. Preparing delivery...');
       setProgressBar(10);
       startAnalysis(file);
     });
@@ -5055,7 +5059,7 @@ function openFullscreenCamera() {
     if (isWebcamRecording) return;
 
     if (!currentWebcamStream) {
-      if (infoBadge) infoBadge.textContent = 'Starting camera…';
+      if (infoBadge) infoBadge.textContent = 'Starting camera...';
       await initWebcamInPortal(liveVideo, infoBadge);
     }
 
@@ -5116,11 +5120,11 @@ function openFullscreenCamera() {
       triggerHapticPattern('stop');
       setScreenWakeLock(false);
       stopRecordBtn.disabled = true;
-      stopRecordBtn.innerHTML = '<span class="material-symbols-outlined text-[28px]">hourglass_empty</span><span>PROCESSING…</span>';
+      stopRecordBtn.innerHTML = '<span class="material-symbols-outlined text-[28px]">hourglass_empty</span><span>PROCESSING...</span>';
       
       // Immediately display full processing overlay with live status
       createProcessingOverlay('Analyzing Live Recording');
-      updateStageText('Finalizing video recording…');
+      updateStageText('Finalizing video recording...');
       setProgressBar(5);
       updateProcStat('procFrame', '—');
       updateProcStat('procEta', '—');
@@ -5215,7 +5219,7 @@ function buildStartPanel(options = {}) {
 
       <div class="ws-status">
         <div class="ws-dot ${ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'connecting'}" id="wsDot"></div>
-        <span id="wsText">${ws && ws.readyState === WebSocket.OPEN ? 'CONNECTED (READY)' : 'CONNECTING…'}</span>
+        <span id="wsText">${ws && ws.readyState === WebSocket.OPEN ? 'CONNECTED (READY)' : 'CONNECTING...'}</span>
       </div>
     </div>
   `;
@@ -5290,7 +5294,7 @@ async function startAnalysis(overrideFile = null) {
   stopWebcamStream();
 
   const startBtn = document.getElementById('startBtn');
-  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳  Preparing…'; }
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳  Preparing...'; }
 
   // Always show processing overlay immediately!
   const isLive = Boolean(overrideFile);
@@ -5298,7 +5302,7 @@ async function startAnalysis(overrideFile = null) {
   createProcessingOverlay(overlayTitle);
   const panel = document.getElementById('startPanel');
   if (panel) panel.remove();
-  updateStageText('Preparing delivery for AI pipeline…');
+  updateStageText('Preparing delivery for AI pipeline...');
   setProgressBar(12);
   updateProcStat('procFrame', '—');
   updateProcStat('procEta', '—');
@@ -5310,13 +5314,13 @@ async function startAnalysis(overrideFile = null) {
   if (progressWrap) progressWrap.style.display = 'block';
   if (progressFill) progressFill.style.width = '0%';
 
-  if (progressLabel) progressLabel.textContent = 'Syncing with server…';
+  if (progressLabel) progressLabel.textContent = 'Syncing with server...';
   await refreshAnalysisCacheVersion();
 
   let fileHash = null;
   try {
-    updateStageText('Fingerprinting video…');
-    if (progressLabel) progressLabel.textContent = 'Fingerprinting video…';
+    updateStageText('Fingerprinting video...');
+    if (progressLabel) progressLabel.textContent = 'Fingerprinting video...';
     setProgressBar(15);
     fileHash = await sha256HexFromFile(file);
   } catch (e) {
@@ -5332,7 +5336,7 @@ async function startAnalysis(overrideFile = null) {
   }
 
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    updateStageText('Connecting to AI processing server…');
+    updateStageText('Connecting to AI processing server...');
     connectWebSocket();
     let waited = 0;
     while ((!ws || ws.readyState !== WebSocket.OPEN) && waited < 4000) {
@@ -5353,9 +5357,9 @@ async function startAnalysis(overrideFile = null) {
     return;
   }
 
-  updateStageText('Uploading delivery to AI server…');
+  updateStageText('Uploading delivery to AI server...');
   setProgressBar(18);
-  if (startBtn) startBtn.textContent = '⏳  UPLOADING…';
+  if (startBtn) startBtn.textContent = '⏳  UPLOADING...';
 
   try {
     try {
@@ -5385,14 +5389,14 @@ async function startAnalysis(overrideFile = null) {
         // Map upload 0-100% to progress bar 18% -> 40%
         const mappedPct = 18 + Math.round(pct * 0.22);
         setProgressBar(mappedPct);
-        updateStageText(`Uploading delivery… ${pct}% (${mbLoaded}/${mbTotal} MB)`);
+        updateStageText(`Uploading delivery... ${pct}% (${mbLoaded}/${mbTotal} MB)`);
         if (progressFill)  progressFill.style.width  = pct + '%';
-        if (progressLabel) progressLabel.textContent  = `Uploading… ${pct}%`;
+        if (progressLabel) progressLabel.textContent  = `Uploading... ${pct}%`;
       });
 
       xhr.addEventListener('load', () => {
         if (xhr.status === 200) {
-          updateStageText('Delivery uploaded! Initializing AI models…');
+          updateStageText('Delivery uploaded! Initializing AI models...');
           setProgressBar(40);
           try { resolve(JSON.parse(xhr.responseText)); }
           catch { reject(new Error('Invalid server response')); }
@@ -5417,7 +5421,7 @@ async function startAnalysis(overrideFile = null) {
 
     createProcessingOverlay(overlayTitle);
     clearWheelAndReset();
-    updateStageText('AI Models Loaded — Starting ball tracking & pose analysis…');
+    updateStageText('AI Models Loaded — Starting ball tracking & pose analysis...');
     setProgressBar(42);
     console.info(
       `[CrickEye] Full pipeline — analyse_session will run on ${uploadResult.video_path} (not Supabase replay).`
@@ -5427,8 +5431,8 @@ async function startAnalysis(overrideFile = null) {
 
     // Re-validate WebSocket is still open after the upload (it may have closed during transfer)
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn('[CrickEye] WebSocket dropped during upload — reconnecting before start…');
-      updateStageText('Reconnecting to AI processing server…');
+      console.warn('[CrickEye] WebSocket dropped during upload — reconnecting before start...');
+      updateStageText('Reconnecting to AI processing server...');
       connectWebSocket();
       // Wait up to 8 seconds for the WebSocket to reconnect
       let waited = 0;
@@ -5458,14 +5462,14 @@ async function startAnalysis(overrideFile = null) {
     if (procStage) procStage.classList.add('error-text');
     const dismissBtn = document.getElementById('procDismissBtn');
     if (dismissBtn) dismissBtn.style.display = 'inline-block';
-    if (progressLabel) progressLabel.textContent = `✗ ${err.message}`;
+    if (progressLabel) progressLabel.textContent = `âœ— ${err.message}`;
     if (progressFill)  progressFill.style.background = '#EF4444';
     if (startBtn) { startBtn.disabled = false; startBtn.textContent = '▶  RUN CRICKEYE PIPELINE'; }
   }
 }
 
 // ── Playback controls ───────────────────────────────────────
-function cycleSpeed() { state.speedIdx=(state.speedIdx+1)%SPEEDS.length; const sp=SPEEDS[state.speedIdx]; video.playbackRate=sp; btnSpeed.textContent=sp+'×'; }
+function cycleSpeed() { state.speedIdx=(state.speedIdx+1)%SPEEDS.length; const sp=SPEEDS[state.speedIdx]; video.playbackRate=sp; btnSpeed.textContent=sp+'x'; }
 function toggleLoop()  { state.looping=!state.looping; video.loop=state.looping; btnLoop.style.color=state.looping?'var(--green)':''; btnLoop.style.borderColor=state.looping?'var(--green)':''; }
 
 /**
@@ -5617,6 +5621,44 @@ function init() {
   gateSwitchMode?.addEventListener('click', () => {
     setAuthMode(state.authMode === 'signup' ? 'login' : 'signup');
   });
+
+  const gateTogglePassword = document.getElementById('gateTogglePassword');
+  gateTogglePassword?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!gatePassword) return;
+    const isPass = gatePassword.type === 'password';
+    gatePassword.type = isPass ? 'text' : 'password';
+    gateTogglePassword.textContent = isPass ? 'Hide' : 'Show';
+  });
+
+  const gateRememberMe = document.getElementById('gateRememberMe');
+  if (gateRememberMe && gateEmail) {
+    try {
+      const savedUser = localStorage.getItem('crickeye_remember_username');
+      if (savedUser) {
+        gateEmail.value = savedUser;
+        gateRememberMe.checked = true;
+      }
+    } catch (e) {}
+
+    gateRememberMe.addEventListener('change', () => {
+      try {
+        if (gateRememberMe.checked && gateEmail.value.trim()) {
+          localStorage.setItem('crickeye_remember_username', gateEmail.value.trim());
+        } else {
+          localStorage.removeItem('crickeye_remember_username');
+        }
+      } catch (e) {}
+    });
+
+    gateEmail.addEventListener('input', () => {
+      try {
+        if (gateRememberMe.checked && gateEmail.value.trim()) {
+          localStorage.setItem('crickeye_remember_username', gateEmail.value.trim());
+        }
+      } catch (e) {}
+    });
+  }
   coachLogoutBtn?.addEventListener('click', () => { logout(); });
   coachDashboard?.addEventListener('change', (e) => {
     const t = e.target;
@@ -5794,6 +5836,7 @@ function init() {
   initMobileNavigation();
   initSidebarToggle();
   initThemeToggle();
+  initFontSizeSwitcher();
   initFeedFullscreen();
   if (typeof Skeleton !== 'undefined') {
     Skeleton.mount();
@@ -5868,12 +5911,12 @@ function initServerSettingsModal() {
     openDialog(modal);
   });
 
-  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.6.138:8000'; });
+  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://192.168.29.14:8000'; });
   presetLocalhost?.addEventListener('click', () => { if (input) input.value = 'http://localhost:8000'; });
-  presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://const-unto-pipe-norfolk.trycloudflare.com'; });
+  presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://redeem-thanks-oliver-aging.trycloudflare.com'; });
   presetEmulator?.addEventListener('click', () => { if (input) input.value = 'http://10.0.2.2:8000'; });
   presetOrigin?.addEventListener('click', () => {
-    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.6.138:8000';
+    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://192.168.29.14:8000';
   });
 
   pingBtn?.addEventListener('click', async () => {
@@ -5882,7 +5925,7 @@ function initServerSettingsModal() {
       if (pingResult) { pingResult.className = 'server-ping-status err'; pingResult.textContent = 'Please enter a server URL'; }
       return;
     }
-    if (pingResult) { pingResult.className = 'server-ping-status'; pingResult.textContent = 'Pinging ' + testUrl + '…'; }
+    if (pingResult) { pingResult.className = 'server-ping-status'; pingResult.textContent = 'Pinging ' + testUrl + '...'; }
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 6000);
@@ -6096,6 +6139,34 @@ function applyTheme(mode) {
   btn.setAttribute('aria-label', `Switch to ${next.toLowerCase()}`);
   btn.dataset.tip = next;
   btn.setAttribute('aria-pressed', String(dark));
+}
+
+const FONT_SIZE_KEY = 'ce-font-size';
+
+function applyFontSize(size) {
+  const validSize = size === 'sm' || size === 'lg' ? size : 'md';
+  document.documentElement.dataset.fontSize = validSize;
+  try { localStorage.setItem(FONT_SIZE_KEY, validSize); } catch (e) {}
+
+  document.querySelectorAll('.font-size-btn').forEach((btn) => {
+    const isTarget = btn.getAttribute('data-font-size') === validSize;
+    btn.classList.toggle('is-active', isTarget);
+    btn.setAttribute('aria-pressed', String(isTarget));
+  });
+}
+
+function initFontSizeSwitcher() {
+  let saved = 'md';
+  try { saved = localStorage.getItem(FONT_SIZE_KEY) || 'md'; }
+  catch (e) {}
+  applyFontSize(saved);
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.font-size-btn');
+    if (!btn) return;
+    const size = btn.getAttribute('data-font-size');
+    if (size) applyFontSize(size);
+  });
 }
 
 function initThemeToggle() {
