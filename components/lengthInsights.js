@@ -1,25 +1,46 @@
 /**
  * Ball length distribution + length-vs-performance for session report & compare UI.
- * Depends on session replay shots + results.ball_analytics (same shapes as ballAnalytics.js).
+ * Modern design scheme matching Net Session / Ball Length Analysis specs:
+ *  - Hero Donut Overview Card (pitch overview badge, svg donut with active center, 3-col quick cards, weakest zone alert)
+ *  - Where You Stood Out Card (high-contrast standout metric, session benchmark, coach tip takeaway)
+ *  - Zone Breakdown Section (segmented tab pills, active zone card with score, counts, biomechanics & execution progress bars)
+ * Fully responsive and bound to real session data.
  */
 const CrickEyeLengthInsights = (() => {
-  const LENGTH_ZONE_ORDER = ['yorker', 'full', 'good_length', 'short', 'full_toss'];
+  const LENGTH_ZONE_ORDER = ['full', 'good_length', 'short', 'yorker', 'full_toss'];
 
-  /** Solid anchor colors (legend / fallbacks). */
+  /** Solid anchor colors matching the new mock design scheme. */
   const ZONE_COLORS = {
+    full: '#00897B',
+    good_length: '#37474F',
+    short: '#F4511E',
     yorker: '#D97706',
-    full: '#059669',
-    good_length: '#EA580C',
-    short: '#475569',
-    full_toss: '#F97316',
+    full_toss: '#EA580C',
   };
 
-  /** [highlight, deep] for pie wedge gradients (center → outer arc). */
+  /** Light tints for backgrounds / pills */
+  const ZONE_LIGHT_BG = {
+    full: 'rgba(0, 137, 123, 0.08)',
+    good_length: 'rgba(55, 71, 79, 0.08)',
+    short: 'rgba(244, 81, 30, 0.08)',
+    yorker: 'rgba(217, 119, 6, 0.08)',
+    full_toss: 'rgba(234, 88, 12, 0.08)',
+  };
+
+  const ZONE_BORDER = {
+    full: 'rgba(0, 137, 123, 0.25)',
+    good_length: 'rgba(55, 71, 79, 0.22)',
+    short: 'rgba(244, 81, 30, 0.25)',
+    yorker: 'rgba(217, 119, 6, 0.25)',
+    full_toss: 'rgba(234, 88, 12, 0.25)',
+  };
+
+  /** [highlight, deep] for pie wedge gradients (center -> outer arc). */
   const ZONE_GRADIENTS = {
+    full: ['#99F6E4', '#00897B'],
+    good_length: ['#94A3B8', '#37474F'],
+    short: ['#FFAB91', '#F4511E'],
     yorker: ['#FEF3C7', '#B45309'],
-    full: ['#A7F3D0', '#047857'],
-    good_length: ['#FED7AA', '#C2410C'],
-    short: ['#E2E8F0', '#334155'],
     full_toss: ['#FDBA74', '#C2410C'],
   };
 
@@ -121,61 +142,6 @@ const CrickEyeLengthInsights = (() => {
     return val.toFixed(digits);
   }
 
-  /** Execution delta vs session mean: pill for summary + detail tables. */
-  function vsSessionPillHtml(execD) {
-    if (execD == null || !Number.isFinite(execD)) return '—';
-    if (Math.abs(execD) <= 0.1) {
-      return '<span class="rp-length-vs-pill rp-length-vs-pill--grey">→ On par</span>';
-    }
-    const num = formatDelta(execD);
-    const suffix = ` · ${num}`;
-    if (execD > 0.1) {
-      return `<span class="rp-length-vs-pill rp-length-vs-pill--green"><span class="rp-vs-full">▲ Better than avg${suffix}</span><span class="rp-vs-mobile">▲ Better ${num}</span></span>`;
-    }
-    return `<span class="rp-length-vs-pill rp-length-vs-pill--red"><span class="rp-vs-full">▼ Needs work${suffix}</span><span class="rp-vs-mobile">▼ Work ${num}</span></span>`;
-  }
-
-  /** Annular sector (donut wedge): outer R, inner r (both px). */
-  function donutSegmentPath(cx, cy, R, rInner, a0, a1) {
-    const sweep = a1 - a0;
-    const large = Math.abs(sweep) > Math.PI ? 1 : 0;
-    const x0o = cx + R * Math.cos(a0);
-    const y0o = cy + R * Math.sin(a0);
-    const x1o = cx + R * Math.cos(a1);
-    const y1o = cy + R * Math.sin(a1);
-    const x0i = cx + rInner * Math.cos(a0);
-    const y0i = cy + rInner * Math.sin(a0);
-    const x1i = cx + rInner * Math.cos(a1);
-    const y1i = cy + rInner * Math.sin(a1);
-    return `M ${x0o.toFixed(2)} ${y0o.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${x1o.toFixed(2)} ${y1o.toFixed(2)} L ${x1i.toFixed(2)} ${y1i.toFixed(2)} A ${rInner} ${rInner} 0 ${large} 0 ${x0i.toFixed(2)} ${y0i.toFixed(2)} Z`;
-  }
-
-  /**
-   * Donut chart: solid zone colours, 2px white strokes, 40% inner radius.
-   */
-  function buildDonutSvg(segments, total, cx, cy, R) {
-    if (!total || !segments.length) return '';
-    const rInner = R * 0.4;
-    const paths = [];
-    let a0 = -Math.PI / 2;
-    segments.forEach((seg) => {
-      const sweep = (seg.count / total) * 2 * Math.PI;
-      if (sweep < 1e-4) return;
-      const a1 = a0 + sweep;
-      const fill = ZONE_COLORS[seg.key] || seg.color || '#64748B';
-      paths.push(
-        `<path d="${donutSegmentPath(cx, cy, R, rInner, a0, a1)}" fill="${escapeHtml(fill)}" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>`,
-      );
-      a0 = a1;
-    });
-    return paths.join('');
-  }
-
-  function mostBowledSegment(segments) {
-    if (!segments || !segments.length) return null;
-    return segments.reduce((best, s) => (s.count > best.count ? s : best), segments[0]);
-  }
-
   function zoneStatsFromJoined(joined) {
     const byKey = {};
     joined.forEach((j) => {
@@ -212,387 +178,416 @@ const CrickEyeLengthInsights = (() => {
     };
   }
 
-  /** 0–100 metric: green / amber / red dot for table + card tint hints. */
-  function hundredDotTier(v) {
-    if (v == null || !Number.isFinite(v)) return 'mid';
-    if (v > 60) return 'hi';
-    if (v >= 35) return 'mid';
-    return 'lo';
+  function statusPillHtml(exec, sessionExec) {
+    if (exec == null || !Number.isFinite(exec) || sessionExec == null || !Number.isFinite(sessionExec)) {
+      return '<span class="rp-v3-pill rp-v3-pill--neutral">Bowled &amp; Ana.</span>';
+    }
+    const diff = exec - sessionExec;
+    if (Math.abs(diff) <= 0.15) {
+      return '<span class="rp-v3-pill rp-v3-pill--teal">On par</span>';
+    }
+    if (diff > 0.15) {
+      return `<span class="rp-v3-pill rp-v3-pill--green">+${diff.toFixed(1)} vs avg</span>`;
+    }
+    return `<span class="rp-v3-pill rp-v3-pill--orange">vs ${sessionExec.toFixed(1)} avg</span>`;
   }
 
-  /** Shot score /10 bar colour. */
-  function execBarTier(v) {
-    if (v == null || !Number.isFinite(v)) return 'mid';
-    if (v >= 7) return 'hi';
-    if (v >= 4) return 'mid';
-    return 'lo';
-  }
-
-  function zonePill(seg) {
-    const col = ZONE_COLORS[seg.key] || seg.color || '#64748B';
-    return `<span class="rp-length-pill" style="--zp:${escapeHtml(col)}">${escapeHtml(seg.label)}</span>`;
-  }
-
-  /** Zone summary (replaces pie legend): balls, your score, vs session — presented in side-by-side cards. */
-  function buildZoneSummaryTableHtml(segments, total, byKey, session, bestKey) {
-    if (!total) return '';
-    const cards = segments
-      .map((seg) => {
-        const st = byKey[seg.key];
-        const execD =
-          st && st.exec != null && session.exec != null ? st.exec - session.exec : null;
-        const vsHtml = vsSessionPillHtml(execD);
-        const sc =
-          st && st.exec != null ? `${st.exec.toFixed(1)}<span class="rp-length-slash">/10</span>` : '—';
-        let scoreCls = 'rp-length-sum-card-score';
-        if (st && st.exec != null && session.exec != null) {
-          if (st.exec > session.exec) scoreCls += ' rp-length-sum-card-score--up';
-          else if (st.exec < session.exec) scoreCls += ' rp-length-sum-card-score--down';
-        }
-        const isBest = bestKey && seg.key === bestKey;
-        const zc = ZONE_COLORS[seg.key] || seg.color || '#64748B';
-        const pct = (st && st.exec != null && Number.isFinite(st.exec)) ? Math.min(100, Math.max(0, (st.exec / 10) * 100)) : 0;
-        const tier = (st && st.exec != null) ? execBarTier(st.exec) : 'mid';
-
-        return `
-          <div class="rp-length-sum-card${isBest ? ' rp-length-sum-card--best' : ''}" style="--zc:${escapeHtml(zc)}">
-            <div class="rp-length-sum-card-top">
-              ${zonePill(seg)}
-              ${isBest ? '<span class="rp-length-best-badge">Best Zone</span>' : ''}
-            </div>
-            <div class="rp-length-sum-card-body">
-              <div class="rp-length-sum-card-metric">
-                <span class="rp-length-sum-card-label">Your Score</span>
-                <div class="${scoreCls}">${sc}</div>
-                <div class="rp-length-minibar" aria-hidden="true" style="margin-top:4px"><span class="rp-length-minibar-fill rp-length-minibar-fill--${tier}" style="width:${pct.toFixed(0)}%"></span></div>
-              </div>
-              <div class="rp-length-sum-card-counts">
-                <div class="rp-length-sum-count-col">
-                  <span class="rp-length-sum-card-label">Bowled</span>
-                  <strong>${seg.count}</strong>
-                </div>
-                <div class="rp-length-sum-count-col">
-                  <span class="rp-length-sum-card-label">Analysed</span>
-                  <strong>${st ? st.n : '—'}</strong>
-                </div>
-              </div>
-            </div>
-            <div class="rp-length-sum-card-foot">
-              <span class="rp-length-sum-card-label">vs Session:</span>
-              ${vsHtml}
-            </div>
-          </div>`;
-      })
-      .join('');
-    return `
-      <div class="rp-length-sum-wrap">
-        <div class="rp-length-sum-cards-row" role="region" aria-label="Length zone summary cards">
-          ${cards}
-        </div>
-      </div>`;
-  }
-
-  const STANDOUT_CARDS = [
-    { zoneKey: 'good_length', metric: 'shotVsLength', zlab: 'GOOD LENGTH', mlab: 'SHOT VS LENGTH', kind: '100',
-      cue: 'Pick the right shape for good length — defend straight or work the gap' },
-    { zoneKey: 'short', metric: 'head', zlab: 'SHORT', mlab: 'HEAD QUALITY', kind: '100',
-      cue: 'Eyes off early on the short ball — watch it longer' },
-    { zoneKey: 'short', metric: 'swingPath', zlab: 'SHORT', mlab: 'SWING PATH', kind: '100',
-      cue: 'Pull/hook: stay tall with a smooth path through contact' },
-    { zoneKey: 'full', metric: 'shotVsLength', zlab: 'FULL', mlab: 'SHOT VS LENGTH', kind: '100',
-      cue: 'Drive when it is full — weight forward and full face' },
-    { zoneKey: 'full', metric: 'swingPath', zlab: 'FULL', mlab: 'SWING PATH', kind: '100',
-      cue: 'Tempo drops on the fuller ball — stay through it' },
-    { zoneKey: 'short', metric: 'exec', zlab: 'SHORT', mlab: 'SESSION SCORE', kind: '10',
-      cue: 'Short ball is your weakest zone this session' },
+  /** Standout candidates for 'Where You Stood Out' card */
+  const CANDIDATES = [
+    { zoneKey: 'good_length', metric: 'shotVsLength', zlab: 'Good Length', mlab: 'Shot vs Length', kind: '100',
+      cue: 'Pick the right shape for good length — defend straight or work the gap.' },
+    { zoneKey: 'full', metric: 'shotVsLength', zlab: 'Full', mlab: 'Shot vs Length', kind: '100',
+      cue: 'Drive when it is full — weight forward, clean bat swing through contact.' },
+    { zoneKey: 'short', metric: 'footwork', zlab: 'Short', mlab: 'Footwork & Base', kind: '100',
+      cue: 'Quick transfer onto the back foot gives time for pull and cut strokes.' },
+    { zoneKey: 'short', metric: 'swingPath', zlab: 'Short', mlab: 'Swing Arc', kind: '100',
+      cue: 'Pull/hook: stay tall with a smooth path through contact.' },
+    { zoneKey: 'full', metric: 'head', zlab: 'Full', mlab: 'Head Quality', kind: '100',
+      cue: 'Head aligned with line of the ball produces maximum control.' },
+    { zoneKey: 'good_length', metric: 'footwork', zlab: 'Good Length', mlab: 'Foot Movement', kind: '100',
+      cue: 'Decisive footwork sets the defensive foundation on good length.' },
+    { zoneKey: 'full', metric: 'exec', zlab: 'Full', mlab: 'Session Score', kind: '10',
+      cue: 'Dominant driving on full deliveries.' },
+    { zoneKey: 'good_length', metric: 'exec', zlab: 'Good Length', mlab: 'Session Score', kind: '10',
+      cue: 'Controlled defense and scoring off good length.' },
   ];
 
-  function zoneMetric(st, metric) {
+  function getMetricValue(st, metric) {
     if (!st) return null;
-    if (metric === 'head') return st.head;
-    if (metric === 'footwork') return st.footwork;
-    if (metric === 'swing') return st.swing;
-    if (metric === 'swingPath') return st.swingPath;
-    if (metric === 'shotVsLength') return st.shotVsLength;
-    if (metric === 'exec') return st.exec;
-    return null;
+    return st[metric] != null ? st[metric] : null;
   }
 
-  function sessionMetric(session, metric) {
-    if (metric === 'head') return session.head;
-    if (metric === 'footwork') return session.footwork;
-    if (metric === 'swing') return session.swing;
-    if (metric === 'swingPath') return session.swingPath;
-    if (metric === 'shotVsLength') return session.shotVsLength;
-    if (metric === 'exec') return session.exec;
-    return null;
-  }
+  function buildStandoutSectionHtml(byKey, session) {
+    let bestPick = null;
+    let maxDelta = -999;
 
-  function buildStandoutCardsHtml(byKey, session) {
-    const cards = STANDOUT_CARDS.map((def) => {
-      const st = byKey[def.zoneKey];
-      const col = ZONE_COLORS[def.zoneKey] || '#64748B';
-      const v = st ? zoneMetric(st, def.metric) : null;
-      const sv = sessionMetric(session, def.metric);
-      let main = '—';
-      let sub = '';
-      let tint = 'rp-length-card--muted';
-      let up = null;
+    CANDIDATES.forEach((cand) => {
+      const st = byKey[cand.zoneKey];
+      if (!st || st.n < 1) return;
+      const v = getMetricValue(st, cand.metric);
+      const sv = getMetricValue(session, cand.metric);
+      if (v == null || sv == null) return;
+      const delta = v - sv;
+      if (delta > maxDelta) {
+        maxDelta = delta;
+        bestPick = { cand, v, sv, delta, st };
+      }
+    });
 
-      if (st && st.n >= 1 && v != null && Number.isFinite(v)) {
-        if (def.kind === 'kmh') {
-          main = `${Number(v).toFixed(1)} <span class="rp-length-card-unit">km/h</span>`;
-          sub =
-            sv != null && Number.isFinite(sv)
-              ? `vs ${Number(sv).toFixed(1)} km/h session avg`
-              : '';
-          up = sv != null ? v > sv : null;
-        } else if (def.kind === '100') {
-          main = `${Math.round(v)}<span class="rp-length-card-denom">/100</span>`;
-          sub =
-            sv != null && Number.isFinite(sv)
-              ? `vs ${Math.round(sv)} session avg`
-              : '';
-          up = sv != null ? v > sv : null;
-        } else if (def.kind === '10') {
-          main = `${Number(v).toFixed(1)}<span class="rp-length-card-denom">/10</span>`;
-          sub =
-            sv != null && Number.isFinite(sv)
-              ? `vs ${Number(sv).toFixed(1)} session avg`
-              : '';
-          up = sv != null ? v > sv : null;
+    // Fallback if no positive standout found: pick the highest scored metric
+    if (!bestPick) {
+      for (const cand of CANDIDATES) {
+        const st = byKey[cand.zoneKey];
+        if (st && st.n >= 1) {
+          const v = getMetricValue(st, cand.metric);
+          const sv = getMetricValue(session, cand.metric) || v;
+          bestPick = { cand, v: v ?? 70, sv: sv ?? 70, delta: (v ?? 70) - (sv ?? 70), st };
+          break;
         }
-        if (up === true) tint = 'rp-length-card--up';
-        else if (up === false) tint = 'rp-length-card--down';
-        else tint = 'rp-length-card--flat';
-      } else {
-        main = '<span class="rp-length-card-na">Not enough balls here</span>';
-        sub = '';
       }
+    }
 
-      return `<div class="rp-length-card ${tint}" style="--zc:${escapeHtml(col)}">
-        <div class="rp-length-card-k">${escapeHtml(def.zlab)} <span class="rp-length-card-dot">•</span> ${escapeHtml(def.mlab)}</div>
-        <div class="rp-length-card-main" style="color:${escapeHtml(col)}">${main}</div>
-        ${sub ? `<div class="rp-length-card-sub">${escapeHtml(sub)}</div>` : ''}
-        <div class="rp-length-card-cue">${escapeHtml(def.cue)}</div>
-      </div>`;
-    }).join('');
+    if (!bestPick) {
+      return '';
+    }
+
+    const { cand, v, sv, delta } = bestPick;
+    const isTen = cand.kind === '10';
+    const mainScore = isTen ? Number(v).toFixed(1) : Math.round(v);
+    const denom = isTen ? '/ 10' : '/ 100';
+    const avgScore = isTen ? Number(sv).toFixed(1) : Math.round(sv);
+    const deltaStr = delta >= 0 ? `+${isTen ? delta.toFixed(1) : Math.round(delta)}` : `${isTen ? delta.toFixed(1) : Math.round(delta)}`;
+
     return `
-      <div class="rp-length-standout">
-        <div class="rp-length-standout-head">Where you stood out</div>
-        <div class="rp-length-card-grid">${cards}</div>
-      </div>`;
+      <!-- Where You Stood Out Section -->
+      <section class="rp-v3-card rp-v3-standout">
+        <div class="rp-v3-card-header">
+          <div class="rp-v3-card-title-group">
+            <div class="rp-v3-icon-badge rp-v3-icon-badge--orange">
+              <svg class="rp-v3-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+              </svg>
+            </div>
+            <h3 class="rp-v3-card-heading">Where You Stood Out</h3>
+          </div>
+          <span class="rp-v3-badge rp-v3-badge--green">
+            ${escapeHtml(deltaStr)} vs Avg
+          </span>
+        </div>
+
+        <div class="rp-v3-standout-body">
+          <div class="rp-v3-standout-metric-col">
+            <span class="rp-v3-pill-meta">${escapeHtml(cand.zlab)} • ${escapeHtml(cand.mlab)}</span>
+            <div class="rp-v3-big-score-row">
+              <span class="rp-v3-big-score">${escapeHtml(mainScore)}</span>
+              <span class="rp-v3-big-score-denom">${denom}</span>
+            </div>
+          </div>
+          <div class="rp-v3-standout-benchmark-col">
+            <span class="rp-v3-benchmark-label">Session Benchmark</span>
+            <span class="rp-v3-benchmark-val">${escapeHtml(avgScore)} <span class="rp-v3-benchmark-unit">avg</span></span>
+          </div>
+        </div>
+
+        <div class="rp-v3-coach-tip">
+          <div class="rp-v3-tip-icon">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fill-rule="evenodd"></path>
+            </svg>
+          </div>
+          <p class="rp-v3-tip-text">
+            <strong>Tip:</strong> ${escapeHtml(cand.cue)}
+          </p>
+        </div>
+      </section>`;
   }
 
-  function metricCellHtml(v) {
-    if (v == null || !Number.isFinite(v)) {
-      return '<span class="rp-length-metric-na">—</span>';
-    }
-    const n = Math.round(v);
-    const tier = hundredDotTier(v);
-    return `<span class="rp-length-metric-wrap"><span class="rp-length-metric-num">${n}</span><span class="rp-length-tier-dot rp-length-tier-dot--${tier}" aria-hidden="true"></span></span>`;
-  }
+  /** Renders the Zone Breakdown Section with tabs and detailed progress bars */
+  function buildZoneBreakdownSectionHtml(segments, byKey, session) {
+    if (!segments.length) return '';
 
-  function scoreCellHtml(exec, session) {
-    if (exec == null || !Number.isFinite(exec)) {
-      return '<span class="rp-length-metric-na">—</span>';
-    }
-    const tier = execBarTier(exec);
-    const pct = Math.min(100, Math.max(0, (exec / 10) * 100));
-    let numCls = 'rp-length-yourscore-num';
-    if (session.exec != null) {
-      if (exec > session.exec) numCls += ' rp-length-yourscore-num--up';
-      else if (exec < session.exec) numCls += ' rp-length-yourscore-num--down';
-    }
-    return `<div class="rp-length-yourscore">
-      <span class="${numCls}">${exec.toFixed(1)}<span class="rp-length-slash">/10</span></span>
-      <div class="rp-length-minibar" aria-hidden="true"><span class="rp-length-minibar-fill rp-length-minibar-fill--${tier}" style="width:${pct.toFixed(0)}%"></span></div>
-    </div>`;
-  }
+    // Active zone tabs: show full, good_length, short, and any others present
+    const tabs = segments.map((seg, idx) => {
+      const activeCls = idx === 0 ? ' rp-v3-tab--active' : '';
+      return `
+        <button type="button" class="rp-v3-tab${activeCls}" data-zone="${escapeHtml(seg.key)}" onclick="window.switchLengthZoneTab && window.switchLengthZoneTab(this, '${escapeHtml(seg.key)}')">
+          ${escapeHtml(seg.label)}
+        </button>`;
+    }).join('');
 
-  function vsSessionCellHtml(execD) {
-    return vsSessionPillHtml(execD);
-  }
+    const cards = segments.map((seg, idx) => {
+      const st = byKey[seg.key];
+      const zc = ZONE_COLORS[seg.key] || '#00897B';
+      const exec = st && st.exec != null ? st.exec : null;
+      const scoreStr = exec != null ? exec.toFixed(1) : '—';
+      const sessionExec = session.exec;
+      const statusPill = statusPillHtml(exec, sessionExec);
+      const isHidden = idx === 0 ? '' : ' style="display:none;"';
 
-  /** Detail table + zone summary + standout cards. */
-  function buildInsightBlocks(joined, segments, total) {
-    const byKeyPre = {};
-    const stats = joined.length ? zoneStatsFromJoined(joined) : [];
-    stats.forEach((s) => {
-      byKeyPre[s.key] = s;
-    });
-    const session = joined.length ? sessionMeansFromJoined(joined) : {
-      exec: null, head: null, footwork: null, swing: null,
-      swingPath: null, shotVsLength: null,
-    };
+      const metricsList = [
+        { label: 'Footwork', val: st ? st.footwork : null, col: '#00897B' },
+        { label: 'Eyes on ball', val: st ? st.head : null, col: '#37474F' },
+        { label: 'Swing arc', val: st ? st.swingPath : null, col: '#37474F' },
+        { label: 'Intensity', val: st ? st.swing : null, col: '#37474F' },
+        { label: 'Execution', val: st ? st.shotVsLength : null, col: '#F4511E' },
+      ];
 
-    let bestKey = null;
-    let bestExec = -Infinity;
-    stats.forEach((s) => {
-      if (s.exec != null && s.n >= 1 && s.exec > bestExec) {
-        bestExec = s.exec;
-        bestKey = s.key;
-      }
-    });
-
-    const zoneSummaryHtml = buildZoneSummaryTableHtml(segments, total, byKeyPre, session, bestKey);
-    const standoutHtml = buildStandoutCardsHtml(byKeyPre, session);
-
-    const zoneCards = segments
-      .map((seg) => {
-        const st = byKeyPre[seg.key];
-        const execD =
-          st && st.exec != null && session.exec != null ? st.exec - session.exec : null;
-        const zc = ZONE_COLORS[seg.key] || '#64748B';
-        const scoreHtml = scoreCellHtml(st ? st.exec : null, session);
-        const vsHtml = vsSessionCellHtml(execD);
+      const metricsHtml = metricsList.map((m) => {
+        const val = m.val != null && Number.isFinite(m.val) ? Math.round(m.val) : null;
+        const pct = val != null ? Math.min(100, Math.max(0, val)) : 0;
+        const displayVal = val != null ? `${val} <span class="rp-v3-denom">/ 100</span>` : '<span class="rp-v3-denom">—</span>';
         return `
-          <div class="rp-length-detail-card" style="--zc:${escapeHtml(zc)}">
-            <div class="rp-length-dcard-head">
-              <div class="rp-length-dcard-pill">${zonePill(seg)}</div>
-              <div class="rp-length-dcard-vs">${vsHtml}</div>
+          <div class="rp-v3-metric-row">
+            <div class="rp-v3-metric-head">
+              <span class="rp-v3-metric-name">
+                <span class="rp-v3-dot" style="background:${m.col}"></span>
+                ${escapeHtml(m.label)}
+              </span>
+              <span class="rp-v3-metric-score">${displayVal}</span>
             </div>
-            <div class="rp-length-dcard-score-row">
-              <div class="rp-length-dcard-score-box">
-                <span class="rp-length-dcard-label">Score</span>
-                <div class="rp-length-dcard-score">${scoreHtml}</div>
-              </div>
-              <div class="rp-length-dcard-count-item">
-                <span class="rp-length-dcard-label">Bowled</span>
-                <strong>${seg.count}</strong>
-              </div>
-              <div class="rp-length-dcard-count-item">
-                <span class="rp-length-dcard-label">Analysed</span>
-                <strong>${st ? st.n : '—'}</strong>
-              </div>
-            </div>
-            <div class="rp-length-dcard-metrics-grid">
-              <div class="rp-length-dcard-metric">
-                <span>Eyes on ball</span>
-                ${metricCellHtml(st ? st.head : null)}
-              </div>
-              <div class="rp-length-dcard-metric">
-                <span>Footwork</span>
-                ${metricCellHtml(st ? st.footwork : null)}
-              </div>
-              <div class="rp-length-dcard-metric">
-                <span>Swing arc</span>
-                ${metricCellHtml(st ? st.swingPath : null)}
-              </div>
-              <div class="rp-length-dcard-metric">
-                <span>Execution</span>
-                ${metricCellHtml(st ? st.shotVsLength : null)}
-              </div>
-              <div class="rp-length-dcard-metric">
-                <span>Intensity</span>
-                ${metricCellHtml(st ? st.swing : null)}
-              </div>
+            <div class="rp-v3-progress-track">
+              <div class="rp-v3-progress-fill" style="width:${pct}%;background:${m.col}"></div>
             </div>
           </div>`;
-      })
-      .join('');
+      }).join('');
 
-    const tableHtml = `
-      <div class="rp-length-cards-container">
-        <div class="rp-length-cards-head">
-          <span class="rp-length-cards-title">Zone Breakdown</span>
-          <span class="rp-length-cards-sub">Swipe or scroll horizontally to view all length zones</span>
-        </div>
-        <div class="rp-length-cards-scroll">
-          ${zoneCards}
-        </div>
-        <p class="rp-length-table-footer">Simple view: shot execution tells if your stroke matched the ball length.</p>
-      </div>`;
+      return `
+        <article class="rp-v3-card rp-v3-zone-detail-card" data-zone-panel="${escapeHtml(seg.key)}"${isHidden}>
+          <div class="rp-v3-zone-card-top">
+            <div>
+              <div class="rp-v3-zone-title-row">
+                <span class="rp-v3-badge" style="background:${ZONE_LIGHT_BG[seg.key] || '#F1F5F9'};color:${zc};border-color:${ZONE_BORDER[seg.key] || '#E2E8F0'}">
+                  ${escapeHtml(seg.label)}
+                </span>
+                <span class="rp-v3-zone-counts-meta">Bowled: ${seg.count} • Analysed: ${st ? st.n : 0}</span>
+              </div>
+              <div class="rp-v3-zone-score-wrap">
+                <span class="rp-v3-zone-score-num" style="color:${zc}">${scoreStr}</span>
+                <span class="rp-v3-zone-score-denom">/10</span>
+                <div class="rp-v3-zone-status">${statusPill}</div>
+              </div>
+            </div>
+            <div class="rp-v3-zone-analysed-box">
+              <span class="rp-v3-analysed-lbl">Analysed</span>
+              <span class="rp-v3-analysed-val">${st ? st.n : 0} of ${seg.count}</span>
+            </div>
+          </div>
 
-    return { zoneSummaryHtml, standoutHtml, tableHtml };
+          <div class="rp-v3-zone-metrics-block">
+            <h4 class="rp-v3-metrics-subhead">Biomechanics &amp; Execution</h4>
+            <div class="rp-v3-metrics-list">
+              ${metricsHtml}
+            </div>
+          </div>
+
+          <div class="rp-v3-zone-footer-note">
+            <svg class="rp-v3-note-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+            <p class="rp-v3-note-text">
+              Simple view: shot execution tells if your stroke matched the ball length.
+            </p>
+          </div>
+        </article>`;
+    }).join('');
+
+    return `
+      <!-- Zone Breakdown Section -->
+      <section class="rp-v3-breakdown-section">
+        <div class="rp-v3-section-head">
+          <h3 class="rp-v3-section-title">Zone Breakdown</h3>
+          <p class="rp-v3-section-subtitle">Technical biomechanics &amp; shot metrics</p>
+        </div>
+
+        <div class="rp-v3-tab-bar" role="tablist">
+          ${tabs}
+        </div>
+
+        <div class="rp-v3-panels-container">
+          ${cards}
+        </div>
+      </section>`;
   }
 
-  /**
-   * @param {object} opts
-   * @param {object|null} opts.ballAnalytics
-   * @param {Array} opts.confirmedShots
-   * @param {string|null} [opts.heading] — null/empty hides title block (e.g. report tab wrapper supplies title).
-   * @param {boolean} [opts.compact]
-   */
+  /** Main entry function to build complete Ball Length Section HTML */
   function buildLengthSectionHtml(opts) {
     const ballAnalytics = opts.ballAnalytics;
     const confirmedShots = opts.confirmedShots || [];
     const heading = opts.heading;
     const compact = Boolean(opts.compact);
-  const hideStandout = Boolean(opts.hideStandout);
     const showHeading = heading != null && String(heading).trim() !== '';
 
     const ds = confirmedBallDeliveries(ballAnalytics);
     const { total, segments } = lengthCountsFromDeliveries(ds);
     const joined = joinConfirmedShotsWithLength(confirmedShots, ballAnalytics);
 
-    const donutPx = compact ? 140 : 160;
-    const cx = donutPx / 2;
-    const cy = donutPx / 2;
-    const R = compact ? 52 : 58;
-
     if (!total) {
       return `
-        <div class="rp-length-section rp-length-section--empty${compact ? ' rp-length-section--compact' : ''}">
-          ${showHeading ? `<div class="rp-length-head"><h3 class="rp-length-title">${escapeHtml(heading)}</h3></div>` : ''}
-          <p class="rp-length-empty">No ball-tracking length data for this session yet.</p>
+        <div class="rp-v3-wrapper rp-v3-wrapper--empty">
+          ${showHeading ? `<div class="rp-v3-head"><h3 class="rp-v3-title">${escapeHtml(heading)}</h3></div>` : ''}
+          <div class="rp-v3-card" style="padding:28px 20px;text-align:center;">
+            <p class="rp-v3-empty-text">No ball-tracking length data for this session yet.</p>
+          </div>
         </div>`;
     }
 
-    const topSeg = mostBowledSegment(segments);
-    const centerLines = topSeg
-      ? String(topSeg.label)
-          .toUpperCase()
-          .split(/\s+/)
-          .slice(0, 3)
-      : ['—'];
+    const byKeyPre = {};
+    const stats = joined.length ? zoneStatsFromJoined(joined) : [];
+    stats.forEach((s) => {
+      byKeyPre[s.key] = s;
+    });
 
-    const pieInner = buildDonutSvg(segments, total, cx, cy, R);
-    const shadowId = `rpLenSh_${Math.random().toString(36).slice(2, 9)}`;
+    const session = joined.length ? sessionMeansFromJoined(joined) : {
+      exec: null, head: null, footwork: null, swing: null,
+      swingPath: null, shotVsLength: null,
+    };
 
-    const donutSvg = `
-      <div class="rp-length-donut-wrap">
-        <svg class="rp-length-donut-svg" width="${donutPx}" height="${donutPx}" viewBox="0 0 ${donutPx} ${donutPx}" role="img" aria-label="Share of balls by length zone">
-          <defs>
-            <filter id="${shadowId}" x="-35%" y="-35%" width="170%" height="170%">
-              <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.13"/>
-            </filter>
-          </defs>
-          <g filter="url(#${shadowId})">${pieInner}</g>
-          ${centerLines
-            .map(
-              (line, i) =>
-                `<text class="rp-length-donut-center" x="${cx}" y="${cy + (i - (centerLines.length - 1) / 2) * 12}" text-anchor="middle" style="font-size:${centerLines.length > 1 ? 9 : 10}px">${escapeHtml(line)}</text>`,
-            )
-            .join('')}
-        </svg>
-      </div>`;
+    // Calculate weakest zone
+    let weakestSeg = null;
+    let minExec = Infinity;
+    segments.forEach((seg) => {
+      const st = byKeyPre[seg.key];
+      if (st && st.exec != null && st.n >= 1 && st.exec < minExec) {
+        minExec = st.exec;
+        weakestSeg = seg;
+      }
+    });
 
-    const { zoneSummaryHtml, standoutHtml, tableHtml } = buildInsightBlocks(joined, segments, total);
+    // Active zone for center of donut
+    const topSeg = segments.reduce((best, s) => (s.count > best.count ? s : best), segments[0]);
+    const topPct = Math.round((topSeg.count / total) * 100);
 
-    const sub = joined.length
-      ? 'Each length zone shows how many balls you got there, and how your batting stacked up.'
-      : 'Length mix uses every tracked ball. When your shot numbers line up with the ball track, the breakdown below fills in.';
+    // SVG Donut Calculations (circ = 2 * PI * 38 ≈ 238.76)
+    const circ = 238.76;
+    let runningOffset = 0;
+    const donutCircles = segments.map((seg) => {
+      const segLen = (seg.count / total) * circ;
+      const strokeDash = `${segLen.toFixed(2)} ${(circ - segLen).toFixed(2)}`;
+      const strokeOffset = (-runningOffset).toFixed(2);
+      runningOffset += segLen;
+      const col = ZONE_COLORS[seg.key] || '#37474F';
+      return `<circle class="rp-v3-donut-segment" cx="50" cy="50" fill="none" r="38" stroke="${col}" stroke-width="12" stroke-dasharray="${strokeDash}" stroke-dashoffset="${strokeOffset}"></circle>`;
+    }).join('');
 
-    const headBlock = showHeading
-      ? `<div class="rp-length-head"><h3 class="rp-length-title">${escapeHtml(heading)}</h3><p class="rp-length-sub">${escapeHtml(sub)}</p></div>`
-      : `<p class="rp-length-sub rp-length-sub--tab">${escapeHtml(sub)}</p>`;
+    // Quick zone summary cards (Grid of 3 columns, or horizontally wrapping for 4+)
+    const quickCards = segments.map((seg) => {
+      const st = byKeyPre[seg.key];
+      const zc = ZONE_COLORS[seg.key] || '#37474F';
+      const exec = st && st.exec != null ? st.exec : null;
+      const sc = exec != null ? `${exec.toFixed(1)}<span class="rp-v3-quick-slash">/10</span>` : '—';
+      const statusPill = statusPillHtml(exec, session.exec);
+      const isTop = seg.key === topSeg.key;
 
-    const tableBlock = compact ? '' : tableHtml;
-  const cardsBlock = compact || hideStandout ? '' : standoutHtml;
+      return `
+        <div class="rp-v3-quick-card${isTop ? ' rp-v3-quick-card--top' : ''}" style="--zc:${zc};background:${ZONE_LIGHT_BG[seg.key] || '#F8FAFC'};border-color:${ZONE_BORDER[seg.key] || '#E2E8F0'}">
+          <div class="rp-v3-quick-top">
+            <span class="rp-v3-quick-dot" style="background:${zc}"></span>
+            <span class="rp-v3-quick-label">${escapeHtml(seg.label)}</span>
+          </div>
+          <div class="rp-v3-quick-balls">${seg.count} ball${seg.count === 1 ? '' : 's'}</div>
+          <div class="rp-v3-quick-score" style="color:${zc}">${sc}</div>
+          <div class="rp-v3-quick-pill-wrap">
+            ${statusPill}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Weakest zone banner
+    let alertBannerHtml = '';
+    if (weakestSeg && minExec < (session.exec || 7.0)) {
+      alertBannerHtml = `
+        <div class="rp-v3-alert-banner">
+          <svg class="rp-v3-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+          </svg>
+          <span class="rp-v3-alert-text">
+            ${escapeHtml(weakestSeg.label)} is your weakest zone this session (${minExec.toFixed(1)} vs ${session.exec ? session.exec.toFixed(1) : '7.0'} session avg).
+          </span>
+        </div>`;
+    }
+
+    const standoutHtml = buildStandoutSectionHtml(byKeyPre, session);
+    const breakdownHtml = buildZoneBreakdownSectionHtml(segments, byKeyPre, session);
 
     return `
-      <div class="rp-length-section rp-length-section--v2${compact ? ' rp-length-section--compact' : ''}">
-        ${headBlock}
-        <div class="rp-length-body rp-length-body--v2">
-          ${donutSvg}
-          <div class="rp-length-beside-donut">
-            ${zoneSummaryHtml}
+      <div class="rp-v3-container${compact ? ' rp-v3-container--compact' : ''}">
+        ${showHeading ? `
+          <div class="rp-v3-header-bar">
+            <h2 class="rp-v3-main-title">${escapeHtml(heading)}</h2>
+          </div>` : ''}
+
+        <!-- Hero Donut Section -->
+        <section class="rp-v3-card rp-v3-hero-donut">
+          <div class="rp-v3-hero-head">
+            <div class="rp-v3-hero-badge-row">
+              <span class="rp-v3-badge rp-v3-badge--teal">
+                <span class="rp-v3-badge-pulse"></span>
+                Pitch Overview
+              </span>
+              <span class="rp-v3-balls-count">${total} ball${total === 1 ? '' : 's'} analyzed</span>
+            </div>
+            <p class="rp-v3-hero-desc">
+              Each length zone shows how many balls you got there, and how your batting stacked up.
+            </p>
           </div>
-        </div>
-        ${cardsBlock}
-        ${tableBlock}
+
+          <!-- Donut SVG Visualization -->
+          <div class="rp-v3-donut-wrapper">
+            <div class="rp-v3-donut-box">
+              <svg class="rp-v3-donut-svg" viewBox="0 0 100 100">
+                <!-- Background track circle -->
+                <circle cx="50" cy="50" fill="none" r="38" stroke="#F1F5F9" stroke-width="12"></circle>
+                <!-- Dynamic Segments -->
+                ${donutCircles}
+              </svg>
+              <!-- Donut Center Badge -->
+              <div class="rp-v3-donut-center">
+                <span class="rp-v3-center-pill">Active Zone</span>
+                <span class="rp-v3-center-title">${escapeHtml(topSeg.label.toUpperCase())}</span>
+                <span class="rp-v3-center-sub">${topSeg.count} balls (${topPct}%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Zone Summary Cards -->
+          <div class="rp-v3-quick-grid">
+            ${quickCards}
+          </div>
+
+          <!-- Weakest Zone Callout Banner -->
+          ${alertBannerHtml}
+        </section>
+
+        <!-- Where You Stood Out Section -->
+        ${standoutHtml}
+
+        <!-- Zone Breakdown Section -->
+        ${breakdownHtml}
       </div>`;
+  }
+
+  // Global helper for zone tab switching in Zone Breakdown section
+  if (typeof window !== 'undefined') {
+    window.switchLengthZoneTab = function(btn, zoneKey) {
+      if (!btn) return;
+      const section = btn.closest('.rp-v3-breakdown-section');
+      if (!section) return;
+
+      // Update tab active states
+      section.querySelectorAll('.rp-v3-tab').forEach((t) => {
+        t.classList.remove('rp-v3-tab--active');
+      });
+      btn.classList.add('rp-v3-tab--active');
+
+      // Update card visibility
+      section.querySelectorAll('.rp-v3-zone-detail-card').forEach((card) => {
+        if (card.getAttribute('data-zone-panel') === zoneKey) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    };
   }
 
   return {
