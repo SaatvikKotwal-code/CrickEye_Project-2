@@ -233,10 +233,10 @@ const CrickEyeLengthInsights = (() => {
     return `<span class="rp-length-pill" style="--zp:${escapeHtml(col)}">${escapeHtml(seg.label)}</span>`;
   }
 
-  /** Zone summary (replaces pie legend): balls, your score, vs session. */
+  /** Zone summary (replaces pie legend): balls, your score, vs session — presented in side-by-side cards. */
   function buildZoneSummaryTableHtml(segments, total, byKey, session, bestKey) {
     if (!total) return '';
-    const rows = segments
+    const cards = segments
       .map((seg) => {
         const st = byKey[seg.key];
         const execD =
@@ -244,34 +244,51 @@ const CrickEyeLengthInsights = (() => {
         const vsHtml = vsSessionPillHtml(execD);
         const sc =
           st && st.exec != null ? `${st.exec.toFixed(1)}<span class="rp-length-slash">/10</span>` : '—';
-        let scoreCls = 'rp-length-sum-score';
+        let scoreCls = 'rp-length-sum-card-score';
         if (st && st.exec != null && session.exec != null) {
-          if (st.exec > session.exec) scoreCls += ' rp-length-sum-score--up';
-          else if (st.exec < session.exec) scoreCls += ' rp-length-sum-score--down';
+          if (st.exec > session.exec) scoreCls += ' rp-length-sum-card-score--up';
+          else if (st.exec < session.exec) scoreCls += ' rp-length-sum-card-score--down';
         }
-        const rowCls =
-          bestKey && seg.key === bestKey ? 'rp-length-sum-tr rp-length-sum-tr--best' : 'rp-length-sum-tr';
-        return `<tr class="${rowCls}">
-          <td>${zonePill(seg)}</td>
-          <td class="rp-length-sum-n">${seg.count}</td>
-          <td class="${scoreCls}">${sc}</td>
-          <td class="rp-length-sum-vs">${vsHtml}</td>
-        </tr>`;
+        const isBest = bestKey && seg.key === bestKey;
+        const zc = ZONE_COLORS[seg.key] || seg.color || '#64748B';
+        const pct = (st && st.exec != null && Number.isFinite(st.exec)) ? Math.min(100, Math.max(0, (st.exec / 10) * 100)) : 0;
+        const tier = (st && st.exec != null) ? execBarTier(st.exec) : 'mid';
+
+        return `
+          <div class="rp-length-sum-card${isBest ? ' rp-length-sum-card--best' : ''}" style="--zc:${escapeHtml(zc)}">
+            <div class="rp-length-sum-card-top">
+              ${zonePill(seg)}
+              ${isBest ? '<span class="rp-length-best-badge">Best Zone</span>' : ''}
+            </div>
+            <div class="rp-length-sum-card-body">
+              <div class="rp-length-sum-card-metric">
+                <span class="rp-length-sum-card-label">Your Score</span>
+                <div class="${scoreCls}">${sc}</div>
+                <div class="rp-length-minibar" aria-hidden="true" style="margin-top:4px"><span class="rp-length-minibar-fill rp-length-minibar-fill--${tier}" style="width:${pct.toFixed(0)}%"></span></div>
+              </div>
+              <div class="rp-length-sum-card-counts">
+                <div class="rp-length-sum-count-col">
+                  <span class="rp-length-sum-card-label">Bowled</span>
+                  <strong>${seg.count}</strong>
+                </div>
+                <div class="rp-length-sum-count-col">
+                  <span class="rp-length-sum-card-label">Analysed</span>
+                  <strong>${st ? st.n : '—'}</strong>
+                </div>
+              </div>
+            </div>
+            <div class="rp-length-sum-card-foot">
+              <span class="rp-length-sum-card-label">vs Session:</span>
+              ${vsHtml}
+            </div>
+          </div>`;
       })
       .join('');
     return `
       <div class="rp-length-sum-wrap">
-        <table class="rp-length-sum-table" aria-label="Length zone summary">
-          <thead>
-            <tr>
-              <th class="rp-th-zone">Zone</th>
-              <th class="rp-th-balls">Balls</th>
-              <th class="rp-th-score"><span class="rp-th-full">Your score</span><span class="rp-th-mobile">Score</span></th>
-              <th class="rp-th-vs"><span class="rp-th-full">BETTER OR WORSE THAN USUAL?</span><span class="rp-th-mobile">VS USUAL</span></th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+        <div class="rp-length-sum-cards-row" role="region" aria-label="Length zone summary cards">
+          ${cards}
+        </div>
       </div>`;
   }
 
@@ -421,46 +438,69 @@ const CrickEyeLengthInsights = (() => {
     const zoneSummaryHtml = buildZoneSummaryTableHtml(segments, total, byKeyPre, session, bestKey);
     const standoutHtml = buildStandoutCardsHtml(byKeyPre, session);
 
-    const tableRows = segments
+    const zoneCards = segments
       .map((seg) => {
         const st = byKeyPre[seg.key];
         const execD =
           st && st.exec != null && session.exec != null ? st.exec - session.exec : null;
         const zc = ZONE_COLORS[seg.key] || '#64748B';
-        return `<tr class="rp-length-zone-tr" style="--zrow:${escapeHtml(zc)}">
-          <td>${zonePill(seg)}</td>
-          <td>${seg.count}</td>
-          <td>${st ? st.n : '—'}</td>
-          <td>${scoreCellHtml(st ? st.exec : null, session)}</td>
-          <td class="rp-length-td-vs">${vsSessionCellHtml(execD)}</td>
-          <td>${metricCellHtml(st ? st.head : null)}</td>
-          <td>${metricCellHtml(st ? st.footwork : null)}</td>
-          <td>${metricCellHtml(st ? st.swingPath : null)}</td>
-          <td>${metricCellHtml(st ? st.shotVsLength : null)}</td>
-          <td>${metricCellHtml(st ? st.swing : null)}</td>
-        </tr>`;
+        const scoreHtml = scoreCellHtml(st ? st.exec : null, session);
+        const vsHtml = vsSessionCellHtml(execD);
+        return `
+          <div class="rp-length-detail-card" style="--zc:${escapeHtml(zc)}">
+            <div class="rp-length-dcard-head">
+              <div class="rp-length-dcard-pill">${zonePill(seg)}</div>
+              <div class="rp-length-dcard-vs">${vsHtml}</div>
+            </div>
+            <div class="rp-length-dcard-score-row">
+              <div class="rp-length-dcard-score-box">
+                <span class="rp-length-dcard-label">Score</span>
+                <div class="rp-length-dcard-score">${scoreHtml}</div>
+              </div>
+              <div class="rp-length-dcard-count-item">
+                <span class="rp-length-dcard-label">Bowled</span>
+                <strong>${seg.count}</strong>
+              </div>
+              <div class="rp-length-dcard-count-item">
+                <span class="rp-length-dcard-label">Analysed</span>
+                <strong>${st ? st.n : '—'}</strong>
+              </div>
+            </div>
+            <div class="rp-length-dcard-metrics-grid">
+              <div class="rp-length-dcard-metric">
+                <span>Eyes on ball</span>
+                ${metricCellHtml(st ? st.head : null)}
+              </div>
+              <div class="rp-length-dcard-metric">
+                <span>Footwork</span>
+                ${metricCellHtml(st ? st.footwork : null)}
+              </div>
+              <div class="rp-length-dcard-metric">
+                <span>Swing arc</span>
+                ${metricCellHtml(st ? st.swingPath : null)}
+              </div>
+              <div class="rp-length-dcard-metric">
+                <span>Execution</span>
+                ${metricCellHtml(st ? st.shotVsLength : null)}
+              </div>
+              <div class="rp-length-dcard-metric">
+                <span>Intensity</span>
+                ${metricCellHtml(st ? st.swing : null)}
+              </div>
+            </div>
+          </div>`;
       })
       .join('');
 
     const tableHtml = `
-      <div class="rp-length-table-wrap rp-length-table-wrap--v2">
-        <table class="rp-length-zone-table rp-length-zone-table--v2">
-          <thead>
-            <tr>
-              <th>Zone</th>
-              <th>Balls bowled</th>
-              <th>Balls analysed</th>
-              <th>Your score</th>
-              <th>BETTER OR WORSE THAN USUAL?</th>
-              <th>Eyes on ball</th>
-              <th>Footwork</th>
-              <th>Swing arc</th>
-              <th>Shot execution</th>
-              <th>Swing intensity</th>
-            </tr>
-          </thead>
-          <tbody>${tableRows}</tbody>
-        </table>
+      <div class="rp-length-cards-container">
+        <div class="rp-length-cards-head">
+          <span class="rp-length-cards-title">Zone Breakdown</span>
+          <span class="rp-length-cards-sub">Swipe or scroll horizontally to view all length zones</span>
+        </div>
+        <div class="rp-length-cards-scroll">
+          ${zoneCards}
+        </div>
         <p class="rp-length-table-footer">Simple view: shot execution tells if your stroke matched the ball length.</p>
       </div>`;
 

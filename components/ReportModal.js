@@ -257,8 +257,16 @@ const ReportModal = (() => {
     const gradId = `grad_${dataKey}_${Math.random().toString(36).slice(2,6)}`;
 
     return `
-      <div class="rp-graph-wrap">
-        <div class="rp-graph-title">${label}</div>
+      <div class="rp-graph-wrap" onclick="window.toggleGraphZoom && window.toggleGraphZoom(this, event)">
+        <div class="rp-graph-head-bar">
+          <div class="rp-graph-title">${label}</div>
+          <div class="rp-graph-actions">
+            <span class="rp-graph-zoom-hint" title="Tap to expand"><span class="material-symbols-outlined">zoom_in</span></span>
+            <button type="button" class="rp-graph-close-btn" title="Close" onclick="event.stopPropagation(); window.toggleGraphZoom && window.toggleGraphZoom(this.closest('.rp-graph-wrap'), event, false)">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
         <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
@@ -2199,3 +2207,24 @@ const ReportModal = (() => {
     ensureStyles: injectStyles,
   };
 })();
+
+  // Global helper for interactive graph zoom modal/expansion
+  if (typeof window !== 'undefined') {
+    window.toggleGraphZoom = function(cardEl, evt, forceState) {
+      if (!cardEl) return;
+      if (evt && evt.target && evt.target.closest && evt.target.closest('.rp-graph-close-btn') && forceState === undefined) {
+        forceState = false;
+      }
+      var isZoomed = cardEl.classList.contains('rp-graph-wrap--zoomed');
+      var shouldZoom = forceState !== undefined ? forceState : !isZoomed;
+      if (shouldZoom) {
+        cardEl.classList.add('rp-graph-wrap--zoomed');
+        document.body.classList.add('rp-graph-zoomed-active');
+      } else {
+        cardEl.classList.remove('rp-graph-wrap--zoomed');
+        if (!document.querySelector('.rp-graph-wrap--zoomed')) {
+          document.body.classList.remove('rp-graph-zoomed-active');
+        }
+      }
+    };
+  }
