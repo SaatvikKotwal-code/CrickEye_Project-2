@@ -41,8 +41,8 @@ export const SERVER_PRESETS: ServerPreset[] = [
   {
     id: 'lan',
     name: 'Current PC Wi-Fi LAN',
-    url: 'http://10.253.13.192:8000',
-    description: 'Direct zero-latency connection to host PC (10.253.13.192:8000)',
+    url: 'http://10.236.212.209:8000',
+    description: 'Direct zero-latency connection to host PC (10.236.212.209:8000)',
     icon: 'wifi',
   },
 ];
@@ -170,4 +170,55 @@ export async function fetchLlmInsights(
     llm_insights: null,
     fallback_used: true,
   };
+}
+
+/**
+ * Fetch the last completed session from the FastAPI backend.
+ * Used when reconnecting or when the mobile app launches to show the most recent analysis.
+ */
+export async function fetchLastSession(
+  serverUrl?: string
+): Promise<any | null> {
+  const base = serverUrl ? serverUrl.replace(/\/+$/, '') : await getActiveServerUrl();
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(`${base}/api/last-session`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn('[ApiClient] Failed to fetch last session:', e);
+  }
+  return null;
+}
+
+/**
+ * Auto-detect which server preset is reachable.
+ * Tries LAN → Emulator → Localhost → Cloudflare in order.
+ * Returns the first reachable URL, or the current active URL as fallback.
+ */
+export async function autoDetectServer(): Promise<string> {
+  const priorityOrder = ['lan', 'emulator', 'localhost', 'cloudflare'];
+
+  for (const presetId of priorityOrder) {
+    const preset = SERVER_PRESETS.find((p) => p.id === presetId);
+    if (!preset) continue;
+
+    const result = await pingServer(preset.url);
+    if (result.ok) {
+      console.log(`[ApiClient] Auto-detected server: ${preset.name} (${result.latencyMs}ms)`);
+      await setActiveServerUrl(preset.url);
+      return preset.url;
+    }
+  }
+
+  console.warn('[ApiClient] No servers reachable, using current URL.');
+  return await getActiveServerUrl();
 }

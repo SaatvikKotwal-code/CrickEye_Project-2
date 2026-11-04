@@ -1320,7 +1320,7 @@ body {
 }
 .hud-tl { top:0; left:0; border-bottom-right-radius: var(--radius-sm); color: #f87171; }
 .hud-tr { top:0; right:0; border-bottom-left-radius: var(--radius-sm); }
-.hud-bl { bottom:0; left:0; border-top-right-radius: var(--radius-sm); color: var(--green); }
+.hud-bl { bottom:0; left:0; border-top-right-radius: var(--radius-sm); color: var(--green); display: none !important; }
 .hud-br { bottom:0; right:0; border-top-left-radius: var(--radius-sm); color: #94A3B8; }
 
 .rec-dot {

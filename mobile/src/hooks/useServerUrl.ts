@@ -1,40 +1,77 @@
 /**
  * CrickEye Mobile — useServerUrl Hook
  * Manages active backend URL, presets, live latency ping diagnostics, and connection state.
+ * Supports auto-detect on first launch and periodic health re-checks.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getActiveServerUrl,
   setActiveServerUrl,
   pingServer,
+  autoDetectServer,
   SERVER_PRESETS,
+  DEFAULT_SERVER_URL,
   PingResult,
 } from '../api/client';
 import { ConnectionStatus, ServerPreset } from '../types/session';
 
+const HEALTH_RECHECK_INTERVAL_MS = 30_000; // 30 seconds
+
 export function useServerUrl() {
-  const [serverUrl, setServerUrlState] = useState<string>('http://10.0.2.2:8000');
+  const [serverUrl, setServerUrlState] = useState<string>(DEFAULT_SERVER_URL);
   const [status, setStatus] = useState<ConnectionStatus>('CONNECTING');
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [lastPingError, setLastPingError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const healthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load initial URL from storage
+  // Load initial URL from storage, auto-detect if needed
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      const url = await getActiveServerUrl();
-      if (isMounted) {
-        setServerUrlState(url);
-        setIsLoading(false);
-        checkHealth(url);
+      const storedUrl = await getActiveServerUrl();
+
+      // If it's still the default, attempt auto-detect to find a reachable server
+      if (storedUrl === DEFAULT_SERVER_URL) {
+        console.log('[useServerUrl] First launch — auto-detecting backend...');
+        const detectedUrl = await autoDetectServer();
+        if (isMounted) {
+          setServerUrlState(detectedUrl);
+          setIsLoading(false);
+          checkHealth(detectedUrl);
+        }
+      } else {
+        if (isMounted) {
+          setServerUrlState(storedUrl);
+          setIsLoading(false);
+          checkHealth(storedUrl);
+        }
       }
     })();
     return () => {
       isMounted = false;
     };
   }, []);
+
+  // Periodic health re-check
+  useEffect(() => {
+    if (healthTimerRef.current) {
+      clearInterval(healthTimerRef.current);
+    }
+
+    healthTimerRef.current = setInterval(() => {
+      if (serverUrl) {
+        checkHealth(serverUrl);
+      }
+    }, HEALTH_RECHECK_INTERVAL_MS);
+
+    return () => {
+      if (healthTimerRef.current) {
+        clearInterval(healthTimerRef.current);
+      }
+    };
+  }, [serverUrl]);
 
   const checkHealth = useCallback(async (targetUrl?: string): Promise<PingResult> => {
     setStatus('CONNECTING');
@@ -65,6 +102,15 @@ export function useServerUrl() {
     }
   }, [updateServerUrl]);
 
+  const runAutoDetect = useCallback(async () => {
+    setIsLoading(true);
+    const detected = await autoDetectServer();
+    setServerUrlState(detected);
+    setIsLoading(false);
+    await checkHealth(detected);
+    return detected;
+  }, [checkHealth]);
+
   return {
     serverUrl,
     setServerUrl: updateServerUrl,
@@ -75,5 +121,6 @@ export function useServerUrl() {
     lastPingError,
     checkHealth,
     isLoading,
+    autoDetect: runAutoDetect,
   };
 }

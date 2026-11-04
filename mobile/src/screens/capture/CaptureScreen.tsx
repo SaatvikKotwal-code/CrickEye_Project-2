@@ -17,6 +17,7 @@ import { CameraView, CameraViewRef } from '../../components/camera/CameraView';
 import { StanceGuide } from '../../components/camera/StanceGuide';
 import { CountdownTimer } from '../../components/camera/CountdownTimer';
 import { uploadDeliveryVideo } from '../../api/uploadService';
+import { saveSessionRecord } from '../../api/supabase';
 import { useTelemetry } from '../../hooks/useTelemetry';
 import { useHaptics } from '../../hooks/useHaptics';
 import { SessionResults } from '../../types/session';
@@ -53,10 +54,26 @@ export const CaptureScreen: React.FC<CaptureScreenProps> = ({
     reset: resetTelemetry,
   } = useTelemetry({
     serverUrl,
-    onComplete: (results) => {
+    onComplete: async (results) => {
       success();
-      setStatusMessage('Analysis complete!');
+      setStatusMessage('Analysis complete! Saving session...');
       setUploadPercent(null);
+
+      // Persist session to Supabase
+      try {
+        await saveSessionRecord({
+          id: results.session_id,
+          user_id: 'demo-player-id', // Will be replaced by real user from context
+          video_url: results.video_url || '',
+          status: 'completed',
+          results: results,
+        });
+        console.log('[CaptureScreen] Session saved to Supabase:', results.session_id);
+      } catch (saveErr) {
+        console.warn('[CaptureScreen] Failed to save session to Supabase:', saveErr);
+      }
+
+      setStatusMessage('Analysis complete!');
       onAnalysisComplete(results);
     },
     onError: (err) => {
@@ -135,9 +152,40 @@ export const CaptureScreen: React.FC<CaptureScreenProps> = ({
 
   const handlePickFromGallery = async () => {
     if (isRecording || isProcessing) return;
-    // Simulate picking pre-recorded sample delivery from device storage
-    setStatusMessage('Selected delivery from gallery');
-    await processVideoUpload('/storage/emulated/0/DCIM/delivery_cover_drive.mp4');
+
+    try {
+      // Use react-native-image-picker if available
+      const ImagePicker = require('react-native-image-picker');
+      const result = await ImagePicker.launchImageLibrary({
+        mediaType: 'video',
+        selectionLimit: 1,
+        videoQuality: 'high',
+      });
+
+      if (result.didCancel || !result.assets || result.assets.length === 0) {
+        setStatusMessage('Gallery selection cancelled');
+        return;
+      }
+
+      const selectedVideo = result.assets[0];
+      const videoUri = selectedVideo.uri;
+
+      if (!videoUri) {
+        Alert.alert('Error', 'Could not get video file path.');
+        return;
+      }
+
+      setStatusMessage(`Selected: ${selectedVideo.fileName || 'gallery video'}`);
+      await processVideoUpload(videoUri);
+    } catch (pickerErr: any) {
+      // Fallback: prompt user to enter file path manually
+      console.warn('[CaptureScreen] Image picker not available:', pickerErr.message);
+      Alert.alert(
+        'Gallery Picker Unavailable',
+        'react-native-image-picker is not installed. Please record a delivery using the camera, or install the picker package.\n\nnpm install react-native-image-picker',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
