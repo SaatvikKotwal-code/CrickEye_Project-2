@@ -17,54 +17,54 @@
     "session_handedness": "RHB",
     "stance_conf": 1.0,
     "shots_total": 11,
-    "shots_confirmed": 4,
+    "shots_confirmed": 3,
     "best_shot": {
-      "shot_num": 2,
+      "shot_num": 3,
       "label": "sweep",
-      "shot_score": 8.0,
+      "shot_score": 7.7,
       "shot_quality": "Good",
-      "timestamp": "00:08.60"
+      "timestamp": "00:14.23"
     },
     "worst_shot": {
-      "shot_num": 3,
+      "shot_num": 2,
       "label": "flick",
       "shot_score": 6.5,
       "shot_quality": "Good",
       "timestamp": "00:11.97"
     },
     "session_summary": {
-      "shots_confirmed": 4,
+      "shots_confirmed": 3,
       "shots_total_detected": 11,
-      "avg_bat_speed_kmh": 40.2,
-      "avg_head_quality_score": 90.95,
-      "avg_symmetry_score": 42.78,
-      "avg_footwork_score": 83.8,
-      "avg_swing_intensity": 63.55,
-      "avg_swing_path_score": 68.72,
-      "avg_execution_score": 68.5,
-      "avg_shot_score": 7.4,
+      "avg_bat_speed_kmh": 46.2,
+      "avg_head_quality_score": 88.93,
+      "avg_symmetry_score": 50.37,
+      "avg_footwork_score": 86.23,
+      "avg_swing_intensity": 68.47,
+      "avg_swing_path_score": 67.57,
+      "avg_execution_score": 63.33,
+      "avg_shot_score": 7.2,
       "feet_active_rate": 1.0,
       "fatigue_detected": false,
       "swing_path_fatigue": false,
       "trend": {
-        "first_half_swing_intensity": 50.85,
+        "first_half_swing_intensity": 52.9,
         "second_half_swing_intensity": 76.25,
-        "first_half_swing_path_score": 65.4,
+        "first_half_swing_path_score": 58.6,
         "second_half_swing_path_score": 72.05,
-        "first_half_execution_score": 86.0,
+        "first_half_execution_score": 88.0,
         "second_half_execution_score": 51.0,
         "first_half_head_quality_score": 97.0,
         "second_half_head_quality_score": 84.9,
         "first_half_symmetry_score": 20.0,
         "second_half_symmetry_score": 65.55,
-        "first_half_footwork_score": 82.1,
+        "first_half_footwork_score": 87.7,
         "second_half_footwork_score": 85.5
       },
       "flags_summary": {
         "HEAD_LATERAL_DRIFT_count": 1,
         "HEAD_VERTICAL_DRIFT_count": 0,
         "HEAD_DUCKING_PULL_count": 0,
-        "STANCE_ASYMMETRIC_count": 2,
+        "STANCE_ASYMMETRIC_count": 1,
         "ELBOW_COLLAPSE_count": 0,
         "ELBOW_REACHING_count": 1,
         "ELBOW_BEHIND_PAD_count": 0,
@@ -124,56 +124,6 @@
             "HEAD_DUCKING_PULL": 0
           }
         },
-        "sweep": {
-          "count": 2,
-          "avg_conf": 0.57,
-          "swing_intensity": {
-            "mean": 74.4,
-            "std": 25.6,
-            "n": 2
-          },
-          "swing_path_score": {
-            "mean": 73.6,
-            "std": 1.4,
-            "n": 2
-          },
-          "execution_score": {
-            "mean": 65.0,
-            "std": 19.0,
-            "n": 2
-          },
-          "head_quality_score": {
-            "mean": 97.0,
-            "std": 0.0,
-            "n": 2
-          },
-          "symmetry_score": {
-            "mean": 50.45,
-            "std": 30.45,
-            "n": 2
-          },
-          "footwork_score": {
-            "mean": 85.2,
-            "std": 8.7,
-            "n": 2
-          },
-          "shot_score": {
-            "mean": 7.85,
-            "std": 0.15,
-            "n": 2
-          },
-          "elbow_breakdown": {
-            "consistent": 1,
-            "cramped": 0,
-            "reaching": 0,
-            "marginal": 1
-          },
-          "head_flag_breakdown": {
-            "HEAD_LATERAL_DRIFT": 0,
-            "HEAD_VERTICAL_DRIFT": 0,
-            "HEAD_DUCKING_PULL": 0
-          }
-        },
         "flick": {
           "count": 1,
           "avg_conf": 0.86,
@@ -223,6 +173,56 @@
             "HEAD_VERTICAL_DRIFT": 0,
             "HEAD_DUCKING_PULL": 0
           }
+        },
+        "sweep": {
+          "count": 1,
+          "avg_conf": 0.85,
+          "swing_intensity": {
+            "mean": 100.0,
+            "std": null,
+            "n": 1
+          },
+          "swing_path_score": {
+            "mean": 75.0,
+            "std": null,
+            "n": 1
+          },
+          "execution_score": {
+            "mean": 46.0,
+            "std": null,
+            "n": 1
+          },
+          "head_quality_score": {
+            "mean": 97.0,
+            "std": null,
+            "n": 1
+          },
+          "symmetry_score": {
+            "mean": 80.9,
+            "std": null,
+            "n": 1
+          },
+          "footwork_score": {
+            "mean": 93.9,
+            "std": null,
+            "n": 1
+          },
+          "shot_score": {
+            "mean": 7.7,
+            "std": null,
+            "n": 1
+          },
+          "elbow_breakdown": {
+            "consistent": 0,
+            "cramped": 0,
+            "reaching": 0,
+            "marginal": 1
+          },
+          "head_flag_breakdown": {
+            "HEAD_LATERAL_DRIFT": 0,
+            "HEAD_VERTICAL_DRIFT": 0,
+            "HEAD_DUCKING_PULL": 0
+          }
         }
       }
     },
@@ -240,14 +240,6 @@
       },
       {
         "shot_num": 2,
-        "label": "sweep",
-        "shot_score": 8.0,
-        "flags_plain": [
-          "Stance uneven"
-        ]
-      },
-      {
-        "shot_num": 3,
         "label": "flick",
         "shot_score": 6.5,
         "flags_plain": [
@@ -255,7 +247,7 @@
         ]
       },
       {
-        "shot_num": 4,
+        "shot_num": 3,
         "label": "sweep",
         "shot_score": 7.7,
         "flags_plain": []
@@ -343,7 +335,7 @@
       "shot_num": 2,
       "display_num": null,
       "label": "sweep",
-      "confidence": 0.2644,
+      "confidence": 0.2638,
       "confirmed": false,
       "timestamp": "00:04.07",
       "annotated_timestamp_sec": 4.1333,
@@ -406,18 +398,18 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2437,
-        "flick": 0.1541,
-        "pull": 0.1847,
-        "straight": 0.153,
-        "sweep": 0.2644
+        "cover": 0.1747,
+        "flick": 0.1747,
+        "pull": 0.2534,
+        "straight": 0.1334,
+        "sweep": 0.2638
       }
     },
     {
       "shot_num": 3,
       "display_num": null,
-      "label": "sweep",
-      "confidence": 0.2675,
+      "label": "pull",
+      "confidence": 0.2606,
       "confirmed": false,
       "timestamp": "00:06.83",
       "annotated_timestamp_sec": 6.9666,
@@ -428,16 +420,16 @@
       "swing_path_score": 69.8,
       "swing_path_label": "Solid swing shape",
       "swing_path_note": "ok",
-      "execution_score": 80.0,
+      "execution_score": 76.0,
       "execution_label": "Strong execution",
       "execution_confidence": 1.0,
       "length_zone": "good_length",
       "ball_line_score": 88.0,
-      "execution_length_note": "sweep vs good length",
+      "execution_length_note": "pull vs good length",
       "peak_swing_speed": 30.8,
       "speed_is_capped": false,
-      "head_quality_score": 73.5,
-      "head_rule_applied": "sweep",
+      "head_quality_score": 74.0,
+      "head_rule_applied": "pull",
       "head_multiplier_used": 2.5,
       "head_lateral_ratio": 0.2745,
       "head_vertical_ratio": 0.8175,
@@ -451,8 +443,8 @@
       "elbow_delta": 0.106,
       "setup_elbow_ratio": 0.568,
       "contact_elbow_ratio": 0.629,
-      "elbow_behind_pad": true,
-      "elbow_flag": "ELBOW_BEHIND_PAD",
+      "elbow_behind_pad": false,
+      "elbow_flag": null,
       "elbow_score": 100.0,
       "feet_active": true,
       "pre_shot_movement": 7.2,
@@ -461,11 +453,10 @@
       "feet_timing_band": "early",
       "footwork_score": 70.8,
       "footwork_flag": null,
-      "shot_score": 7.1,
+      "shot_score": 7.0,
       "shot_quality": "Good",
       "flags": [
-        "STANCE_ASYMMETRIC",
-        "ELBOW_BEHIND_PAD"
+        "STANCE_ASYMMETRIC"
       ],
       "head_quality_label": "Head mostly quiet",
       "symmetry_label": "Strongly off balance",
@@ -473,26 +464,25 @@
       "footwork_label": "Front foot used well",
       "shot_quality_label": "Good",
       "flags_plain": [
-        "Stance uneven",
-        "Sweep: bat turning in early"
+        "Stance uneven"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2547,
-        "flick": 0.1535,
-        "pull": 0.1704,
-        "straight": 0.1538,
-        "sweep": 0.2675
+        "cover": 0.1945,
+        "flick": 0.1686,
+        "pull": 0.2606,
+        "straight": 0.1273,
+        "sweep": 0.249
       }
     },
     {
       "shot_num": 4,
-      "display_num": 2,
-      "label": "sweep",
-      "confidence": 0.2882,
-      "confirmed": true,
+      "display_num": null,
+      "label": "pull",
+      "confidence": 0.2648,
+      "confirmed": false,
       "timestamp": "00:08.60",
       "annotated_timestamp_sec": 8.7999,
       "peak_frame": 258,
@@ -502,16 +492,16 @@
       "swing_path_score": 72.2,
       "swing_path_label": "Solid swing shape",
       "swing_path_note": "ok",
-      "execution_score": 84.0,
-      "execution_label": "Strong execution",
+      "execution_score": 95.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "short",
       "ball_line_score": 58.0,
-      "execution_length_note": "sweep vs short",
+      "execution_length_note": "pull vs short",
       "peak_swing_speed": 22.2,
       "speed_is_capped": false,
       "head_quality_score": 97.0,
-      "head_rule_applied": "sweep",
+      "head_rule_applied": "pull",
       "head_multiplier_used": 2.5,
       "head_lateral_ratio": 0.0629,
       "head_vertical_ratio": 0.104,
@@ -535,7 +525,7 @@
       "feet_timing_band": "on_time",
       "footwork_score": 76.5,
       "footwork_flag": null,
-      "shot_score": 8.0,
+      "shot_score": 8.2,
       "shot_quality": "Good",
       "flags": [
         "STANCE_ASYMMETRIC"
@@ -552,16 +542,16 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2395,
-        "flick": 0.1586,
-        "pull": 0.16,
-        "straight": 0.1538,
-        "sweep": 0.2882
+        "cover": 0.1831,
+        "flick": 0.1784,
+        "pull": 0.2648,
+        "straight": 0.1299,
+        "sweep": 0.2438
       }
     },
     {
       "shot_num": 5,
-      "display_num": 3,
+      "display_num": 2,
       "label": "flick",
       "confidence": 0.86,
       "confirmed": true,
@@ -633,7 +623,7 @@
     },
     {
       "shot_num": 6,
-      "display_num": 4,
+      "display_num": 3,
       "label": "sweep",
       "confidence": 0.85,
       "confirmed": true,
@@ -702,8 +692,8 @@
     {
       "shot_num": 7,
       "display_num": null,
-      "label": "cover",
-      "confidence": 0.2197,
+      "label": "sweep",
+      "confidence": 0.2591,
       "confirmed": false,
       "timestamp": "00:16.60",
       "annotated_timestamp_sec": 16.9997,
@@ -714,17 +704,17 @@
       "swing_path_score": 48.0,
       "swing_path_label": "A bit tight or short",
       "swing_path_note": "too_few_wrists",
-      "execution_score": 94.0,
-      "execution_label": "Excellent choice for length",
+      "execution_score": 46.0,
+      "execution_label": "Risky for this length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 58.0,
-      "execution_length_note": "cover vs full",
+      "execution_length_note": "sweep vs full",
       "peak_swing_speed": 21.7,
       "speed_is_capped": false,
       "head_quality_score": 59.0,
-      "head_rule_applied": "cover",
-      "head_multiplier_used": 3.3,
+      "head_rule_applied": "sweep",
+      "head_multiplier_used": 2.5,
       "head_lateral_ratio": null,
       "head_vertical_ratio": null,
       "head_frames_used": 1,
@@ -737,47 +727,47 @@
       "elbow_delta": 0.525,
       "setup_elbow_ratio": 1.147,
       "contact_elbow_ratio": 1.749,
-      "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_REACHING",
+      "elbow_behind_pad": true,
+      "elbow_flag": "ELBOW_BEHIND_PAD",
       "elbow_score": 36.0,
       "feet_active": true,
       "pre_shot_movement": 62.3,
       "plant_timing": 11,
-      "feet_timing_score": 10.0,
+      "feet_timing_score": 40.0,
       "feet_timing_band": "late",
-      "footwork_score": 55.5,
+      "footwork_score": 68.1,
       "footwork_flag": "LATE_PLANT",
-      "shot_score": 6.6,
-      "shot_quality": "Good",
+      "shot_score": 5.8,
+      "shot_quality": "Average",
       "flags": [
-        "ELBOW_REACHING",
+        "ELBOW_BEHIND_PAD",
         "LATE_PLANT"
       ],
       "head_quality_label": "Small head movement (approx.)",
       "symmetry_label": "Level stance",
       "swing_intensity_label": "Flowing swing",
       "footwork_label": "Timing inconsistent \u2014 plant a touch earlier",
-      "shot_quality_label": "Good",
+      "shot_quality_label": "Average",
       "flags_plain": [
-        "Reaching for the ball",
+        "Sweep: bat turning in early",
         "Front foot down late"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "estimated",
       "probs": {
-        "cover": 0.2197,
-        "flick": 0.1826,
-        "pull": 0.213,
-        "straight": 0.1728,
-        "sweep": 0.2119
+        "cover": 0.1759,
+        "flick": 0.1745,
+        "pull": 0.2339,
+        "straight": 0.1567,
+        "sweep": 0.2591
       }
     },
     {
       "shot_num": 8,
       "display_num": null,
       "label": "sweep",
-      "confidence": 0.2234,
+      "confidence": 0.2563,
       "confirmed": false,
       "timestamp": "00:19.03",
       "annotated_timestamp_sec": 19.4997,
@@ -838,18 +828,18 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2097,
-        "flick": 0.2113,
-        "pull": 0.1872,
-        "straight": 0.1684,
-        "sweep": 0.2234
+        "cover": 0.1468,
+        "flick": 0.2111,
+        "pull": 0.2107,
+        "straight": 0.1751,
+        "sweep": 0.2563
       }
     },
     {
       "shot_num": 9,
       "display_num": null,
-      "label": "pull",
-      "confidence": 0.2625,
+      "label": "sweep",
+      "confidence": 0.2223,
       "confirmed": false,
       "timestamp": "00:21.87",
       "annotated_timestamp_sec": 22.3997,
@@ -860,16 +850,16 @@
       "swing_path_score": 54.6,
       "swing_path_label": "OK path",
       "swing_path_note": "ok",
-      "execution_score": 44.0,
+      "execution_score": 46.0,
       "execution_label": "Risky for this length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 88.0,
-      "execution_length_note": "pull vs full",
+      "execution_length_note": "sweep vs full",
       "peak_swing_speed": 70.3,
       "speed_is_capped": false,
-      "head_quality_score": 95.2,
-      "head_rule_applied": "pull",
+      "head_quality_score": 93.0,
+      "head_rule_applied": "sweep",
       "head_multiplier_used": 2.5,
       "head_lateral_ratio": 0.4915,
       "head_vertical_ratio": 0.1102,
@@ -883,9 +873,9 @@
       "elbow_delta": -0.809,
       "setup_elbow_ratio": 1.385,
       "contact_elbow_ratio": 0.264,
-      "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_COLLAPSE_PULL",
-      "elbow_score": 11.0,
+      "elbow_behind_pad": true,
+      "elbow_flag": "ELBOW_BEHIND_PAD",
+      "elbow_score": 21.0,
       "feet_active": true,
       "pre_shot_movement": 22.3,
       "plant_timing": -14,
@@ -893,11 +883,11 @@
       "feet_timing_band": "early",
       "footwork_score": 83.4,
       "footwork_flag": null,
-      "shot_score": 6.3,
+      "shot_score": 6.4,
       "shot_quality": "Average",
       "flags": [
         "HEAD_LATERAL_DRIFT",
-        "ELBOW_COLLAPSE_PULL"
+        "ELBOW_BEHIND_PAD"
       ],
       "head_quality_label": "Very still \u2014 eyes on the ball",
       "symmetry_label": "Off balance",
@@ -906,24 +896,24 @@
       "shot_quality_label": "Average",
       "flags_plain": [
         "Head shifting sideways",
-        "Bat rolling across on the pull"
+        "Sweep: bat turning in early"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2289,
-        "flick": 0.1574,
-        "pull": 0.2625,
-        "straight": 0.1797,
-        "sweep": 0.1715
+        "cover": 0.192,
+        "flick": 0.1899,
+        "pull": 0.2101,
+        "straight": 0.1857,
+        "sweep": 0.2223
       }
     },
     {
       "shot_num": 10,
       "display_num": null,
-      "label": "pull",
-      "confidence": 0.2253,
+      "label": "sweep",
+      "confidence": 0.2592,
       "confirmed": false,
       "timestamp": "00:25.70",
       "annotated_timestamp_sec": 26.2996,
@@ -934,21 +924,21 @@
       "swing_path_score": 76.8,
       "swing_path_label": "Clean path",
       "swing_path_note": "ok",
-      "execution_score": 44.0,
+      "execution_score": 46.0,
       "execution_label": "Risky for this length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 36.0,
-      "execution_length_note": "pull vs full",
+      "execution_length_note": "sweep vs full",
       "peak_swing_speed": 36.5,
       "speed_is_capped": false,
       "head_quality_score": 97.0,
-      "head_rule_applied": "pull",
+      "head_rule_applied": "sweep",
       "head_multiplier_used": 2.5,
       "head_lateral_ratio": 0.1422,
       "head_vertical_ratio": 0.2744,
       "head_frames_used": 11,
-      "head_flag": "HEAD_DUCKING_PULL",
+      "head_flag": null,
       "symmetry_score": 79.7,
       "avg_shoulder_tilt": 3.73,
       "avg_hip_tilt": 3.02,
@@ -967,10 +957,9 @@
       "feet_timing_band": "on_time",
       "footwork_score": 60.4,
       "footwork_flag": null,
-      "shot_score": 6.7,
+      "shot_score": 6.8,
       "shot_quality": "Good",
       "flags": [
-        "HEAD_DUCKING_PULL",
         "ELBOW_REACHING",
         "FOOTWORK_LINE_MISMATCH"
       ],
@@ -980,7 +969,6 @@
       "footwork_label": "Timing inconsistent \u2014 plant a touch earlier",
       "shot_quality_label": "Good",
       "flags_plain": [
-        "Head dropping on the pull",
         "Reaching for the ball",
         "Feet not moving to the line of the ball"
       ],
@@ -988,18 +976,18 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2202,
+        "cover": 0.1674,
         "flick": 0.187,
-        "pull": 0.2253,
-        "straight": 0.1564,
-        "sweep": 0.2111
+        "pull": 0.2356,
+        "straight": 0.1508,
+        "sweep": 0.2592
       }
     },
     {
       "shot_num": 11,
       "display_num": null,
-      "label": "cover",
-      "confidence": 0.2261,
+      "label": "sweep",
+      "confidence": 0.2416,
       "confirmed": false,
       "timestamp": "00:27.67",
       "annotated_timestamp_sec": 28.3329,
@@ -1010,21 +998,21 @@
       "swing_path_score": 72.4,
       "swing_path_label": "Solid swing shape",
       "swing_path_note": "ok",
-      "execution_score": 94.0,
-      "execution_label": "Excellent choice for length",
+      "execution_score": 46.0,
+      "execution_label": "Risky for this length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 88.0,
-      "execution_length_note": "cover vs full",
+      "execution_length_note": "sweep vs full",
       "peak_swing_speed": 20.8,
       "speed_is_capped": false,
-      "head_quality_score": 51.1,
-      "head_rule_applied": "cover",
-      "head_multiplier_used": 3.3,
+      "head_quality_score": 53.1,
+      "head_rule_applied": "sweep",
+      "head_multiplier_used": 2.5,
       "head_lateral_ratio": 0.3448,
       "head_vertical_ratio": 1.2426,
       "head_frames_used": 24,
-      "head_flag": "HEAD_LATERAL_DRIFT",
+      "head_flag": null,
       "symmetry_score": 53.4,
       "avg_shoulder_tilt": 9.41,
       "avg_hip_tilt": 6.13,
@@ -1033,40 +1021,38 @@
       "elbow_delta": -0.567,
       "setup_elbow_ratio": 1.95,
       "contact_elbow_ratio": 0.844,
-      "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_COLLAPSE",
+      "elbow_behind_pad": true,
+      "elbow_flag": "ELBOW_BEHIND_PAD",
       "elbow_score": 21.0,
       "feet_active": true,
       "pre_shot_movement": 14.7,
       "plant_timing": -13,
-      "feet_timing_score": 80.0,
+      "feet_timing_score": 65.0,
       "feet_timing_band": "early",
-      "footwork_score": 89.7,
+      "footwork_score": 83.4,
       "footwork_flag": null,
-      "shot_score": 6.6,
-      "shot_quality": "Good",
+      "shot_score": 5.5,
+      "shot_quality": "Average",
       "flags": [
-        "HEAD_LATERAL_DRIFT",
-        "ELBOW_COLLAPSE"
+        "ELBOW_BEHIND_PAD"
       ],
       "head_quality_label": "Some head movement",
       "symmetry_label": "Moderately open",
       "swing_intensity_label": "Flowing swing",
-      "footwork_label": "Good foot timing \u2014 stable at contact",
-      "shot_quality_label": "Good",
+      "footwork_label": "Front foot used well",
+      "shot_quality_label": "Average",
       "flags_plain": [
-        "Head shifting sideways",
-        "Bat too tight to the body"
+        "Sweep: bat turning in early"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.2261,
-        "flick": 0.188,
-        "pull": 0.2158,
-        "straight": 0.156,
-        "sweep": 0.2141
+        "cover": 0.1742,
+        "flick": 0.1951,
+        "pull": 0.2374,
+        "straight": 0.1517,
+        "sweep": 0.2416
       }
     }
   ],
@@ -1839,7 +1825,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 2,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2644,
+        "shot_classifier_conf": 0.2638,
         "shot_confirmed": false
       },
       {
@@ -1898,7 +1884,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 3,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2675,
+        "shot_classifier_conf": 0.2606,
         "shot_confirmed": false
       },
       {
@@ -1952,12 +1938,12 @@
           "session_median_speed_rescale"
         ],
         "shot_num": 4,
-        "display_num": 2,
+        "display_num": 4,
         "peak_frame": 258,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 4,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2882,
+        "shot_classifier_conf": 0.2648,
         "shot_confirmed": false
       },
       {
@@ -2619,7 +2605,7 @@
           "session_median_speed_rescale"
         ],
         "shot_num": 5,
-        "display_num": 3,
+        "display_num": 2,
         "peak_frame": 359,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 5,
@@ -3149,7 +3135,7 @@
           "session_median_speed_rescale"
         ],
         "shot_num": 6,
-        "display_num": 4,
+        "display_num": 3,
         "peak_frame": 427,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 6,
@@ -3209,7 +3195,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 7,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2197,
+        "shot_classifier_conf": 0.2591,
         "shot_confirmed": false
       },
       {
@@ -3264,7 +3250,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 8,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2234,
+        "shot_classifier_conf": 0.2563,
         "shot_confirmed": false
       },
       {
@@ -3319,7 +3305,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 9,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2625,
+        "shot_classifier_conf": 0.2223,
         "shot_confirmed": false
       },
       {
@@ -3376,7 +3362,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 10,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2253,
+        "shot_classifier_conf": 0.2592,
         "shot_confirmed": false
       },
       {
@@ -3434,7 +3420,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 11,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2261,
+        "shot_classifier_conf": 0.2416,
         "shot_confirmed": false
       }
     ],
@@ -16601,7 +16587,7 @@
             "pace_band": "slow",
             "length_zone": "good_length",
             "shot_outcome": {
-              "shot_label": "sweep",
+              "shot_label": "pull",
               "shot_score": 6.4,
               "shot_quality": "Average",
               "confirmed": false
@@ -16614,7 +16600,7 @@
             "pace_band": "slow",
             "length_zone": "short",
             "shot_outcome": {
-              "shot_label": "sweep",
+              "shot_label": "pull",
               "shot_score": 7.3,
               "shot_quality": "Good",
               "confirmed": false
@@ -16653,8 +16639,8 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "cover",
-              "shot_score": 5.6,
+              "shot_label": "sweep",
+              "shot_score": 5.9,
               "shot_quality": "Average",
               "confirmed": false
             }
@@ -16679,9 +16665,9 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "pull",
-              "shot_score": 6.4,
-              "shot_quality": "Average",
+              "shot_label": "sweep",
+              "shot_score": 6.5,
+              "shot_quality": "Good",
               "confirmed": false
             }
           },
@@ -16692,7 +16678,7 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "pull",
+              "shot_label": "sweep",
               "shot_score": 7.0,
               "shot_quality": "Good",
               "confirmed": false
@@ -16705,8 +16691,8 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "cover",
-              "shot_score": 5.7,
+              "shot_label": "sweep",
+              "shot_score": 5.6,
               "shot_quality": "Average",
               "confirmed": false
             }
