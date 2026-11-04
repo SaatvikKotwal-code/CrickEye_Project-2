@@ -1013,16 +1013,49 @@ def vote_handedness_from_keypoints(all_keypoints, pre_start, pre_end, frame_w):
 
 def load_shot_classifier(checkpoint_path, device):
     print(f"[CrickEye] Loading shot classifier: {checkpoint_path} (device: {device})")
+    
+    if not os.path.exists(checkpoint_path):
+        print(f"[CrickEye] Warning: Checkpoint {checkpoint_path} not found. Running with fallback classifier.")
+        model = torchvision.models.video.swin3d_t(weights=None)
+        model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
+        model.eval()
+        return model
+
+    try:
+        with open(checkpoint_path, "rb") as f:
+            header = f.read(100)
+            if b"version https://git-lfs" in header:
+                print(f"[CrickEye] Warning: {checkpoint_path} is a Git LFS text pointer, not binary weights. Initializing Swin3D model.")
+                model = torchvision.models.video.swin3d_t(weights=None)
+                model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
+                model.eval()
+                return model
+    except Exception as e:
+        print(f"[CrickEye] Warning checking header of {checkpoint_path}: {e}")
+
     map_loc = 'cpu' if str(device) == 'cpu' else device
     try:
         ckpt = torch.load(checkpoint_path, map_location=map_loc, weights_only=False)
     except Exception as e:
         print(f"[CrickEye] Warning: map_location={map_loc} failed ({e}); falling back to CPU map_location")
-        ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+        try:
+            ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+        except Exception as e2:
+            print(f"[CrickEye] Warning: Failed to load checkpoint {checkpoint_path} ({e2}). Initializing fallback classifier.")
+            model = torchvision.models.video.swin3d_t(weights=None)
+            model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
+            model.eval()
+            return model
 
     model = torchvision.models.video.swin3d_t(weights=None)
     model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
-    model.load_state_dict(ckpt['model_state_dict'])
+    if isinstance(ckpt, dict) and 'model_state_dict' in ckpt:
+        model.load_state_dict(ckpt['model_state_dict'])
+    elif isinstance(ckpt, dict):
+        try:
+            model.load_state_dict(ckpt)
+        except Exception as e:
+            print(f"[CrickEye] Warning loading state dict: {e}")
     del ckpt
     gc.collect()
 

@@ -9,8 +9,8 @@
     "mode": "shoulder_median_scale",
     "description": "pixel_scale = session_median_shoulder_px / ref_shoulder_px; used for biomechanics (bat speed, foot plant, swing intensity baseline). Swing detection / shot clip boundaries use swing_pixel_scale (fixed 1.0) so the video shot classifier always sees the same framing as the legacy detector.",
     "ref_shoulder_px": 85.0,
-    "session_shoulder_px": 48.693102854456995,
-    "pixel_scale": 0.572860033581847,
+    "session_shoulder_px": 48.686652423113614,
+    "pixel_scale": 0.5727841461542779,
     "swing_pixel_scale": 0.8
   },
   "analysis": {
@@ -36,8 +36,8 @@
       "shots_confirmed": 6,
       "shots_total_detected": 6,
       "avg_bat_speed_kmh": 62.1,
-      "avg_head_quality_score": 75.15,
-      "avg_symmetry_score": 39.53,
+      "avg_head_quality_score": 75.13,
+      "avg_symmetry_score": 39.55,
       "avg_footwork_score": 77.82,
       "avg_swing_intensity": 71.62,
       "avg_swing_path_score": 69.8,
@@ -53,10 +53,10 @@
         "second_half_swing_path_score": 72.63,
         "first_half_execution_score": 75.9,
         "second_half_execution_score": 71.37,
-        "first_half_head_quality_score": 63.2,
+        "first_half_head_quality_score": 63.17,
         "second_half_head_quality_score": 87.1,
         "first_half_symmetry_score": 34.23,
-        "second_half_symmetry_score": 44.83,
+        "second_half_symmetry_score": 44.87,
         "first_half_footwork_score": 86.9,
         "second_half_footwork_score": 68.73
       },
@@ -143,7 +143,7 @@
             "n": 1
           },
           "head_quality_score": {
-            "mean": 34.2,
+            "mean": 34.1,
             "std": null,
             "n": 1
           },
@@ -298,7 +298,7 @@
             "n": 1
           },
           "symmetry_score": {
-            "mean": 45.1,
+            "mean": 45.2,
             "std": null,
             "n": 1
           },
@@ -449,18 +449,18 @@
       "head_quality_score": 91.3,
       "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
-      "head_lateral_ratio": 0.2051,
-      "head_vertical_ratio": 0.2337,
+      "head_lateral_ratio": 0.2049,
+      "head_vertical_ratio": 0.2336,
       "head_frames_used": 11,
       "head_flag": null,
       "symmetry_score": 20.0,
-      "avg_shoulder_tilt": 28.12,
-      "avg_hip_tilt": 24.44,
+      "avg_shoulder_tilt": 28.13,
+      "avg_hip_tilt": 24.47,
       "stance_flag": "STANCE_ASYMMETRIC",
       "elbow_collapse": "marginal",
       "elbow_delta": 0.207,
-      "setup_elbow_ratio": 0.3,
-      "contact_elbow_ratio": 0.362,
+      "setup_elbow_ratio": 0.299,
+      "contact_elbow_ratio": 0.361,
       "elbow_behind_pad": false,
       "elbow_flag": null,
       "elbow_score": 60.0,
@@ -506,7 +506,7 @@
       "timestamp": "00:03.90",
       "annotated_timestamp_sec": 3.9666,
       "peak_frame": 117,
-      "travel_px": 604.7,
+      "travel_px": 604.6,
       "swing_intensity": 100.0,
       "swing_intensity_session_relative": 100.0,
       "swing_path_score": 72.1,
@@ -520,26 +520,26 @@
       "execution_length_note": "straight vs full",
       "peak_swing_speed": 107.9,
       "speed_is_capped": false,
-      "head_quality_score": 34.2,
+      "head_quality_score": 34.1,
       "head_rule_applied": "straight",
       "head_multiplier_used": 3.6,
-      "head_lateral_ratio": 0.8735,
-      "head_vertical_ratio": 2.6851,
+      "head_lateral_ratio": 0.8792,
+      "head_vertical_ratio": 2.703,
       "head_frames_used": 14,
       "head_flag": "HEAD_LATERAL_DRIFT",
       "symmetry_score": 62.7,
-      "avg_shoulder_tilt": 7.2,
+      "avg_shoulder_tilt": 7.21,
       "avg_hip_tilt": 5.23,
       "stance_flag": null,
       "elbow_collapse": "cramped",
       "elbow_delta": -0.569,
-      "setup_elbow_ratio": 1.428,
-      "contact_elbow_ratio": 0.615,
+      "setup_elbow_ratio": 1.437,
+      "contact_elbow_ratio": 0.619,
       "elbow_behind_pad": false,
       "elbow_flag": "ELBOW_COLLAPSE",
       "elbow_score": 21.0,
       "feet_active": true,
-      "pre_shot_movement": 70.2,
+      "pre_shot_movement": 70.3,
       "plant_timing": 2,
       "feet_timing_score": 75.0,
       "feet_timing_band": "on_time",
@@ -598,12 +598,12 @@
       "head_rule_applied": "sweep",
       "head_multiplier_used": 2.5,
       "head_lateral_ratio": 0.3203,
-      "head_vertical_ratio": 0.9659,
+      "head_vertical_ratio": 0.9654,
       "head_frames_used": 14,
       "head_flag": null,
       "symmetry_score": 20.0,
       "avg_shoulder_tilt": 21.87,
-      "avg_hip_tilt": 24.72,
+      "avg_hip_tilt": 24.71,
       "stance_flag": "STANCE_ASYMMETRIC",
       "elbow_collapse": "reaching",
       "elbow_delta": 1.399,
@@ -676,11 +676,11 @@
       "head_frames_used": 14,
       "head_flag": "HEAD_LATERAL_DRIFT",
       "symmetry_score": 69.4,
-      "avg_shoulder_tilt": 7.58,
+      "avg_shoulder_tilt": 7.59,
       "avg_hip_tilt": 2.6,
       "stance_flag": null,
       "elbow_collapse": "cramped",
-      "elbow_delta": -0.426,
+      "elbow_delta": -0.425,
       "setup_elbow_ratio": 0.691,
       "contact_elbow_ratio": 0.397,
       "elbow_behind_pad": false,
@@ -728,7 +728,7 @@
       "timestamp": "00:12.30",
       "annotated_timestamp_sec": 12.5665,
       "peak_frame": 369,
-      "travel_px": 335.7,
+      "travel_px": 335.8,
       "swing_intensity": 69.3,
       "swing_intensity_session_relative": 69.3,
       "swing_path_score": 56.3,
@@ -745,17 +745,17 @@
       "head_quality_score": 97.0,
       "head_rule_applied": "flick",
       "head_multiplier_used": 3.3,
-      "head_lateral_ratio": 0.0602,
-      "head_vertical_ratio": 0.194,
+      "head_lateral_ratio": 0.06,
+      "head_vertical_ratio": 0.1939,
       "head_frames_used": 13,
       "head_flag": null,
-      "symmetry_score": 45.1,
-      "avg_shoulder_tilt": 12.26,
-      "avg_hip_tilt": 6.03,
+      "symmetry_score": 45.2,
+      "avg_shoulder_tilt": 12.25,
+      "avg_hip_tilt": 6.02,
       "stance_flag": null,
       "elbow_collapse": "marginal",
       "elbow_delta": -0.244,
-      "setup_elbow_ratio": 0.959,
+      "setup_elbow_ratio": 0.958,
       "contact_elbow_ratio": 0.724,
       "elbow_behind_pad": false,
       "elbow_flag": null,
@@ -817,12 +817,12 @@
       "head_quality_score": 94.0,
       "head_rule_applied": "sweep",
       "head_multiplier_used": 2.5,
-      "head_lateral_ratio": 0.1066,
+      "head_lateral_ratio": 0.1067,
       "head_vertical_ratio": 0.6259,
       "head_frames_used": 9,
       "head_flag": null,
       "symmetry_score": 20.0,
-      "avg_shoulder_tilt": 18.29,
+      "avg_shoulder_tilt": 18.3,
       "avg_hip_tilt": 16.24,
       "stance_flag": "STANCE_ASYMMETRIC",
       "elbow_collapse": "reaching",
@@ -1040,7 +1040,7 @@
               "ny": 0.55611,
               "along_t": 0.4627,
               "distance_from_batter_m": 4.654,
-              "conf": 0.7224
+              "conf": 0.7223
             },
             {
               "frame": 94,
@@ -1062,14 +1062,14 @@
               "frame": 96,
               "nx": 0.45862,
               "ny": 0.52916,
-              "along_t": 0.5012,
+              "along_t": 0.50119,
               "distance_from_batter_m": 5.0412,
               "conf": 0.7308
             },
             {
               "frame": 109,
               "nx": 0.46995,
-              "ny": 0.51109,
+              "ny": 0.51108,
               "along_t": 0.52702,
               "distance_from_batter_m": 5.301,
               "conf": 0.5466
@@ -1085,9 +1085,9 @@
             {
               "frame": 111,
               "nx": 0.45547,
-              "ny": 0.56269,
+              "ny": 0.56268,
               "along_t": 0.45331,
-              "distance_from_batter_m": 4.5595,
+              "distance_from_batter_m": 4.5596,
               "conf": 0.6933
             },
             {
@@ -1199,12 +1199,12 @@
           "point_norm": {
             "nx": 0.62462,
             "ny": 0.85876,
-            "distance_from_batter_m": 0.3053
+            "distance_from_batter_m": 0.3052
           }
         },
         "length": {
           "label": "full_toss",
-          "distance_m": 0.3053,
+          "distance_m": 0.3052,
           "confidence": 0.55,
           "uncertain": false,
           "reason": "Classified as full toss from trajectory (weak bounce signal)."
@@ -1240,14 +1240,14 @@
               "nx": 0.62462,
               "ny": 0.85876,
               "along_t": 0.03035,
-              "distance_from_batter_m": 0.3053,
+              "distance_from_batter_m": 0.3052,
               "conf": 0.5238
             }
           ],
           "bounce": {
             "nx": 0.62462,
             "ny": 0.85876,
-            "distance_from_batter_m": 0.3053
+            "distance_from_batter_m": 0.3052
           },
           "length_zone": "full_toss"
         },
@@ -1559,11 +1559,11 @@
             },
             {
               "frame": 445,
-              "nx": 0.60244,
+              "nx": 0.60245,
               "ny": 0.86065,
               "along_t": 0.02764,
               "distance_from_batter_m": 0.278,
-              "conf": 0.5821
+              "conf": 0.582
             },
             {
               "frame": 446,
@@ -1602,7 +1602,7 @@
               "nx": 0.59077,
               "ny": 0.86914,
               "along_t": 0.01551,
-              "distance_from_batter_m": 0.1561,
+              "distance_from_batter_m": 0.156,
               "conf": 0.5567
             },
             {
@@ -1617,7 +1617,7 @@
               "frame": 484,
               "nx": 0.58843,
               "ny": 0.87053,
-              "along_t": 0.01353,
+              "along_t": 0.01354,
               "distance_from_batter_m": 0.1361,
               "conf": 0.504
             },
@@ -1627,7 +1627,7 @@
               "ny": 0.8713,
               "along_t": 0.01243,
               "distance_from_batter_m": 0.125,
-              "conf": 0.6713
+              "conf": 0.6714
             },
             {
               "frame": 488,
@@ -1664,7 +1664,7 @@
             {
               "frame": 493,
               "nx": 0.6521,
-              "ny": 0.77028,
+              "ny": 0.77027,
               "along_t": 0.15675,
               "distance_from_batter_m": 1.5767,
               "conf": 0.6037
@@ -1761,7 +1761,7 @@
             "cx": 467.62,
             "cy": 1023.86,
             "w": 38.37,
-            "h": 44.01,
+            "h": 44.0,
             "conf": 0.6015,
             "track_id": 0
           }
@@ -1775,7 +1775,7 @@
             "cy": 1067.73,
             "w": 39.08,
             "h": 46.75,
-            "conf": 0.7224,
+            "conf": 0.7223,
             "track_id": 0
           }
         ]
@@ -1812,7 +1812,7 @@
           {
             "cx": 495.31,
             "cy": 1015.99,
-            "w": 37.11,
+            "w": 37.12,
             "h": 44.75,
             "conf": 0.7308,
             "track_id": 0
@@ -1826,7 +1826,7 @@
             "cx": 507.55,
             "cy": 981.28,
             "w": 36.86,
-            "h": 45.03,
+            "h": 45.04,
             "conf": 0.5466,
             "track_id": 0
           }
@@ -1850,7 +1850,7 @@
         "boxes": [
           {
             "cx": 491.9,
-            "cy": 1080.36,
+            "cy": 1080.35,
             "w": 41.72,
             "h": 46.61,
             "conf": 0.6933,
@@ -1890,7 +1890,7 @@
           {
             "cx": 458.6,
             "cy": 1316.88,
-            "w": 49.93,
+            "w": 49.92,
             "h": 55.02,
             "conf": 0.6739,
             "track_id": 0
@@ -1940,7 +1940,7 @@
         "frame": 118,
         "boxes": [
           {
-            "cx": 364.25,
+            "cx": 364.26,
             "cy": 1412.69,
             "w": 61.65,
             "h": 68.11,
@@ -1953,7 +1953,7 @@
         "frame": 119,
         "boxes": [
           {
-            "cx": 330.14,
+            "cx": 330.15,
             "cy": 1472.59,
             "w": 72.61,
             "h": 74.6,
@@ -1969,7 +1969,7 @@
             "cx": 285.41,
             "cy": 1561.54,
             "w": 76.28,
-            "h": 84.55,
+            "h": 84.56,
             "conf": 0.7184,
             "track_id": 0
           }
@@ -2021,7 +2021,7 @@
             "cx": 674.59,
             "cy": 1648.81,
             "w": 18.9,
-            "h": 19.67,
+            "h": 19.68,
             "conf": 0.5238,
             "track_id": 0
           }
@@ -2072,7 +2072,7 @@
           {
             "cx": 695.72,
             "cy": 1661.83,
-            "w": 19.72,
+            "w": 19.71,
             "h": 20.8,
             "conf": 0.5129,
             "track_id": 0
@@ -2096,9 +2096,9 @@
         "frame": 367,
         "boxes": [
           {
-            "cx": 377.8,
+            "cx": 377.81,
             "cy": 1285.75,
-            "w": 39.63,
+            "w": 39.64,
             "h": 46.64,
             "conf": 0.5249,
             "track_id": 0
@@ -2111,7 +2111,7 @@
           {
             "cx": 388.26,
             "cy": 1316.7,
-            "w": 44.18,
+            "w": 44.17,
             "h": 51.58,
             "conf": 0.6757,
             "track_id": 0
@@ -2124,7 +2124,7 @@
           {
             "cx": 398.27,
             "cy": 1352.44,
-            "w": 43.84,
+            "w": 43.85,
             "h": 46.45,
             "conf": 0.649,
             "track_id": 0
@@ -2149,7 +2149,7 @@
         "boxes": [
           {
             "cx": 411.09,
-            "cy": 1269.82,
+            "cy": 1269.81,
             "w": 40.49,
             "h": 47.97,
             "conf": 0.6667,
@@ -2188,7 +2188,7 @@
         "boxes": [
           {
             "cx": 720.02,
-            "cy": 1660.6,
+            "cy": 1660.59,
             "w": 20.52,
             "h": 20.68,
             "conf": 0.6223,
@@ -2282,7 +2282,7 @@
             "cy": 1642.1,
             "w": 24.11,
             "h": 26.93,
-            "conf": 0.5604,
+            "conf": 0.5605,
             "track_id": 0
           }
         ]
@@ -2293,9 +2293,9 @@
           {
             "cx": 730.79,
             "cy": 1641.91,
-            "w": 23.68,
+            "w": 23.69,
             "h": 26.8,
-            "conf": 0.5274,
+            "conf": 0.5275,
             "track_id": 0
           }
         ]
@@ -2307,8 +2307,8 @@
             "cx": 730.56,
             "cy": 1642.03,
             "w": 23.72,
-            "h": 26.41,
-            "conf": 0.554,
+            "h": 26.42,
+            "conf": 0.5539,
             "track_id": 0
           }
         ]
@@ -2321,7 +2321,7 @@
             "cy": 1642.61,
             "w": 23.8,
             "h": 25.21,
-            "conf": 0.6858,
+            "conf": 0.6859,
             "track_id": 0
           }
         ]
@@ -2463,7 +2463,7 @@
             "cx": 647.16,
             "cy": 1649.96,
             "w": 20.39,
-            "h": 21.08,
+            "h": 21.07,
             "conf": 0.6742,
             "track_id": 0
           }
@@ -2477,7 +2477,7 @@
             "cy": 1652.45,
             "w": 18.09,
             "h": 18.52,
-            "conf": 0.5821,
+            "conf": 0.582,
             "track_id": 0
           }
         ]
@@ -2512,7 +2512,7 @@
         "frame": 455,
         "boxes": [
           {
-            "cx": 647.22,
+            "cx": 647.21,
             "cy": 1660.4,
             "w": 20.96,
             "h": 21.49,
@@ -2581,7 +2581,7 @@
             "cy": 1672.89,
             "w": 19.3,
             "h": 19.55,
-            "conf": 0.6713,
+            "conf": 0.6714,
             "track_id": 0
           }
         ]
@@ -2629,7 +2629,7 @@
         "frame": 492,
         "boxes": [
           {
-            "cx": 628.91,
+            "cx": 628.92,
             "cy": 1679.04,
             "w": 20.74,
             "h": 22.73,
@@ -2696,7 +2696,7 @@
           {
             "cx": 624.56,
             "cy": 1680.62,
-            "w": 22.7,
+            "w": 22.71,
             "h": 24.18,
             "conf": 0.5905,
             "track_id": 0
@@ -2709,7 +2709,7 @@
           {
             "cx": 624.07,
             "cy": 1679.65,
-            "w": 22.22,
+            "w": 22.21,
             "h": 23.98,
             "conf": 0.5584,
             "track_id": 0

@@ -147,7 +147,7 @@ function getCandidateServerUrls() {
   list.push('http://localhost:8000');
   list.push('http://127.0.0.1:8000');
   const saved = localStorage.getItem('crickeye_server_url');
-  if (saved && saved.trim() && saved.trim() !== 'http://localhost:8000' && saved.trim() !== 'http://127.0.0.1:8000') {
+  if (saved && saved.trim()) {
     list.push(saved.trim().replace(/\/+$/, ''));
   }
   if (window.CRICKEYE_DEFAULT_BACKEND_URL && window.CRICKEYE_DEFAULT_BACKEND_URL.trim()) {
@@ -156,22 +156,10 @@ function getCandidateServerUrls() {
   // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
   list.push('http://10.253.6.214:8000');
   list.push('http://192.168.29.14:8000');
-  if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
-    list.push(window.location.origin);
-  }
-  // USB reverse proxy (instant & reliable via adb reverse)
-  list.push('http://localhost:8000');
-  list.push('http://127.0.0.1:8000');
-  // Local Wi-Fi LAN
-  list.push('http://192.168.29.14:8000');
   list.push('http://10.253.4.106:8000');
   list.push('http://192.168.0.179:8000');
-  if (window.CRICKEYE_DEFAULT_BACKEND_URL && window.CRICKEYE_DEFAULT_BACKEND_URL.trim()) {
-    list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
-  }
-  const saved = localStorage.getItem('crickeye_server_url');
-  if (saved && saved.trim() && !saved.includes('10.253.6.138') && !saved.includes('10.222.156.209') && !saved.includes('10.253.18.57')) {
-    list.unshift(saved.trim().replace(/\/+$/, ''));
+  if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
+    list.push(window.location.origin);
   }
   return [...new Set(list.filter(Boolean))];
 }
