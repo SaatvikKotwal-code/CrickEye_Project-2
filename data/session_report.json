@@ -3,7 +3,7 @@
   "annotated_total_frames": 952,
   "fps": 30.000451619701803,
   "session_handedness": "RHB",
-  "stance_conf": 0.89,
+  "stance_conf": 0.8,
   "speed_unit": "km/h",
   "camera_calibration": {
     "mode": "shoulder_median_scale",
@@ -15,161 +15,161 @@
   },
   "analysis": {
     "session_handedness": "RHB",
-    "stance_conf": 0.89,
+    "stance_conf": 0.8,
     "shots_total": 11,
-    "shots_confirmed": 9,
+    "shots_confirmed": 10,
     "best_shot": {
-      "shot_num": 6,
-      "label": "sweep",
-      "shot_score": 7.7,
+      "shot_num": 8,
+      "label": "cover",
+      "shot_score": 8.2,
       "shot_quality": "Good",
-      "timestamp": "00:14.23"
+      "timestamp": "00:19.03"
     },
     "worst_shot": {
-      "shot_num": 7,
+      "shot_num": 5,
       "label": "flick",
-      "shot_score": 6.2,
-      "shot_quality": "Average",
-      "timestamp": "00:16.60"
+      "shot_score": 6.5,
+      "shot_quality": "Good",
+      "timestamp": "00:11.97"
     },
     "session_summary": {
-      "shots_confirmed": 9,
+      "shots_confirmed": 10,
       "shots_total_detected": 11,
-      "avg_bat_speed_kmh": 33.4,
-      "avg_head_quality_score": 79.07,
-      "avg_symmetry_score": 49.84,
-      "avg_footwork_score": 76.52,
-      "avg_swing_intensity": 58.38,
-      "avg_swing_path_score": 67.28,
-      "avg_execution_score": 67.78,
-      "avg_shot_score": 6.84,
+      "avg_bat_speed_kmh": 32.9,
+      "avg_head_quality_score": 82.18,
+      "avg_symmetry_score": 53.69,
+      "avg_footwork_score": 76.53,
+      "avg_swing_intensity": 57.96,
+      "avg_swing_path_score": 66.53,
+      "avg_execution_score": 80.4,
+      "avg_shot_score": 7.23,
       "feet_active_rate": 1.0,
       "fatigue_detected": false,
       "swing_path_fatigue": false,
       "trend": {
-        "first_half_swing_intensity": 53.28,
-        "second_half_swing_intensity": 62.46,
-        "first_half_swing_path_score": 66.05,
-        "second_half_swing_path_score": 68.26,
-        "first_half_execution_score": 70.0,
-        "second_half_execution_score": 66.0,
-        "first_half_head_quality_score": 84.95,
-        "second_half_head_quality_score": 74.36,
-        "first_half_symmetry_score": 24.57,
-        "second_half_symmetry_score": 70.06,
-        "first_half_footwork_score": 79.6,
-        "second_half_footwork_score": 74.06
+        "first_half_swing_intensity": 53.12,
+        "second_half_swing_intensity": 62.8,
+        "first_half_swing_path_score": 66.66,
+        "second_half_swing_path_score": 66.4,
+        "first_half_execution_score": 76.4,
+        "second_half_execution_score": 84.4,
+        "first_half_head_quality_score": 84.14,
+        "second_half_head_quality_score": 80.22,
+        "first_half_symmetry_score": 29.7,
+        "second_half_symmetry_score": 77.68,
+        "first_half_footwork_score": 77.44,
+        "second_half_footwork_score": 75.62
       },
       "flags_summary": {
         "HEAD_LATERAL_DRIFT_count": 3,
         "HEAD_VERTICAL_DRIFT_count": 0,
         "HEAD_DUCKING_PULL_count": 0,
         "STANCE_ASYMMETRIC_count": 4,
-        "ELBOW_COLLAPSE_count": 2,
+        "ELBOW_COLLAPSE_count": 3,
         "ELBOW_REACHING_count": 3,
         "ELBOW_BEHIND_PAD_count": 0,
         "FLAT_FOOTED_count": 0,
         "LATE_PLANT_count": 1,
-        "FOOTWORK_LINE_MISMATCH_count": 2,
+        "FOOTWORK_LINE_MISMATCH_count": 3,
         "BAT_SPEED_SESSION_LOCK_count": 0
       },
       "by_shot_type": {
         "cover": {
-          "count": 1,
-          "avg_conf": 0.88,
+          "count": 8,
+          "avg_conf": 0.4,
           "swing_intensity": {
-            "mean": 52.9,
+            "mean": 53.39,
+            "std": 5.31,
+            "n": 8
+          },
+          "swing_path_score": {
+            "mean": 65.15,
+            "std": 8.86,
+            "n": 8
+          },
+          "execution_score": {
+            "mean": 87.75,
+            "std": 10.12,
+            "n": 8
+          },
+          "head_quality_score": {
+            "mean": 81.5,
+            "std": 18.91,
+            "n": 8
+          },
+          "symmetry_score": {
+            "mean": 50.73,
+            "std": 28.5,
+            "n": 8
+          },
+          "footwork_score": {
+            "mean": 74.29,
+            "std": 13.32,
+            "n": 8
+          },
+          "shot_score": {
+            "mean": 7.26,
+            "std": 0.51,
+            "n": 8
+          },
+          "elbow_breakdown": {
+            "consistent": 2,
+            "cramped": 3,
+            "reaching": 3,
+            "marginal": 0
+          },
+          "head_flag_breakdown": {
+            "HEAD_LATERAL_DRIFT": 2,
+            "HEAD_VERTICAL_DRIFT": 0,
+            "HEAD_DUCKING_PULL": 0
+          }
+        },
+        "flick": {
+          "count": 1,
+          "avg_conf": 0.86,
+          "swing_intensity": {
+            "mean": 52.5,
             "std": null,
             "n": 1
           },
           "swing_path_score": {
-            "mean": 58.6,
+            "mean": 69.1,
             "std": null,
             "n": 1
           },
           "execution_score": {
-            "mean": 88.0,
+            "mean": 56.0,
             "std": null,
             "n": 1
           },
           "head_quality_score": {
-            "mean": 97.0,
+            "mean": 72.8,
             "std": null,
             "n": 1
           },
           "symmetry_score": {
-            "mean": 20.0,
+            "mean": 50.2,
             "std": null,
             "n": 1
           },
           "footwork_score": {
-            "mean": 87.7,
+            "mean": 77.1,
             "std": null,
             "n": 1
           },
           "shot_score": {
-            "mean": 7.4,
+            "mean": 6.5,
             "std": null,
             "n": 1
           },
           "elbow_breakdown": {
             "consistent": 0,
             "cramped": 0,
-            "reaching": 1,
-            "marginal": 0
-          },
-          "head_flag_breakdown": {
-            "HEAD_LATERAL_DRIFT": 0,
-            "HEAD_VERTICAL_DRIFT": 0,
-            "HEAD_DUCKING_PULL": 0
-          }
-        },
-        "flick": {
-          "count": 7,
-          "avg_conf": 0.38,
-          "swing_intensity": {
-            "mean": 53.21,
-            "std": 5.67,
-            "n": 7
-          },
-          "swing_path_score": {
-            "mean": 67.41,
-            "std": 8.75,
-            "n": 7
-          },
-          "execution_score": {
-            "mean": 68.0,
-            "std": 8.28,
-            "n": 7
-          },
-          "head_quality_score": {
-            "mean": 73.94,
-            "std": 16.54,
-            "n": 7
-          },
-          "symmetry_score": {
-            "mean": 49.67,
-            "std": 24.3,
-            "n": 7
-          },
-          "footwork_score": {
-            "mean": 72.44,
-            "std": 12.48,
-            "n": 7
-          },
-          "shot_score": {
-            "mean": 6.64,
-            "std": 0.38,
-            "n": 7
-          },
-          "elbow_breakdown": {
-            "consistent": 2,
-            "cramped": 2,
-            "reaching": 2,
+            "reaching": 0,
             "marginal": 1
           },
           "head_flag_breakdown": {
-            "HEAD_LATERAL_DRIFT": 3,
+            "HEAD_LATERAL_DRIFT": 1,
             "HEAD_VERTICAL_DRIFT": 0,
             "HEAD_DUCKING_PULL": 0
           }
@@ -231,8 +231,8 @@
         "severity": "HIGH",
         "metric": "Ball watch",
         "flag": "HEAD_LATERAL_DRIFT",
-        "shot_type": "flick",
-        "message": "Head sliding off line on 3 shots (often the flick). Lowest score: #9 (51/100).",
+        "shot_type": "cover",
+        "message": "Head sliding off line on 3 shots (often the cover). Lowest score: #10 (51/100).",
         "player_cue": "Watch the seam onto the bat. Keep the head still \u2014 let the eyes track.",
         "drill": "20 balls on a tee at off stump; restart if your head drifts sideways."
       },
@@ -250,7 +250,7 @@
         "metric": "Bat path",
         "flag": "ELBOW_COLLAPSE",
         "shot_type": "all",
-        "message": "Bat too tight to the body on 2 shots.",
+        "message": "Bat too tight to the body on 3 shots.",
         "player_cue": "Let the ball come; keep a little room so the bat doesn't jam into the body.",
         "drill": "Underarm feeds with cones under the armpits \u2014 don't drop them for 20 balls."
       },
@@ -258,9 +258,9 @@
         "severity": "MEDIUM",
         "metric": "Reach",
         "flag": "ELBOW_REACHING",
-        "shot_type": "flick",
-        "message": "Reaching or over-hitting on 3 shots \u2014 often on the flick.",
-        "player_cue": "Let it come; soft hands on the flick \u2014 timing, not a big hit.",
+        "shot_type": "all",
+        "message": "Reaching or over-hitting on 3 shots.",
+        "player_cue": "Don't stretch; a slight bend in the arms keeps the face under control.",
         "drill": "Slower feeds; hit straight back to the feeder with the full face \u2014 25 balls."
       },
       {
@@ -268,7 +268,7 @@
         "metric": "Line of ball",
         "flag": "FOOTWORK_LINE_MISMATCH",
         "shot_type": "all",
-        "message": "Feet not moving to the line of the ball on 2 shots.",
+        "message": "Feet not moving to the line of the ball on 3 shots.",
         "player_cue": "Step or lean toward where you see the ball in the net \u2014 head stays level.",
         "drill": "Tee on three lines \u2014 hit 10 balls each stepping slightly toward each line."
       }
@@ -286,8 +286,8 @@
       },
       {
         "shot_num": 2,
-        "label": "flick",
-        "shot_score": 6.6,
+        "label": "cover",
+        "shot_score": 7.3,
         "flags_plain": [
           "Stance uneven",
           "Bat too tight to the body"
@@ -295,17 +295,18 @@
       },
       {
         "shot_num": 3,
-        "label": "flick",
-        "shot_score": 6.6,
+        "label": "cover",
+        "shot_score": 6.9,
         "flags_plain": [
           "Head shifting sideways",
-          "Stance uneven"
+          "Stance uneven",
+          "Feet not moving to the line of the ball"
         ]
       },
       {
         "shot_num": 4,
-        "label": "flick",
-        "shot_score": 7.2,
+        "label": "cover",
+        "shot_score": 7.4,
         "flags_plain": [
           "Stance uneven"
         ]
@@ -326,26 +327,34 @@
       },
       {
         "shot_num": 7,
-        "label": "flick",
-        "shot_score": 6.2,
+        "label": "cover",
+        "shot_score": 6.6,
         "flags_plain": [
-          "Flick: trying too hard",
+          "Reaching for the ball",
           "Front foot down late"
         ]
       },
       {
         "shot_num": 8,
-        "label": "flick",
-        "shot_score": 7.2,
+        "label": "cover",
+        "shot_score": 8.2,
         "flags_plain": [
-          "Flick: trying too hard",
-          "Feet not moving to the line of the ball"
+          "Bat too tight to the body"
         ]
       },
       {
         "shot_num": 9,
-        "label": "flick",
-        "shot_score": 6.2,
+        "label": "cover",
+        "shot_score": 7.7,
+        "flags_plain": [
+          "Reaching for the ball",
+          "Feet not moving to the line of the ball"
+        ]
+      },
+      {
+        "shot_num": 10,
+        "label": "cover",
+        "shot_score": 6.6,
         "flags_plain": [
           "Head shifting sideways",
           "Bat too tight to the body"
@@ -433,8 +442,8 @@
     {
       "shot_num": 2,
       "display_num": 2,
-      "label": "flick",
-      "confidence": 0.3094,
+      "label": "cover",
+      "confidence": 0.3136,
       "confirmed": true,
       "timestamp": "00:04.07",
       "annotated_timestamp_sec": 4.1333,
@@ -445,16 +454,16 @@
       "swing_path_score": 63.6,
       "swing_path_label": "OK path",
       "swing_path_note": "ok",
-      "execution_score": 68.0,
-      "execution_label": "Sensible option",
+      "execution_score": 88.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "good_length",
       "ball_line_score": 88.0,
-      "execution_length_note": "flick vs good length",
+      "execution_length_note": "cover vs good length",
       "peak_swing_speed": 29.7,
       "speed_is_capped": false,
-      "head_quality_score": 85.4,
-      "head_rule_applied": "flick",
+      "head_quality_score": 91.6,
+      "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
       "head_lateral_ratio": 0.2033,
       "head_vertical_ratio": 0.2026,
@@ -478,13 +487,13 @@
       "feet_timing_band": "early",
       "footwork_score": 83.4,
       "footwork_flag": null,
-      "shot_score": 6.6,
+      "shot_score": 7.3,
       "shot_quality": "Good",
       "flags": [
         "STANCE_ASYMMETRIC",
         "ELBOW_COLLAPSE"
       ],
-      "head_quality_label": "Stable \u2014 watching the ball",
+      "head_quality_label": "Very still \u2014 eyes on the ball",
       "symmetry_label": "Off balance",
       "swing_intensity_label": "Rhythm swing",
       "footwork_label": "Front foot used well",
@@ -497,18 +506,18 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1138,
-        "flick": 0.3094,
-        "pull": 0.1876,
-        "straight": 0.1693,
-        "sweep": 0.2199
+        "cover": 0.3136,
+        "flick": 0.1627,
+        "pull": 0.1568,
+        "straight": 0.2065,
+        "sweep": 0.1604
       }
     },
     {
       "shot_num": 3,
       "display_num": 3,
-      "label": "flick",
-      "confidence": 0.2997,
+      "label": "cover",
+      "confidence": 0.3104,
       "confirmed": true,
       "timestamp": "00:06.83",
       "annotated_timestamp_sec": 6.9666,
@@ -519,16 +528,16 @@
       "swing_path_score": 69.8,
       "swing_path_label": "Solid swing shape",
       "swing_path_note": "ok",
-      "execution_score": 68.0,
-      "execution_label": "Sensible option",
+      "execution_score": 88.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "good_length",
-      "ball_line_score": 88.0,
-      "execution_length_note": "flick vs good length",
+      "ball_line_score": 36.0,
+      "execution_length_note": "cover vs good length",
       "peak_swing_speed": 30.8,
       "speed_is_capped": false,
-      "head_quality_score": 60.4,
-      "head_rule_applied": "flick",
+      "head_quality_score": 62.3,
+      "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
       "head_lateral_ratio": 0.2745,
       "head_vertical_ratio": 0.8175,
@@ -550,39 +559,41 @@
       "plant_timing": -19,
       "feet_timing_score": 80.0,
       "feet_timing_band": "early",
-      "footwork_score": 77.1,
+      "footwork_score": 68.8,
       "footwork_flag": null,
-      "shot_score": 6.6,
+      "shot_score": 6.9,
       "shot_quality": "Good",
       "flags": [
         "HEAD_LATERAL_DRIFT",
-        "STANCE_ASYMMETRIC"
+        "STANCE_ASYMMETRIC",
+        "FOOTWORK_LINE_MISMATCH"
       ],
       "head_quality_label": "Small head movement",
       "symmetry_label": "Strongly off balance",
       "swing_intensity_label": "Rhythm swing",
-      "footwork_label": "Front foot used well",
+      "footwork_label": "Timing inconsistent \u2014 plant a touch earlier",
       "shot_quality_label": "Good",
       "flags_plain": [
         "Head shifting sideways",
-        "Stance uneven"
+        "Stance uneven",
+        "Feet not moving to the line of the ball"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1214,
-        "flick": 0.2997,
-        "pull": 0.1866,
-        "straight": 0.1643,
-        "sweep": 0.2279
+        "cover": 0.3104,
+        "flick": 0.1648,
+        "pull": 0.1536,
+        "straight": 0.2039,
+        "sweep": 0.1674
       }
     },
     {
       "shot_num": 4,
       "display_num": 4,
-      "label": "flick",
-      "confidence": 0.3354,
+      "label": "cover",
+      "confidence": 0.304,
       "confirmed": true,
       "timestamp": "00:08.60",
       "annotated_timestamp_sec": 8.7999,
@@ -593,16 +604,16 @@
       "swing_path_score": 72.2,
       "swing_path_label": "Solid swing shape",
       "swing_path_note": "ok",
-      "execution_score": 56.0,
-      "execution_label": "OK / neutral",
+      "execution_score": 62.0,
+      "execution_label": "Sensible option",
       "execution_confidence": 1.0,
       "length_zone": "short",
       "ball_line_score": 58.0,
-      "execution_length_note": "flick vs short",
+      "execution_length_note": "cover vs short",
       "peak_swing_speed": 22.2,
       "speed_is_capped": false,
       "head_quality_score": 97.0,
-      "head_rule_applied": "flick",
+      "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
       "head_lateral_ratio": 0.0629,
       "head_vertical_ratio": 0.104,
@@ -626,7 +637,7 @@
       "feet_timing_band": "on_time",
       "footwork_score": 70.2,
       "footwork_flag": null,
-      "shot_score": 7.2,
+      "shot_score": 7.4,
       "shot_quality": "Good",
       "flags": [
         "STANCE_ASYMMETRIC"
@@ -643,11 +654,11 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1052,
-        "flick": 0.3354,
-        "pull": 0.1979,
-        "straight": 0.1609,
-        "sweep": 0.2006
+        "cover": 0.304,
+        "flick": 0.1627,
+        "pull": 0.158,
+        "straight": 0.2064,
+        "sweep": 0.1688
       }
     },
     {
@@ -793,8 +804,8 @@
     {
       "shot_num": 7,
       "display_num": 7,
-      "label": "flick",
-      "confidence": 0.2854,
+      "label": "cover",
+      "confidence": 0.341,
       "confirmed": true,
       "timestamp": "00:16.60",
       "annotated_timestamp_sec": 16.9997,
@@ -805,16 +816,16 @@
       "swing_path_score": 48.0,
       "swing_path_label": "A bit tight or short",
       "swing_path_note": "too_few_wrists",
-      "execution_score": 76.0,
-      "execution_label": "Strong execution",
+      "execution_score": 94.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 58.0,
-      "execution_length_note": "flick vs full",
+      "execution_length_note": "cover vs full",
       "peak_swing_speed": 21.7,
       "speed_is_capped": false,
       "head_quality_score": 59.0,
-      "head_rule_applied": "flick",
+      "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
       "head_lateral_ratio": null,
       "head_vertical_ratio": null,
@@ -829,7 +840,7 @@
       "setup_elbow_ratio": 1.147,
       "contact_elbow_ratio": 1.749,
       "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_REACHING_FLICK",
+      "elbow_flag": "ELBOW_REACHING",
       "elbow_score": 36.0,
       "feet_active": true,
       "pre_shot_movement": 62.3,
@@ -838,38 +849,38 @@
       "feet_timing_band": "late",
       "footwork_score": 55.5,
       "footwork_flag": "LATE_PLANT",
-      "shot_score": 6.2,
-      "shot_quality": "Average",
+      "shot_score": 6.6,
+      "shot_quality": "Good",
       "flags": [
-        "ELBOW_REACHING_FLICK",
+        "ELBOW_REACHING",
         "LATE_PLANT"
       ],
       "head_quality_label": "Small head movement (approx.)",
       "symmetry_label": "Level stance",
       "swing_intensity_label": "Flowing swing",
       "footwork_label": "Timing inconsistent \u2014 plant a touch earlier",
-      "shot_quality_label": "Average",
+      "shot_quality_label": "Good",
       "flags_plain": [
-        "Flick: trying too hard",
+        "Reaching for the ball",
         "Front foot down late"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "estimated",
       "probs": {
-        "cover": 0.1231,
-        "flick": 0.2854,
-        "pull": 0.2034,
-        "straight": 0.1676,
-        "sweep": 0.2205
+        "cover": 0.341,
+        "flick": 0.1717,
+        "pull": 0.1437,
+        "straight": 0.2123,
+        "sweep": 0.1313
       }
     },
     {
       "shot_num": 8,
-      "display_num": null,
-      "label": "flick",
-      "confidence": 0.2627,
-      "confirmed": false,
+      "display_num": 8,
+      "label": "cover",
+      "confidence": 0.3323,
+      "confirmed": true,
       "timestamp": "00:19.03",
       "annotated_timestamp_sec": 19.4997,
       "peak_frame": 571,
@@ -879,16 +890,16 @@
       "swing_path_score": 59.8,
       "swing_path_label": "OK path",
       "swing_path_note": "ok",
-      "execution_score": 76.0,
-      "execution_label": "Strong execution",
+      "execution_score": 94.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 58.0,
-      "execution_length_note": "flick vs full",
+      "execution_length_note": "cover vs full",
       "peak_swing_speed": 28.7,
       "speed_is_capped": false,
-      "head_quality_score": 94.1,
-      "head_rule_applied": "flick",
+      "head_quality_score": 97.0,
+      "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
       "head_lateral_ratio": 0.1426,
       "head_vertical_ratio": 0.1328,
@@ -912,7 +923,7 @@
       "feet_timing_band": "early",
       "footwork_score": 84.9,
       "footwork_flag": null,
-      "shot_score": 7.7,
+      "shot_score": 8.2,
       "shot_quality": "Good",
       "flags": [
         "ELBOW_COLLAPSE"
@@ -929,18 +940,18 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1014,
-        "flick": 0.2627,
-        "pull": 0.2047,
-        "straight": 0.1994,
-        "sweep": 0.2318
+        "cover": 0.3323,
+        "flick": 0.1516,
+        "pull": 0.1796,
+        "straight": 0.1985,
+        "sweep": 0.1381
       }
     },
     {
       "shot_num": 9,
       "display_num": null,
-      "label": "sweep",
-      "confidence": 0.2603,
+      "label": "cover",
+      "confidence": 0.2587,
       "confirmed": false,
       "timestamp": "00:21.87",
       "annotated_timestamp_sec": 22.3997,
@@ -951,17 +962,17 @@
       "swing_path_score": 54.6,
       "swing_path_label": "OK path",
       "swing_path_note": "ok",
-      "execution_score": 46.0,
-      "execution_label": "Risky for this length",
+      "execution_score": 94.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 88.0,
-      "execution_length_note": "sweep vs full",
+      "execution_length_note": "cover vs full",
       "peak_swing_speed": 70.3,
       "speed_is_capped": false,
-      "head_quality_score": 93.0,
-      "head_rule_applied": "sweep",
-      "head_multiplier_used": 2.5,
+      "head_quality_score": 66.2,
+      "head_rule_applied": "cover",
+      "head_multiplier_used": 3.3,
       "head_lateral_ratio": 0.4915,
       "head_vertical_ratio": 0.1102,
       "head_frames_used": 26,
@@ -974,47 +985,47 @@
       "elbow_delta": -0.809,
       "setup_elbow_ratio": 1.385,
       "contact_elbow_ratio": 0.264,
-      "elbow_behind_pad": true,
-      "elbow_flag": "ELBOW_BEHIND_PAD",
+      "elbow_behind_pad": false,
+      "elbow_flag": "ELBOW_COLLAPSE",
       "elbow_score": 21.0,
       "feet_active": true,
       "pre_shot_movement": 22.3,
-      "plant_timing": -14,
-      "feet_timing_score": 65.0,
+      "plant_timing": -10,
+      "feet_timing_score": 80.0,
       "feet_timing_band": "early",
-      "footwork_score": 83.4,
+      "footwork_score": 89.7,
       "footwork_flag": null,
-      "shot_score": 6.4,
-      "shot_quality": "Average",
+      "shot_score": 6.8,
+      "shot_quality": "Good",
       "flags": [
         "HEAD_LATERAL_DRIFT",
-        "ELBOW_BEHIND_PAD"
+        "ELBOW_COLLAPSE"
       ],
-      "head_quality_label": "Very still \u2014 eyes on the ball",
+      "head_quality_label": "Head mostly quiet",
       "symmetry_label": "Off balance",
       "swing_intensity_label": "Strong, committed swing",
-      "footwork_label": "Front foot used well",
-      "shot_quality_label": "Average",
+      "footwork_label": "Good foot timing \u2014 stable at contact",
+      "shot_quality_label": "Good",
       "flags_plain": [
         "Head shifting sideways",
-        "Sweep: bat turning in early"
+        "Bat too tight to the body"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1599,
-        "flick": 0.2059,
-        "pull": 0.1966,
-        "straight": 0.1772,
-        "sweep": 0.2603
+        "cover": 0.2587,
+        "flick": 0.2014,
+        "pull": 0.1794,
+        "straight": 0.203,
+        "sweep": 0.1575
       }
     },
     {
       "shot_num": 10,
-      "display_num": 8,
-      "label": "flick",
-      "confidence": 0.2859,
+      "display_num": 9,
+      "label": "cover",
+      "confidence": 0.3508,
       "confirmed": true,
       "timestamp": "00:25.70",
       "annotated_timestamp_sec": 26.2996,
@@ -1025,16 +1036,16 @@
       "swing_path_score": 76.8,
       "swing_path_label": "Clean path",
       "swing_path_note": "ok",
-      "execution_score": 76.0,
-      "execution_label": "Strong execution",
+      "execution_score": 94.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 36.0,
-      "execution_length_note": "flick vs full",
+      "execution_length_note": "cover vs full",
       "peak_swing_speed": 36.5,
       "speed_is_capped": false,
-      "head_quality_score": 91.9,
-      "head_rule_applied": "flick",
+      "head_quality_score": 97.0,
+      "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
       "head_lateral_ratio": 0.1422,
       "head_vertical_ratio": 0.2744,
@@ -1049,7 +1060,7 @@
       "setup_elbow_ratio": 0.816,
       "contact_elbow_ratio": 1.046,
       "elbow_behind_pad": false,
-      "elbow_flag": "ELBOW_REACHING_FLICK",
+      "elbow_flag": "ELBOW_REACHING",
       "elbow_score": 36.0,
       "feet_active": true,
       "pre_shot_movement": 5.9,
@@ -1058,10 +1069,10 @@
       "feet_timing_band": "on_time",
       "footwork_score": 54.1,
       "footwork_flag": null,
-      "shot_score": 7.2,
+      "shot_score": 7.7,
       "shot_quality": "Good",
       "flags": [
-        "ELBOW_REACHING_FLICK",
+        "ELBOW_REACHING",
         "FOOTWORK_LINE_MISMATCH"
       ],
       "head_quality_label": "Very still \u2014 eyes on the ball",
@@ -1070,25 +1081,25 @@
       "footwork_label": "Front foot late \u2014 land before swing",
       "shot_quality_label": "Good",
       "flags_plain": [
-        "Flick: trying too hard",
+        "Reaching for the ball",
         "Feet not moving to the line of the ball"
       ],
       "data_quality": "good",
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1469,
-        "flick": 0.2859,
-        "pull": 0.1785,
-        "straight": 0.1633,
-        "sweep": 0.2254
+        "cover": 0.3508,
+        "flick": 0.1733,
+        "pull": 0.1507,
+        "straight": 0.2035,
+        "sweep": 0.1217
       }
     },
     {
       "shot_num": 11,
-      "display_num": 9,
-      "label": "flick",
-      "confidence": 0.3036,
+      "display_num": 10,
+      "label": "cover",
+      "confidence": 0.351,
       "confirmed": true,
       "timestamp": "00:27.67",
       "annotated_timestamp_sec": 28.3329,
@@ -1099,16 +1110,16 @@
       "swing_path_score": 72.4,
       "swing_path_label": "Solid swing shape",
       "swing_path_note": "ok",
-      "execution_score": 76.0,
-      "execution_label": "Strong execution",
+      "execution_score": 94.0,
+      "execution_label": "Excellent choice for length",
       "execution_confidence": 1.0,
       "length_zone": "full",
       "ball_line_score": 88.0,
-      "execution_length_note": "flick vs full",
+      "execution_length_note": "cover vs full",
       "peak_swing_speed": 20.8,
       "speed_is_capped": false,
       "head_quality_score": 51.1,
-      "head_rule_applied": "flick",
+      "head_rule_applied": "cover",
       "head_multiplier_used": 3.3,
       "head_lateral_ratio": 0.3448,
       "head_vertical_ratio": 1.2426,
@@ -1132,8 +1143,8 @@
       "feet_timing_band": "early",
       "footwork_score": 89.7,
       "footwork_flag": null,
-      "shot_score": 6.2,
-      "shot_quality": "Average",
+      "shot_score": 6.6,
+      "shot_quality": "Good",
       "flags": [
         "HEAD_LATERAL_DRIFT",
         "ELBOW_COLLAPSE"
@@ -1142,7 +1153,7 @@
       "symmetry_label": "Moderately open",
       "swing_intensity_label": "Flowing swing",
       "footwork_label": "Good foot timing \u2014 stable at contact",
-      "shot_quality_label": "Average",
+      "shot_quality_label": "Good",
       "flags_plain": [
         "Head shifting sideways",
         "Bat too tight to the body"
@@ -1151,11 +1162,11 @@
       "data_quality_note": "Reliable read",
       "head_confidence": "measured",
       "probs": {
-        "cover": 0.1381,
-        "flick": 0.3036,
-        "pull": 0.1746,
-        "straight": 0.1619,
-        "sweep": 0.2218
+        "cover": 0.351,
+        "flick": 0.1733,
+        "pull": 0.1427,
+        "straight": 0.2002,
+        "sweep": 0.1327
       }
     }
   ],
@@ -2417,7 +2428,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 2,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.3094,
+        "shot_classifier_conf": 0.3136,
         "shot_confirmed": true
       },
       {
@@ -2455,7 +2466,544 @@
           "reason": null
         },
         "pitch_plot": {
-          "trajectory": [],
+          "trajectory": [
+            {
+              "frame": 163,
+              "nx": 0.5253599882125854,
+              "ny": 0.3913699984550476,
+              "along_t": 0.69804,
+              "distance_from_batter_m": 7.0223,
+              "conf": 0.8934
+            },
+            {
+              "frame": 164,
+              "nx": 0.5251500010490417,
+              "ny": 0.39096999168395996,
+              "along_t": 0.69862,
+              "distance_from_batter_m": 7.0281,
+              "conf": 0.8915
+            },
+            {
+              "frame": 165,
+              "nx": 0.5233700275421143,
+              "ny": 0.39063000679016113,
+              "along_t": 0.6991,
+              "distance_from_batter_m": 7.033,
+              "conf": 0.8979
+            },
+            {
+              "frame": 166,
+              "nx": 0.523419976234436,
+              "ny": 0.39063000679016113,
+              "along_t": 0.6991,
+              "distance_from_batter_m": 7.0329,
+              "conf": 0.8975
+            },
+            {
+              "frame": 167,
+              "nx": 0.522350013256073,
+              "ny": 0.390610009431839,
+              "along_t": 0.69913,
+              "distance_from_batter_m": 7.0333,
+              "conf": 0.901
+            },
+            {
+              "frame": 168,
+              "nx": 0.5220400094985962,
+              "ny": 0.3905799984931946,
+              "along_t": 0.69917,
+              "distance_from_batter_m": 7.0336,
+              "conf": 0.8983
+            },
+            {
+              "frame": 169,
+              "nx": 0.5200799703598022,
+              "ny": 0.39111998677253723,
+              "along_t": 0.6984,
+              "distance_from_batter_m": 7.0259,
+              "conf": 0.9041
+            },
+            {
+              "frame": 170,
+              "nx": 0.5200600028038025,
+              "ny": 0.39111000299453735,
+              "along_t": 0.69841,
+              "distance_from_batter_m": 7.026,
+              "conf": 0.9043
+            },
+            {
+              "frame": 171,
+              "nx": 0.5202100276947021,
+              "ny": 0.39100000262260437,
+              "along_t": 0.69858,
+              "distance_from_batter_m": 7.0277,
+              "conf": 0.9036
+            },
+            {
+              "frame": 172,
+              "nx": 0.5193399786949158,
+              "ny": 0.3914099931716919,
+              "along_t": 0.69799,
+              "distance_from_batter_m": 7.0217,
+              "conf": 0.8996
+            },
+            {
+              "frame": 173,
+              "nx": 0.5181800127029419,
+              "ny": 0.3914799988269806,
+              "along_t": 0.69788,
+              "distance_from_batter_m": 7.0207,
+              "conf": 0.8986
+            },
+            {
+              "frame": 174,
+              "nx": 0.5182499885559082,
+              "ny": 0.3914499878883362,
+              "along_t": 0.69793,
+              "distance_from_batter_m": 7.0211,
+              "conf": 0.897
+            },
+            {
+              "frame": 175,
+              "nx": 0.5173199772834778,
+              "ny": 0.3913100063800812,
+              "along_t": 0.69813,
+              "distance_from_batter_m": 7.0232,
+              "conf": 0.9027
+            },
+            {
+              "frame": 176,
+              "nx": 0.5146899819374084,
+              "ny": 0.391510009765625,
+              "along_t": 0.69785,
+              "distance_from_batter_m": 7.0204,
+              "conf": 0.9029
+            },
+            {
+              "frame": 177,
+              "nx": 0.5111899971961975,
+              "ny": 0.39177000522613525,
+              "along_t": 0.69747,
+              "distance_from_batter_m": 7.0166,
+              "conf": 0.8982
+            },
+            {
+              "frame": 178,
+              "nx": 0.5112500190734863,
+              "ny": 0.3917199969291687,
+              "along_t": 0.69755,
+              "distance_from_batter_m": 7.0173,
+              "conf": 0.8997
+            },
+            {
+              "frame": 179,
+              "nx": 0.5082200169563293,
+              "ny": 0.390639990568161,
+              "along_t": 0.69909,
+              "distance_from_batter_m": 7.0328,
+              "conf": 0.9021
+            },
+            {
+              "frame": 180,
+              "nx": 0.504069983959198,
+              "ny": 0.391539990901947,
+              "along_t": 0.69779,
+              "distance_from_batter_m": 7.0198,
+              "conf": 0.9044
+            },
+            {
+              "frame": 181,
+              "nx": 0.4996100068092346,
+              "ny": 0.3920400142669678,
+              "along_t": 0.69708,
+              "distance_from_batter_m": 7.0127,
+              "conf": 0.8997
+            },
+            {
+              "frame": 182,
+              "nx": 0.49957001209259033,
+              "ny": 0.39204999804496765,
+              "along_t": 0.69707,
+              "distance_from_batter_m": 7.0125,
+              "conf": 0.8997
+            },
+            {
+              "frame": 183,
+              "nx": 0.49750998616218567,
+              "ny": 0.3921299874782562,
+              "along_t": 0.69696,
+              "distance_from_batter_m": 7.0114,
+              "conf": 0.8876
+            },
+            {
+              "frame": 184,
+              "nx": 0.5004500150680542,
+              "ny": 0.391759991645813,
+              "along_t": 0.69748,
+              "distance_from_batter_m": 7.0167,
+              "conf": 0.849
+            },
+            {
+              "frame": 185,
+              "nx": 0.487060010433197,
+              "ny": 0.39169999957084656,
+              "along_t": 0.69756,
+              "distance_from_batter_m": 7.0175,
+              "conf": 0.8546
+            },
+            {
+              "frame": 186,
+              "nx": 0.4871000051498413,
+              "ny": 0.3917500078678131,
+              "along_t": 0.6975,
+              "distance_from_batter_m": 7.0168,
+              "conf": 0.8551
+            },
+            {
+              "frame": 187,
+              "nx": 0.4938400089740753,
+              "ny": 0.39153000712394714,
+              "along_t": 0.69782,
+              "distance_from_batter_m": 7.0201,
+              "conf": 0.8165
+            },
+            {
+              "frame": 188,
+              "nx": 0.493010014295578,
+              "ny": 0.39282000064849854,
+              "along_t": 0.69597,
+              "distance_from_batter_m": 7.0015,
+              "conf": 0.8375
+            },
+            {
+              "frame": 189,
+              "nx": 0.48363998532295227,
+              "ny": 0.39351001381874084,
+              "along_t": 0.69499,
+              "distance_from_batter_m": 6.9916,
+              "conf": 0.7627
+            },
+            {
+              "frame": 190,
+              "nx": 0.4833900034427643,
+              "ny": 0.3934600055217743,
+              "along_t": 0.69505,
+              "distance_from_batter_m": 6.9923,
+              "conf": 0.7652
+            },
+            {
+              "frame": 191,
+              "nx": 0.4764299988746643,
+              "ny": 0.3930000066757202,
+              "along_t": 0.69571,
+              "distance_from_batter_m": 6.9988,
+              "conf": 0.743
+            },
+            {
+              "frame": 192,
+              "nx": 0.4735499918460846,
+              "ny": 0.3910300135612488,
+              "along_t": 0.69853,
+              "distance_from_batter_m": 7.0272,
+              "conf": 0.8208
+            },
+            {
+              "frame": 193,
+              "nx": 0.46873998641967773,
+              "ny": 0.3853600025177002,
+              "along_t": 0.70663,
+              "distance_from_batter_m": 7.1087,
+              "conf": 0.8384
+            },
+            {
+              "frame": 194,
+              "nx": 0.4683299958705902,
+              "ny": 0.38503000140190125,
+              "along_t": 0.70711,
+              "distance_from_batter_m": 7.1135,
+              "conf": 0.8413
+            },
+            {
+              "frame": 195,
+              "nx": 0.4653800129890442,
+              "ny": 0.3825500011444092,
+              "along_t": 0.71064,
+              "distance_from_batter_m": 7.149,
+              "conf": 0.8204
+            },
+            {
+              "frame": 196,
+              "nx": 0.4647200107574463,
+              "ny": 0.38251999020576477,
+              "along_t": 0.71068,
+              "distance_from_batter_m": 7.1494,
+              "conf": 0.7182
+            },
+            {
+              "frame": 197,
+              "nx": 0.4650300145149231,
+              "ny": 0.39625999331474304,
+              "along_t": 0.69106,
+              "distance_from_batter_m": 6.952,
+              "conf": 0.7928
+            },
+            {
+              "frame": 198,
+              "nx": 0.46511998772621155,
+              "ny": 0.3942300081253052,
+              "along_t": 0.69396,
+              "distance_from_batter_m": 6.9813,
+              "conf": 0.794
+            },
+            {
+              "frame": 199,
+              "nx": 0.46077001094818115,
+              "ny": 0.40046998858451843,
+              "along_t": 0.68505,
+              "distance_from_batter_m": 6.8916,
+              "conf": 0.848
+            },
+            {
+              "frame": 200,
+              "nx": 0.45579999685287476,
+              "ny": 0.4070900082588196,
+              "along_t": 0.67558,
+              "distance_from_batter_m": 6.7964,
+              "conf": 0.8854
+            },
+            {
+              "frame": 201,
+              "nx": 0.45306000113487244,
+              "ny": 0.4071100056171417,
+              "along_t": 0.67555,
+              "distance_from_batter_m": 6.796,
+              "conf": 0.8977
+            },
+            {
+              "frame": 202,
+              "nx": 0.45302000641822815,
+              "ny": 0.40713000297546387,
+              "along_t": 0.67553,
+              "distance_from_batter_m": 6.7958,
+              "conf": 0.8979
+            },
+            {
+              "frame": 203,
+              "nx": 0.45041999220848083,
+              "ny": 0.40904000401496887,
+              "along_t": 0.6728,
+              "distance_from_batter_m": 6.7684,
+              "conf": 0.8822
+            },
+            {
+              "frame": 204,
+              "nx": 0.4447900056838989,
+              "ny": 0.40933001041412354,
+              "along_t": 0.67238,
+              "distance_from_batter_m": 6.7641,
+              "conf": 0.8492
+            },
+            {
+              "frame": 205,
+              "nx": 0.43998000025749207,
+              "ny": 0.4101499915122986,
+              "along_t": 0.67122,
+              "distance_from_batter_m": 6.7524,
+              "conf": 0.834
+            },
+            {
+              "frame": 206,
+              "nx": 0.4398300051689148,
+              "ny": 0.41032999753952026,
+              "along_t": 0.67096,
+              "distance_from_batter_m": 6.7499,
+              "conf": 0.8305
+            },
+            {
+              "frame": 207,
+              "nx": 0.45848000049591064,
+              "ny": 0.41565999388694763,
+              "along_t": 0.66334,
+              "distance_from_batter_m": 6.6732,
+              "conf": 0.6031
+            },
+            {
+              "frame": 208,
+              "nx": 0.4209499955177307,
+              "ny": 0.41185998916625977,
+              "along_t": 0.66877,
+              "distance_from_batter_m": 6.7279,
+              "conf": 0.6719
+            },
+            {
+              "frame": 209,
+              "nx": 0.41710999608039856,
+              "ny": 0.4084300100803375,
+              "along_t": 0.67367,
+              "distance_from_batter_m": 6.7771,
+              "conf": 0.7758
+            },
+            {
+              "frame": 210,
+              "nx": 0.41701000928878784,
+              "ny": 0.40845000743865967,
+              "along_t": 0.67364,
+              "distance_from_batter_m": 6.7768,
+              "conf": 0.7841
+            },
+            {
+              "frame": 211,
+              "nx": 0.41725999116897583,
+              "ny": 0.4083400070667267,
+              "along_t": 0.6738,
+              "distance_from_batter_m": 6.7785,
+              "conf": 0.7453
+            },
+            {
+              "frame": 212,
+              "nx": 0.4244999885559082,
+              "ny": 0.4008699953556061,
+              "along_t": 0.68447,
+              "distance_from_batter_m": 6.8858,
+              "conf": 0.7661
+            },
+            {
+              "frame": 213,
+              "nx": 0.40814000368118286,
+              "ny": 0.3997400104999542,
+              "along_t": 0.68608,
+              "distance_from_batter_m": 6.902,
+              "conf": 0.742
+            },
+            {
+              "frame": 214,
+              "nx": 0.4098699986934662,
+              "ny": 0.3999499976634979,
+              "along_t": 0.68578,
+              "distance_from_batter_m": 6.899,
+              "conf": 0.7279
+            },
+            {
+              "frame": 215,
+              "nx": 0.4261299967765808,
+              "ny": 0.39969998598098755,
+              "along_t": 0.68614,
+              "distance_from_batter_m": 6.9026,
+              "conf": 0.759
+            },
+            {
+              "frame": 216,
+              "nx": 0.41223999857902527,
+              "ny": 0.3989799916744232,
+              "along_t": 0.68718,
+              "distance_from_batter_m": 6.913,
+              "conf": 0.7274
+            },
+            {
+              "frame": 217,
+              "nx": 0.40272998809814453,
+              "ny": 0.39774999022483826,
+              "along_t": 0.68893,
+              "distance_from_batter_m": 6.9306,
+              "conf": 0.8165
+            },
+            {
+              "frame": 218,
+              "nx": 0.4028500020503998,
+              "ny": 0.3977400064468384,
+              "along_t": 0.68895,
+              "distance_from_batter_m": 6.9308,
+              "conf": 0.8189
+            },
+            {
+              "frame": 219,
+              "nx": 0.4039500057697296,
+              "ny": 0.3980199992656708,
+              "along_t": 0.68854,
+              "distance_from_batter_m": 6.9267,
+              "conf": 0.8123
+            },
+            {
+              "frame": 220,
+              "nx": 0.4030500054359436,
+              "ny": 0.3982900083065033,
+              "along_t": 0.68815,
+              "distance_from_batter_m": 6.9228,
+              "conf": 0.7905
+            },
+            {
+              "frame": 221,
+              "nx": 0.40307000279426575,
+              "ny": 0.3988899886608124,
+              "along_t": 0.6873,
+              "distance_from_batter_m": 6.9143,
+              "conf": 0.8161
+            },
+            {
+              "frame": 222,
+              "nx": 0.40323999524116516,
+              "ny": 0.3988400101661682,
+              "along_t": 0.68737,
+              "distance_from_batter_m": 6.9149,
+              "conf": 0.8076
+            },
+            {
+              "frame": 223,
+              "nx": 0.4021899998188019,
+              "ny": 0.3984600007534027,
+              "along_t": 0.68792,
+              "distance_from_batter_m": 6.9205,
+              "conf": 0.8317
+            },
+            {
+              "frame": 224,
+              "nx": 0.40220001339912415,
+              "ny": 0.39844998717308044,
+              "along_t": 0.68793,
+              "distance_from_batter_m": 6.9206,
+              "conf": 0.8137
+            },
+            {
+              "frame": 225,
+              "nx": 0.40191999077796936,
+              "ny": 0.39840999245643616,
+              "along_t": 0.68798,
+              "distance_from_batter_m": 6.9211,
+              "conf": 0.8249
+            },
+            {
+              "frame": 226,
+              "nx": 0.4019399881362915,
+              "ny": 0.39836999773979187,
+              "along_t": 0.68804,
+              "distance_from_batter_m": 6.9217,
+              "conf": 0.8221
+            },
+            {
+              "frame": 227,
+              "nx": 0.4023599922657013,
+              "ny": 0.3978300094604492,
+              "along_t": 0.68881,
+              "distance_from_batter_m": 6.9295,
+              "conf": 0.8279
+            },
+            {
+              "frame": 228,
+              "nx": 0.4023599922657013,
+              "ny": 0.39796000719070435,
+              "along_t": 0.68862,
+              "distance_from_batter_m": 6.9276,
+              "conf": 0.8325
+            },
+            {
+              "frame": 229,
+              "nx": 0.46121999621391296,
+              "ny": 0.19011999666690826,
+              "along_t": 0.98554,
+              "distance_from_batter_m": 9.9145,
+              "conf": 0.8324
+            }
+          ],
           "bounce": {
             "nx": 0.40236,
             "ny": 0.39796,
@@ -2476,8 +3024,8 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 3,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2997,
-        "shot_confirmed": false
+        "shot_classifier_conf": 0.3104,
+        "shot_confirmed": true
       },
       {
         "delivery_id": "d4",
@@ -2952,7 +3500,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 4,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.3354,
+        "shot_classifier_conf": 0.304,
         "shot_confirmed": true
       },
       {
@@ -4185,7 +4733,496 @@
           "reason": null
         },
         "pitch_plot": {
-          "trajectory": [],
+          "trajectory": [
+            {
+              "frame": 462,
+              "nx": 0.5875300168991089,
+              "ny": 0.46535998582839966,
+              "along_t": 0.59234,
+              "distance_from_batter_m": 5.959,
+              "conf": 0.8815
+            },
+            {
+              "frame": 463,
+              "nx": 0.5913199782371521,
+              "ny": 0.4645799994468689,
+              "along_t": 0.59345,
+              "distance_from_batter_m": 5.9701,
+              "conf": 0.8665
+            },
+            {
+              "frame": 464,
+              "nx": 0.5905699729919434,
+              "ny": 0.46351000666618347,
+              "along_t": 0.59498,
+              "distance_from_batter_m": 5.9855,
+              "conf": 0.84
+            },
+            {
+              "frame": 465,
+              "nx": 0.5881100296974182,
+              "ny": 0.4657999873161316,
+              "along_t": 0.59171,
+              "distance_from_batter_m": 5.9526,
+              "conf": 0.8947
+            },
+            {
+              "frame": 466,
+              "nx": 0.582260012626648,
+              "ny": 0.4668000042438507,
+              "along_t": 0.59029,
+              "distance_from_batter_m": 5.9383,
+              "conf": 0.9014
+            },
+            {
+              "frame": 467,
+              "nx": 0.5716500282287598,
+              "ny": 0.46654000878334045,
+              "along_t": 0.59066,
+              "distance_from_batter_m": 5.942,
+              "conf": 0.854
+            },
+            {
+              "frame": 468,
+              "nx": 0.5625200271606445,
+              "ny": 0.4673500061035156,
+              "along_t": 0.58949,
+              "distance_from_batter_m": 5.9303,
+              "conf": 0.8804
+            },
+            {
+              "frame": 469,
+              "nx": 0.5615100264549255,
+              "ny": 0.4663499891757965,
+              "along_t": 0.59092,
+              "distance_from_batter_m": 5.9447,
+              "conf": 0.881
+            },
+            {
+              "frame": 470,
+              "nx": 0.5597000122070312,
+              "ny": 0.46825000643730164,
+              "along_t": 0.58821,
+              "distance_from_batter_m": 5.9174,
+              "conf": 0.9088
+            },
+            {
+              "frame": 471,
+              "nx": 0.559909999370575,
+              "ny": 0.46733999252319336,
+              "along_t": 0.58952,
+              "distance_from_batter_m": 5.9305,
+              "conf": 0.905
+            },
+            {
+              "frame": 472,
+              "nx": 0.5600000023841858,
+              "ny": 0.4660699963569641,
+              "along_t": 0.59133,
+              "distance_from_batter_m": 5.9488,
+              "conf": 0.828
+            },
+            {
+              "frame": 473,
+              "nx": 0.5907899737358093,
+              "ny": 0.4702500104904175,
+              "along_t": 0.58536,
+              "distance_from_batter_m": 5.8887,
+              "conf": 0.7922
+            },
+            {
+              "frame": 474,
+              "nx": 0.5560899972915649,
+              "ny": 0.47297000885009766,
+              "along_t": 0.58147,
+              "distance_from_batter_m": 5.8496,
+              "conf": 0.81
+            },
+            {
+              "frame": 475,
+              "nx": 0.5513100028038025,
+              "ny": 0.47473999857902527,
+              "along_t": 0.57895,
+              "distance_from_batter_m": 5.8242,
+              "conf": 0.8723
+            },
+            {
+              "frame": 476,
+              "nx": 0.5433099865913391,
+              "ny": 0.47510001063346863,
+              "along_t": 0.57843,
+              "distance_from_batter_m": 5.819,
+              "conf": 0.8636
+            },
+            {
+              "frame": 477,
+              "nx": 0.5291299819946289,
+              "ny": 0.477400004863739,
+              "along_t": 0.57515,
+              "distance_from_batter_m": 5.786,
+              "conf": 0.8336
+            },
+            {
+              "frame": 478,
+              "nx": 0.5238900184631348,
+              "ny": 0.47694000601768494,
+              "along_t": 0.5758,
+              "distance_from_batter_m": 5.7926,
+              "conf": 0.8218
+            },
+            {
+              "frame": 479,
+              "nx": 0.5108100175857544,
+              "ny": 0.47982001304626465,
+              "along_t": 0.57168,
+              "distance_from_batter_m": 5.7511,
+              "conf": 0.8666
+            },
+            {
+              "frame": 480,
+              "nx": 0.5061200261116028,
+              "ny": 0.48069000244140625,
+              "along_t": 0.57044,
+              "distance_from_batter_m": 5.7386,
+              "conf": 0.8854
+            },
+            {
+              "frame": 481,
+              "nx": 0.49292001128196716,
+              "ny": 0.481220006942749,
+              "along_t": 0.56969,
+              "distance_from_batter_m": 5.7311,
+              "conf": 0.8878
+            },
+            {
+              "frame": 482,
+              "nx": 0.4825800061225891,
+              "ny": 0.48319000005722046,
+              "along_t": 0.56688,
+              "distance_from_batter_m": 5.7028,
+              "conf": 0.8829
+            },
+            {
+              "frame": 483,
+              "nx": 0.4757300019264221,
+              "ny": 0.48535001277923584,
+              "along_t": 0.56378,
+              "distance_from_batter_m": 5.6716,
+              "conf": 0.8838
+            },
+            {
+              "frame": 484,
+              "nx": 0.4705899953842163,
+              "ny": 0.48712998628616333,
+              "along_t": 0.56125,
+              "distance_from_batter_m": 5.6461,
+              "conf": 0.899
+            },
+            {
+              "frame": 485,
+              "nx": 0.46316999197006226,
+              "ny": 0.48875001072883606,
+              "along_t": 0.55893,
+              "distance_from_batter_m": 5.6228,
+              "conf": 0.8903
+            },
+            {
+              "frame": 486,
+              "nx": 0.45820000767707825,
+              "ny": 0.4889200031757355,
+              "along_t": 0.55868,
+              "distance_from_batter_m": 5.6204,
+              "conf": 0.8821
+            },
+            {
+              "frame": 487,
+              "nx": 0.458189994096756,
+              "ny": 0.4889200031757355,
+              "along_t": 0.55869,
+              "distance_from_batter_m": 5.6204,
+              "conf": 0.8819
+            },
+            {
+              "frame": 488,
+              "nx": 0.45827001333236694,
+              "ny": 0.48892998695373535,
+              "along_t": 0.55867,
+              "distance_from_batter_m": 5.6203,
+              "conf": 0.8821
+            },
+            {
+              "frame": 489,
+              "nx": 0.483240008354187,
+              "ny": 0.5753999948501587,
+              "along_t": 0.43514,
+              "distance_from_batter_m": 4.3775,
+              "conf": 0.7693
+            },
+            {
+              "frame": 490,
+              "nx": 0.491100013256073,
+              "ny": 0.5756800174713135,
+              "along_t": 0.43474,
+              "distance_from_batter_m": 4.3734,
+              "conf": 0.7392
+            },
+            {
+              "frame": 491,
+              "nx": 0.49175000190734863,
+              "ny": 0.57573002576828,
+              "along_t": 0.43467,
+              "distance_from_batter_m": 4.3728,
+              "conf": 0.7406
+            },
+            {
+              "frame": 492,
+              "nx": 0.4845399856567383,
+              "ny": 0.575760006904602,
+              "along_t": 0.43463,
+              "distance_from_batter_m": 4.3724,
+              "conf": 0.7312
+            },
+            {
+              "frame": 493,
+              "nx": 0.4984700083732605,
+              "ny": 0.5762900114059448,
+              "along_t": 0.43386,
+              "distance_from_batter_m": 4.3647,
+              "conf": 0.7797
+            },
+            {
+              "frame": 494,
+              "nx": 0.49601998925209045,
+              "ny": 0.576170027256012,
+              "along_t": 0.43404,
+              "distance_from_batter_m": 4.3665,
+              "conf": 0.7693
+            },
+            {
+              "frame": 495,
+              "nx": 0.48993998765945435,
+              "ny": 0.5757399797439575,
+              "along_t": 0.43466,
+              "distance_from_batter_m": 4.3727,
+              "conf": 0.7976
+            },
+            {
+              "frame": 496,
+              "nx": 0.48993000388145447,
+              "ny": 0.5759099721908569,
+              "along_t": 0.43442,
+              "distance_from_batter_m": 4.3702,
+              "conf": 0.7011
+            },
+            {
+              "frame": 497,
+              "nx": 0.4888699948787689,
+              "ny": 0.5751199722290039,
+              "along_t": 0.43555,
+              "distance_from_batter_m": 4.3816,
+              "conf": 0.7104
+            },
+            {
+              "frame": 498,
+              "nx": 0.49838998913764954,
+              "ny": 0.5770699977874756,
+              "along_t": 0.43276,
+              "distance_from_batter_m": 4.3536,
+              "conf": 0.7155
+            },
+            {
+              "frame": 499,
+              "nx": 0.5003700256347656,
+              "ny": 0.5853000283241272,
+              "along_t": 0.421,
+              "distance_from_batter_m": 4.2353,
+              "conf": 0.8053
+            },
+            {
+              "frame": 500,
+              "nx": 0.4994699954986572,
+              "ny": 0.5852199792861938,
+              "along_t": 0.42112,
+              "distance_from_batter_m": 4.2365,
+              "conf": 0.8166
+            },
+            {
+              "frame": 501,
+              "nx": 0.4998599886894226,
+              "ny": 0.5853300094604492,
+              "along_t": 0.42095,
+              "distance_from_batter_m": 4.2348,
+              "conf": 0.8314
+            },
+            {
+              "frame": 502,
+              "nx": 0.45059001445770264,
+              "ny": 0.5843200087547302,
+              "along_t": 0.42241,
+              "distance_from_batter_m": 4.2494,
+              "conf": 0.7986
+            },
+            {
+              "frame": 503,
+              "nx": 0.45017001032829285,
+              "ny": 0.5846999883651733,
+              "along_t": 0.42186,
+              "distance_from_batter_m": 4.2439,
+              "conf": 0.8148
+            },
+            {
+              "frame": 504,
+              "nx": 0.44971001148223877,
+              "ny": 0.5847399830818176,
+              "along_t": 0.42179,
+              "distance_from_batter_m": 4.2432,
+              "conf": 0.831
+            },
+            {
+              "frame": 505,
+              "nx": 0.4520600140094757,
+              "ny": 0.5838000178337097,
+              "along_t": 0.42314,
+              "distance_from_batter_m": 4.2568,
+              "conf": 0.8026
+            },
+            {
+              "frame": 506,
+              "nx": 0.451229989528656,
+              "ny": 0.583840012550354,
+              "along_t": 0.42308,
+              "distance_from_batter_m": 4.2562,
+              "conf": 0.8172
+            },
+            {
+              "frame": 507,
+              "nx": 0.4515500068664551,
+              "ny": 0.5839200019836426,
+              "along_t": 0.42297,
+              "distance_from_batter_m": 4.2551,
+              "conf": 0.8178
+            },
+            {
+              "frame": 508,
+              "nx": 0.4546799957752228,
+              "ny": 0.5838599801063538,
+              "along_t": 0.42306,
+              "distance_from_batter_m": 4.2559,
+              "conf": 0.8113
+            },
+            {
+              "frame": 509,
+              "nx": 0.45820000767707825,
+              "ny": 0.5915300250053406,
+              "along_t": 0.4121,
+              "distance_from_batter_m": 4.1457,
+              "conf": 0.7539
+            },
+            {
+              "frame": 510,
+              "nx": 0.4597899913787842,
+              "ny": 0.5924199819564819,
+              "along_t": 0.41083,
+              "distance_from_batter_m": 4.133,
+              "conf": 0.782
+            },
+            {
+              "frame": 511,
+              "nx": 0.4583500027656555,
+              "ny": 0.5924699902534485,
+              "along_t": 0.41075,
+              "distance_from_batter_m": 4.1322,
+              "conf": 0.7555
+            },
+            {
+              "frame": 512,
+              "nx": 0.4702099859714508,
+              "ny": 0.597599983215332,
+              "along_t": 0.40343,
+              "distance_from_batter_m": 4.0586,
+              "conf": 0.8466
+            },
+            {
+              "frame": 513,
+              "nx": 0.46351000666618347,
+              "ny": 0.5979200005531311,
+              "along_t": 0.40297,
+              "distance_from_batter_m": 4.0538,
+              "conf": 0.8482
+            },
+            {
+              "frame": 514,
+              "nx": 0.4634299874305725,
+              "ny": 0.5978000164031982,
+              "along_t": 0.40314,
+              "distance_from_batter_m": 4.0556,
+              "conf": 0.8459
+            },
+            {
+              "frame": 515,
+              "nx": 0.4925200045108795,
+              "ny": 0.5957300066947937,
+              "along_t": 0.4061,
+              "distance_from_batter_m": 4.0854,
+              "conf": 0.7186
+            },
+            {
+              "frame": 516,
+              "nx": 0.4913400113582611,
+              "ny": 0.5960900187492371,
+              "along_t": 0.40559,
+              "distance_from_batter_m": 4.0802,
+              "conf": 0.7317
+            },
+            {
+              "frame": 517,
+              "nx": 0.4946799874305725,
+              "ny": 0.5959500074386597,
+              "along_t": 0.40579,
+              "distance_from_batter_m": 4.0823,
+              "conf": 0.713
+            },
+            {
+              "frame": 518,
+              "nx": 0.44846001267433167,
+              "ny": 0.5976499915122986,
+              "along_t": 0.40336,
+              "distance_from_batter_m": 4.0578,
+              "conf": 0.7861
+            },
+            {
+              "frame": 519,
+              "nx": 0.4534600079059601,
+              "ny": 0.5978400111198425,
+              "along_t": 0.40308,
+              "distance_from_batter_m": 4.055,
+              "conf": 0.7295
+            },
+            {
+              "frame": 520,
+              "nx": 0.44679000973701477,
+              "ny": 0.5977200269699097,
+              "along_t": 0.40326,
+              "distance_from_batter_m": 4.0568,
+              "conf": 0.823
+            },
+            {
+              "frame": 521,
+              "nx": 0.4489000141620636,
+              "ny": 0.600629985332489,
+              "along_t": 0.3991,
+              "distance_from_batter_m": 4.0149,
+              "conf": 0.7345
+            },
+            {
+              "frame": 522,
+              "nx": 0.4493100047111511,
+              "ny": 0.600629985332489,
+              "along_t": 0.39909,
+              "distance_from_batter_m": 4.0149,
+              "conf": 0.7558
+            }
+          ],
           "bounce": {
             "nx": 0.49468,
             "ny": 0.59595,
@@ -4204,8 +5241,8 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 7,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2854,
-        "shot_confirmed": false
+        "shot_classifier_conf": 0.341,
+        "shot_confirmed": true
       },
       {
         "delivery_id": "d8",
@@ -4240,7 +5277,504 @@
           "reason": null
         },
         "pitch_plot": {
-          "trajectory": [],
+          "trajectory": [
+            {
+              "frame": 534,
+              "nx": 0.5088800191879272,
+              "ny": 0.6332700252532959,
+              "along_t": 0.35247,
+              "distance_from_batter_m": 3.5458,
+              "conf": 0.7073
+            },
+            {
+              "frame": 535,
+              "nx": 0.5091300010681152,
+              "ny": 0.6325299739837646,
+              "along_t": 0.35353,
+              "distance_from_batter_m": 3.5565,
+              "conf": 0.6846
+            },
+            {
+              "frame": 536,
+              "nx": 0.4658600091934204,
+              "ny": 0.5677199959754944,
+              "along_t": 0.44611,
+              "distance_from_batter_m": 4.4879,
+              "conf": 0.5493
+            },
+            {
+              "frame": 537,
+              "nx": 0.4645400047302246,
+              "ny": 0.5672799944877625,
+              "along_t": 0.44674,
+              "distance_from_batter_m": 4.4942,
+              "conf": 0.5684
+            },
+            {
+              "frame": 538,
+              "nx": 0.5223000049591064,
+              "ny": 0.6768199801445007,
+              "along_t": 0.29026,
+              "distance_from_batter_m": 2.92,
+              "conf": 0.593
+            },
+            {
+              "frame": 539,
+              "nx": 0.4879299998283386,
+              "ny": 0.5714499950408936,
+              "along_t": 0.44078,
+              "distance_from_batter_m": 4.4343,
+              "conf": 0.848
+            },
+            {
+              "frame": 540,
+              "nx": 0.48598000407218933,
+              "ny": 0.5697799921035767,
+              "along_t": 0.44318,
+              "distance_from_batter_m": 4.4584,
+              "conf": 0.82
+            },
+            {
+              "frame": 541,
+              "nx": 0.48614999651908875,
+              "ny": 0.5694900155067444,
+              "along_t": 0.44359,
+              "distance_from_batter_m": 4.4625,
+              "conf": 0.8039
+            },
+            {
+              "frame": 542,
+              "nx": 0.5433899760246277,
+              "ny": 0.5682500004768372,
+              "along_t": 0.44536,
+              "distance_from_batter_m": 4.4803,
+              "conf": 0.8391
+            },
+            {
+              "frame": 543,
+              "nx": 0.5435900092124939,
+              "ny": 0.5685700178146362,
+              "along_t": 0.44489,
+              "distance_from_batter_m": 4.4756,
+              "conf": 0.8332
+            },
+            {
+              "frame": 544,
+              "nx": 0.5412899851799011,
+              "ny": 0.5682700276374817,
+              "along_t": 0.44533,
+              "distance_from_batter_m": 4.48,
+              "conf": 0.824
+            },
+            {
+              "frame": 545,
+              "nx": 0.5250499844551086,
+              "ny": 0.5640599727630615,
+              "along_t": 0.45134,
+              "distance_from_batter_m": 4.5405,
+              "conf": 0.8374
+            },
+            {
+              "frame": 546,
+              "nx": 0.5247700214385986,
+              "ny": 0.5641099810600281,
+              "along_t": 0.45128,
+              "distance_from_batter_m": 4.5398,
+              "conf": 0.8386
+            },
+            {
+              "frame": 547,
+              "nx": 0.5298600196838379,
+              "ny": 0.5633100271224976,
+              "along_t": 0.45241,
+              "distance_from_batter_m": 4.5513,
+              "conf": 0.7026
+            },
+            {
+              "frame": 548,
+              "nx": 0.528689980506897,
+              "ny": 0.5610899925231934,
+              "along_t": 0.45558,
+              "distance_from_batter_m": 4.5832,
+              "conf": 0.6028
+            },
+            {
+              "frame": 549,
+              "nx": 0.52947998046875,
+              "ny": 0.5605199933052063,
+              "along_t": 0.4564,
+              "distance_from_batter_m": 4.5914,
+              "conf": 0.6552
+            },
+            {
+              "frame": 550,
+              "nx": 0.5117899775505066,
+              "ny": 0.5194100141525269,
+              "along_t": 0.51513,
+              "distance_from_batter_m": 5.1822,
+              "conf": 0.8072
+            },
+            {
+              "frame": 551,
+              "nx": 0.5135800242424011,
+              "ny": 0.5195199847221375,
+              "along_t": 0.51497,
+              "distance_from_batter_m": 5.1806,
+              "conf": 0.8054
+            },
+            {
+              "frame": 552,
+              "nx": 0.5080199837684631,
+              "ny": 0.5192499756813049,
+              "along_t": 0.51536,
+              "distance_from_batter_m": 5.1845,
+              "conf": 0.7565
+            },
+            {
+              "frame": 553,
+              "nx": 0.4456300139427185,
+              "ny": 0.51978999376297,
+              "along_t": 0.51459,
+              "distance_from_batter_m": 5.1767,
+              "conf": 0.7614
+            },
+            {
+              "frame": 554,
+              "nx": 0.44839999079704285,
+              "ny": 0.51596999168396,
+              "along_t": 0.52005,
+              "distance_from_batter_m": 5.2317,
+              "conf": 0.7564
+            },
+            {
+              "frame": 555,
+              "nx": 0.49889999628067017,
+              "ny": 0.5190100073814392,
+              "along_t": 0.5157,
+              "distance_from_batter_m": 5.188,
+              "conf": 0.7112
+            },
+            {
+              "frame": 556,
+              "nx": 0.447270005941391,
+              "ny": 0.5148900151252747,
+              "along_t": 0.52158,
+              "distance_from_batter_m": 5.2471,
+              "conf": 0.7827
+            },
+            {
+              "frame": 557,
+              "nx": 0.48252999782562256,
+              "ny": 0.5189999938011169,
+              "along_t": 0.51572,
+              "distance_from_batter_m": 5.1881,
+              "conf": 0.7075
+            },
+            {
+              "frame": 558,
+              "nx": 0.46480000019073486,
+              "ny": 0.5206900238990784,
+              "along_t": 0.5133,
+              "distance_from_batter_m": 5.1637,
+              "conf": 0.7144
+            },
+            {
+              "frame": 559,
+              "nx": 0.49213001132011414,
+              "ny": 0.5214599967002869,
+              "along_t": 0.5122,
+              "distance_from_batter_m": 5.1527,
+              "conf": 0.697
+            },
+            {
+              "frame": 560,
+              "nx": 0.49039000272750854,
+              "ny": 0.5214700102806091,
+              "along_t": 0.51219,
+              "distance_from_batter_m": 5.1527,
+              "conf": 0.6789
+            },
+            {
+              "frame": 561,
+              "nx": 0.4997900128364563,
+              "ny": 0.519349992275238,
+              "along_t": 0.51521,
+              "distance_from_batter_m": 5.183,
+              "conf": 0.7709
+            },
+            {
+              "frame": 562,
+              "nx": 0.4820599853992462,
+              "ny": 0.5174999833106995,
+              "along_t": 0.51785,
+              "distance_from_batter_m": 5.2096,
+              "conf": 0.7381
+            },
+            {
+              "frame": 563,
+              "nx": 0.4690699875354767,
+              "ny": 0.5199300050735474,
+              "along_t": 0.51439,
+              "distance_from_batter_m": 5.1747,
+              "conf": 0.7707
+            },
+            {
+              "frame": 564,
+              "nx": 0.4993399977684021,
+              "ny": 0.5259400010108948,
+              "along_t": 0.50579,
+              "distance_from_batter_m": 5.0883,
+              "conf": 0.8276
+            },
+            {
+              "frame": 565,
+              "nx": 0.4981200098991394,
+              "ny": 0.5252599716186523,
+              "along_t": 0.50678,
+              "distance_from_batter_m": 5.0982,
+              "conf": 0.8238
+            },
+            {
+              "frame": 566,
+              "nx": 0.5000399947166443,
+              "ny": 0.5237500071525574,
+              "along_t": 0.50893,
+              "distance_from_batter_m": 5.1199,
+              "conf": 0.8492
+            },
+            {
+              "frame": 567,
+              "nx": 0.4949699938297272,
+              "ny": 0.5271499752998352,
+              "along_t": 0.50407,
+              "distance_from_batter_m": 5.0709,
+              "conf": 0.853
+            },
+            {
+              "frame": 568,
+              "nx": 0.498879998922348,
+              "ny": 0.527400016784668,
+              "along_t": 0.50372,
+              "distance_from_batter_m": 5.0674,
+              "conf": 0.8658
+            },
+            {
+              "frame": 569,
+              "nx": 0.498089998960495,
+              "ny": 0.5270199775695801,
+              "along_t": 0.50426,
+              "distance_from_batter_m": 5.0728,
+              "conf": 0.8766
+            },
+            {
+              "frame": 570,
+              "nx": 0.4983699917793274,
+              "ny": 0.5277500152587891,
+              "along_t": 0.50322,
+              "distance_from_batter_m": 5.0624,
+              "conf": 0.878
+            },
+            {
+              "frame": 571,
+              "nx": 0.49678999185562134,
+              "ny": 0.5276600122451782,
+              "along_t": 0.50335,
+              "distance_from_batter_m": 5.0637,
+              "conf": 0.8726
+            },
+            {
+              "frame": 572,
+              "nx": 0.48785001039505005,
+              "ny": 0.5241199731826782,
+              "along_t": 0.5084,
+              "distance_from_batter_m": 5.1145,
+              "conf": 0.8402
+            },
+            {
+              "frame": 573,
+              "nx": 0.49028000235557556,
+              "ny": 0.5200300216674805,
+              "along_t": 0.51425,
+              "distance_from_batter_m": 5.1733,
+              "conf": 0.8376
+            },
+            {
+              "frame": 574,
+              "nx": 0.17855000495910645,
+              "ny": 0.623449981212616,
+              "along_t": 0.3665,
+              "distance_from_batter_m": 3.687,
+              "conf": 0.8609
+            },
+            {
+              "frame": 575,
+              "nx": 0.4783700108528137,
+              "ny": 0.5083799958229065,
+              "along_t": 0.53089,
+              "distance_from_batter_m": 5.3408,
+              "conf": 0.7851
+            },
+            {
+              "frame": 576,
+              "nx": 0.48636001348495483,
+              "ny": 0.5102199912071228,
+              "along_t": 0.52826,
+              "distance_from_batter_m": 5.3143,
+              "conf": 0.7914
+            },
+            {
+              "frame": 577,
+              "nx": 0.4761500060558319,
+              "ny": 0.48361000418663025,
+              "along_t": 0.56627,
+              "distance_from_batter_m": 5.6967,
+              "conf": 0.7912
+            },
+            {
+              "frame": 578,
+              "nx": 0.48917001485824585,
+              "ny": 0.5278199911117554,
+              "along_t": 0.50311,
+              "distance_from_batter_m": 5.0613,
+              "conf": 0.8363
+            },
+            {
+              "frame": 579,
+              "nx": 0.48895999789237976,
+              "ny": 0.5288000106811523,
+              "along_t": 0.50172,
+              "distance_from_batter_m": 5.0473,
+              "conf": 0.856
+            },
+            {
+              "frame": 580,
+              "nx": 0.48697999119758606,
+              "ny": 0.5222100019454956,
+              "along_t": 0.51114,
+              "distance_from_batter_m": 5.142,
+              "conf": 0.8708
+            },
+            {
+              "frame": 581,
+              "nx": 0.48715999722480774,
+              "ny": 0.5119799971580505,
+              "along_t": 0.52574,
+              "distance_from_batter_m": 5.289,
+              "conf": 0.8642
+            },
+            {
+              "frame": 582,
+              "nx": 0.48721998929977417,
+              "ny": 0.5328800082206726,
+              "along_t": 0.49589,
+              "distance_from_batter_m": 4.9886,
+              "conf": 0.873
+            },
+            {
+              "frame": 583,
+              "nx": 0.4808799922466278,
+              "ny": 0.5341500043869019,
+              "along_t": 0.49408,
+              "distance_from_batter_m": 4.9704,
+              "conf": 0.8747
+            },
+            {
+              "frame": 584,
+              "nx": 0.47846001386642456,
+              "ny": 0.5337499976158142,
+              "along_t": 0.49464,
+              "distance_from_batter_m": 4.9761,
+              "conf": 0.8654
+            },
+            {
+              "frame": 585,
+              "nx": 0.47760000824928284,
+              "ny": 0.5341799855232239,
+              "along_t": 0.49404,
+              "distance_from_batter_m": 4.97,
+              "conf": 0.8633
+            },
+            {
+              "frame": 586,
+              "nx": 0.47832000255584717,
+              "ny": 0.5392500162124634,
+              "along_t": 0.48678,
+              "distance_from_batter_m": 4.897,
+              "conf": 0.8803
+            },
+            {
+              "frame": 587,
+              "nx": 0.4778499901294708,
+              "ny": 0.5390300154685974,
+              "along_t": 0.4871,
+              "distance_from_batter_m": 4.9002,
+              "conf": 0.8891
+            },
+            {
+              "frame": 588,
+              "nx": 0.47714000940322876,
+              "ny": 0.536549985408783,
+              "along_t": 0.49065,
+              "distance_from_batter_m": 4.9359,
+              "conf": 0.9045
+            },
+            {
+              "frame": 589,
+              "nx": 0.4779900014400482,
+              "ny": 0.538320004940033,
+              "along_t": 0.48812,
+              "distance_from_batter_m": 4.9104,
+              "conf": 0.8933
+            },
+            {
+              "frame": 590,
+              "nx": 0.47846999764442444,
+              "ny": 0.5390499830245972,
+              "along_t": 0.48708,
+              "distance_from_batter_m": 4.9,
+              "conf": 0.8867
+            },
+            {
+              "frame": 591,
+              "nx": 0.47975000739097595,
+              "ny": 0.5400999784469604,
+              "along_t": 0.48557,
+              "distance_from_batter_m": 4.8848,
+              "conf": 0.8637
+            },
+            {
+              "frame": 592,
+              "nx": 0.4810500144958496,
+              "ny": 0.5411499738693237,
+              "along_t": 0.48407,
+              "distance_from_batter_m": 4.8698,
+              "conf": 0.871
+            },
+            {
+              "frame": 593,
+              "nx": 0.4814999997615814,
+              "ny": 0.5395699739456177,
+              "along_t": 0.48633,
+              "distance_from_batter_m": 4.8925,
+              "conf": 0.8546
+            },
+            {
+              "frame": 594,
+              "nx": 0.4828700125217438,
+              "ny": 0.5382199883460999,
+              "along_t": 0.48825,
+              "distance_from_batter_m": 4.9118,
+              "conf": 0.8636
+            },
+            {
+              "frame": 595,
+              "nx": 0.485370010137558,
+              "ny": 0.5390700101852417,
+              "along_t": 0.48705,
+              "distance_from_batter_m": 4.8997,
+              "conf": 0.8902
+            }
+          ],
           "bounce": {
             "nx": 0.48253,
             "ny": 0.519,
@@ -4259,8 +5793,8 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 8,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2627,
-        "shot_confirmed": false
+        "shot_classifier_conf": 0.3323,
+        "shot_confirmed": true
       },
       {
         "delivery_id": "d9",
@@ -4314,7 +5848,7 @@
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 9,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2603,
+        "shot_classifier_conf": 0.2587,
         "shot_confirmed": false
       },
       {
@@ -4351,7 +5885,616 @@
           "reason": null
         },
         "pitch_plot": {
-          "trajectory": [],
+          "trajectory": [
+            {
+              "frame": 719,
+              "nx": 0.6387199759483337,
+              "ny": 0.542739987373352,
+              "along_t": 0.4818,
+              "distance_from_batter_m": 4.8469,
+              "conf": 0.8708
+            },
+            {
+              "frame": 720,
+              "nx": 0.6330199837684631,
+              "ny": 0.5425300002098083,
+              "along_t": 0.4821,
+              "distance_from_batter_m": 4.8499,
+              "conf": 0.8428
+            },
+            {
+              "frame": 721,
+              "nx": 0.6334900259971619,
+              "ny": 0.5424699783325195,
+              "along_t": 0.48218,
+              "distance_from_batter_m": 4.8507,
+              "conf": 0.8433
+            },
+            {
+              "frame": 722,
+              "nx": 0.6270700097084045,
+              "ny": 0.5440599918365479,
+              "along_t": 0.47992,
+              "distance_from_batter_m": 4.828,
+              "conf": 0.8229
+            },
+            {
+              "frame": 723,
+              "nx": 0.6283000111579895,
+              "ny": 0.5442299842834473,
+              "along_t": 0.47967,
+              "distance_from_batter_m": 4.8255,
+              "conf": 0.8191
+            },
+            {
+              "frame": 724,
+              "nx": 0.6273400187492371,
+              "ny": 0.545520007610321,
+              "along_t": 0.47783,
+              "distance_from_batter_m": 4.807,
+              "conf": 0.8339
+            },
+            {
+              "frame": 725,
+              "nx": 0.6252700090408325,
+              "ny": 0.5456900000572205,
+              "along_t": 0.47759,
+              "distance_from_batter_m": 4.8045,
+              "conf": 0.8469
+            },
+            {
+              "frame": 726,
+              "nx": 0.6206499934196472,
+              "ny": 0.544730007648468,
+              "along_t": 0.47896,
+              "distance_from_batter_m": 4.8184,
+              "conf": 0.8414
+            },
+            {
+              "frame": 727,
+              "nx": 0.6210200190544128,
+              "ny": 0.544920027256012,
+              "along_t": 0.47869,
+              "distance_from_batter_m": 4.8156,
+              "conf": 0.8376
+            },
+            {
+              "frame": 728,
+              "nx": 0.621649980545044,
+              "ny": 0.5473899841308594,
+              "along_t": 0.47515,
+              "distance_from_batter_m": 4.7801,
+              "conf": 0.853
+            },
+            {
+              "frame": 729,
+              "nx": 0.6219900250434875,
+              "ny": 0.547510027885437,
+              "along_t": 0.47499,
+              "distance_from_batter_m": 4.7784,
+              "conf": 0.8535
+            },
+            {
+              "frame": 730,
+              "nx": 0.19936999678611755,
+              "ny": 0.5170000195503235,
+              "along_t": 0.51857,
+              "distance_from_batter_m": 5.2168,
+              "conf": 0.8548
+            },
+            {
+              "frame": 731,
+              "nx": 0.19950999319553375,
+              "ny": 0.5155900120735168,
+              "along_t": 0.52059,
+              "distance_from_batter_m": 5.2371,
+              "conf": 0.847
+            },
+            {
+              "frame": 732,
+              "nx": 0.6211000084877014,
+              "ny": 0.545710027217865,
+              "along_t": 0.47755,
+              "distance_from_batter_m": 4.8042,
+              "conf": 0.8684
+            },
+            {
+              "frame": 733,
+              "nx": 0.6210799813270569,
+              "ny": 0.5455399751663208,
+              "along_t": 0.4778,
+              "distance_from_batter_m": 4.8067,
+              "conf": 0.8746
+            },
+            {
+              "frame": 734,
+              "nx": 0.6210899949073792,
+              "ny": 0.5455099940299988,
+              "along_t": 0.47784,
+              "distance_from_batter_m": 4.8071,
+              "conf": 0.8745
+            },
+            {
+              "frame": 735,
+              "nx": 0.6208500266075134,
+              "ny": 0.5453199744224548,
+              "along_t": 0.47812,
+              "distance_from_batter_m": 4.8099,
+              "conf": 0.8712
+            },
+            {
+              "frame": 736,
+              "nx": 0.2715499997138977,
+              "ny": 0.7074499726295471,
+              "along_t": 0.2465,
+              "distance_from_batter_m": 2.4798,
+              "conf": 0.8772
+            },
+            {
+              "frame": 737,
+              "nx": 0.2716299891471863,
+              "ny": 0.7074599862098694,
+              "along_t": 0.24648,
+              "distance_from_batter_m": 2.4796,
+              "conf": 0.8759
+            },
+            {
+              "frame": 738,
+              "nx": 0.6057500243186951,
+              "ny": 0.5415999889373779,
+              "along_t": 0.48343,
+              "distance_from_batter_m": 4.8634,
+              "conf": 0.8759
+            },
+            {
+              "frame": 739,
+              "nx": 0.6058499813079834,
+              "ny": 0.5418000221252441,
+              "along_t": 0.48314,
+              "distance_from_batter_m": 4.8604,
+              "conf": 0.8767
+            },
+            {
+              "frame": 740,
+              "nx": 0.6053000092506409,
+              "ny": 0.537339985370636,
+              "along_t": 0.48951,
+              "distance_from_batter_m": 4.9245,
+              "conf": 0.8615
+            },
+            {
+              "frame": 741,
+              "nx": 0.6046000123023987,
+              "ny": 0.537339985370636,
+              "along_t": 0.48952,
+              "distance_from_batter_m": 4.9245,
+              "conf": 0.8611
+            },
+            {
+              "frame": 742,
+              "nx": 0.5959299802780151,
+              "ny": 0.5250800251960754,
+              "along_t": 0.50703,
+              "distance_from_batter_m": 5.1007,
+              "conf": 0.8565
+            },
+            {
+              "frame": 743,
+              "nx": 0.5940099954605103,
+              "ny": 0.5244200229644775,
+              "along_t": 0.50797,
+              "distance_from_batter_m": 5.1102,
+              "conf": 0.86
+            },
+            {
+              "frame": 744,
+              "nx": 0.5864599943161011,
+              "ny": 0.5191799998283386,
+              "along_t": 0.51546,
+              "distance_from_batter_m": 5.1855,
+              "conf": 0.8853
+            },
+            {
+              "frame": 745,
+              "nx": 0.5869600176811218,
+              "ny": 0.5190500020980835,
+              "along_t": 0.51564,
+              "distance_from_batter_m": 5.1874,
+              "conf": 0.8882
+            },
+            {
+              "frame": 746,
+              "nx": 0.5777300000190735,
+              "ny": 0.5193899869918823,
+              "along_t": 0.51515,
+              "distance_from_batter_m": 5.1824,
+              "conf": 0.8862
+            },
+            {
+              "frame": 747,
+              "nx": 0.5778499841690063,
+              "ny": 0.5199199914932251,
+              "along_t": 0.51441,
+              "distance_from_batter_m": 5.1749,
+              "conf": 0.8819
+            },
+            {
+              "frame": 748,
+              "nx": 0.5697900056838989,
+              "ny": 0.5179799795150757,
+              "along_t": 0.51718,
+              "distance_from_batter_m": 5.2028,
+              "conf": 0.9007
+            },
+            {
+              "frame": 749,
+              "nx": 0.5697100162506104,
+              "ny": 0.5180400013923645,
+              "along_t": 0.51709,
+              "distance_from_batter_m": 5.2019,
+              "conf": 0.9022
+            },
+            {
+              "frame": 750,
+              "nx": 0.5583800077438354,
+              "ny": 0.5174999833106995,
+              "along_t": 0.51786,
+              "distance_from_batter_m": 5.2096,
+              "conf": 0.8718
+            },
+            {
+              "frame": 751,
+              "nx": 0.5582000017166138,
+              "ny": 0.5175399780273438,
+              "along_t": 0.51779,
+              "distance_from_batter_m": 5.209,
+              "conf": 0.8739
+            },
+            {
+              "frame": 752,
+              "nx": 0.553659975528717,
+              "ny": 0.5176699757575989,
+              "along_t": 0.51762,
+              "distance_from_batter_m": 5.2073,
+              "conf": 0.9019
+            },
+            {
+              "frame": 753,
+              "nx": 0.5532400012016296,
+              "ny": 0.5173599720001221,
+              "along_t": 0.51806,
+              "distance_from_batter_m": 5.2117,
+              "conf": 0.8993
+            },
+            {
+              "frame": 754,
+              "nx": 0.5504400134086609,
+              "ny": 0.5181499719619751,
+              "along_t": 0.51693,
+              "distance_from_batter_m": 5.2003,
+              "conf": 0.8904
+            },
+            {
+              "frame": 755,
+              "nx": 0.5507299900054932,
+              "ny": 0.5180000066757202,
+              "along_t": 0.51714,
+              "distance_from_batter_m": 5.2024,
+              "conf": 0.8915
+            },
+            {
+              "frame": 756,
+              "nx": 0.5456100106239319,
+              "ny": 0.5190799832344055,
+              "along_t": 0.51559,
+              "distance_from_batter_m": 5.1869,
+              "conf": 0.8018
+            },
+            {
+              "frame": 757,
+              "nx": 0.5454099774360657,
+              "ny": 0.5191799998283386,
+              "along_t": 0.51546,
+              "distance_from_batter_m": 5.1855,
+              "conf": 0.7966
+            },
+            {
+              "frame": 758,
+              "nx": 0.5486400127410889,
+              "ny": 0.5192199945449829,
+              "along_t": 0.5154,
+              "distance_from_batter_m": 5.1849,
+              "conf": 0.8171
+            },
+            {
+              "frame": 759,
+              "nx": 0.5483300089836121,
+              "ny": 0.5191900134086609,
+              "along_t": 0.51545,
+              "distance_from_batter_m": 5.1854,
+              "conf": 0.8132
+            },
+            {
+              "frame": 760,
+              "nx": 0.5557900071144104,
+              "ny": 0.5130199790000916,
+              "along_t": 0.52425,
+              "distance_from_batter_m": 5.274,
+              "conf": 0.8289
+            },
+            {
+              "frame": 761,
+              "nx": 0.5561800003051758,
+              "ny": 0.5134999752044678,
+              "along_t": 0.52357,
+              "distance_from_batter_m": 5.2672,
+              "conf": 0.8293
+            },
+            {
+              "frame": 762,
+              "nx": 0.5329899787902832,
+              "ny": 0.5036299824714661,
+              "along_t": 0.53767,
+              "distance_from_batter_m": 5.4089,
+              "conf": 0.8084
+            },
+            {
+              "frame": 763,
+              "nx": 0.53329998254776,
+              "ny": 0.502810001373291,
+              "along_t": 0.53885,
+              "distance_from_batter_m": 5.4208,
+              "conf": 0.8075
+            },
+            {
+              "frame": 764,
+              "nx": 0.543429970741272,
+              "ny": 0.4961700141429901,
+              "along_t": 0.54834,
+              "distance_from_batter_m": 5.5163,
+              "conf": 0.8257
+            },
+            {
+              "frame": 765,
+              "nx": 0.5467900037765503,
+              "ny": 0.4965600073337555,
+              "along_t": 0.54778,
+              "distance_from_batter_m": 5.5106,
+              "conf": 0.8229
+            },
+            {
+              "frame": 766,
+              "nx": 0.5268700122833252,
+              "ny": 0.4955599904060364,
+              "along_t": 0.5492,
+              "distance_from_batter_m": 5.525,
+              "conf": 0.7618
+            },
+            {
+              "frame": 767,
+              "nx": 0.5304399728775024,
+              "ny": 0.4969399869441986,
+              "along_t": 0.54723,
+              "distance_from_batter_m": 5.5051,
+              "conf": 0.7553
+            },
+            {
+              "frame": 768,
+              "nx": 0.5351899862289429,
+              "ny": 0.4967699944972992,
+              "along_t": 0.54747,
+              "distance_from_batter_m": 5.5075,
+              "conf": 0.7977
+            },
+            {
+              "frame": 769,
+              "nx": 0.5369200110435486,
+              "ny": 0.49713000655174255,
+              "along_t": 0.54696,
+              "distance_from_batter_m": 5.5024,
+              "conf": 0.7995
+            },
+            {
+              "frame": 770,
+              "nx": 0.5522699952125549,
+              "ny": 0.4947099983692169,
+              "along_t": 0.55042,
+              "distance_from_batter_m": 5.5372,
+              "conf": 0.8144
+            },
+            {
+              "frame": 771,
+              "nx": 0.5513399839401245,
+              "ny": 0.4950999915599823,
+              "along_t": 0.54985,
+              "distance_from_batter_m": 5.5315,
+              "conf": 0.8058
+            },
+            {
+              "frame": 772,
+              "nx": 0.45438000559806824,
+              "ny": 0.5690100193023682,
+              "along_t": 0.44426,
+              "distance_from_batter_m": 4.4693,
+              "conf": 0.813
+            },
+            {
+              "frame": 773,
+              "nx": 0.45416998863220215,
+              "ny": 0.5689499974250793,
+              "along_t": 0.44436,
+              "distance_from_batter_m": 4.4702,
+              "conf": 0.8187
+            },
+            {
+              "frame": 774,
+              "nx": 0.4509199857711792,
+              "ny": 0.5679000020027161,
+              "along_t": 0.44585,
+              "distance_from_batter_m": 4.4853,
+              "conf": 0.7898
+            },
+            {
+              "frame": 775,
+              "nx": 0.48921999335289,
+              "ny": 0.5738400220870972,
+              "along_t": 0.43737,
+              "distance_from_batter_m": 4.3999,
+              "conf": 0.8161
+            },
+            {
+              "frame": 776,
+              "nx": 0.48486000299453735,
+              "ny": 0.5738400220870972,
+              "along_t": 0.43737,
+              "distance_from_batter_m": 4.3999,
+              "conf": 0.8094
+            },
+            {
+              "frame": 777,
+              "nx": 0.48864999413490295,
+              "ny": 0.574209988117218,
+              "along_t": 0.43684,
+              "distance_from_batter_m": 4.3946,
+              "conf": 0.8005
+            },
+            {
+              "frame": 778,
+              "nx": 0.4864000082015991,
+              "ny": 0.5741099715232849,
+              "along_t": 0.43699,
+              "distance_from_batter_m": 4.3961,
+              "conf": 0.7801
+            },
+            {
+              "frame": 779,
+              "nx": 0.4827600121498108,
+              "ny": 0.5795599818229675,
+              "along_t": 0.4292,
+              "distance_from_batter_m": 4.3178,
+              "conf": 0.7336
+            },
+            {
+              "frame": 780,
+              "nx": 0.4606499969959259,
+              "ny": 0.5800099968910217,
+              "along_t": 0.42856,
+              "distance_from_batter_m": 4.3113,
+              "conf": 0.8105
+            },
+            {
+              "frame": 781,
+              "nx": 0.46198999881744385,
+              "ny": 0.580079972743988,
+              "along_t": 0.42846,
+              "distance_from_batter_m": 4.3103,
+              "conf": 0.8018
+            },
+            {
+              "frame": 782,
+              "nx": 0.4789299964904785,
+              "ny": 0.5851100087165833,
+              "along_t": 0.42127,
+              "distance_from_batter_m": 4.238,
+              "conf": 0.7889
+            },
+            {
+              "frame": 783,
+              "nx": 0.48284000158309937,
+              "ny": 0.5853099822998047,
+              "along_t": 0.42099,
+              "distance_from_batter_m": 4.2352,
+              "conf": 0.7935
+            },
+            {
+              "frame": 784,
+              "nx": 0.48159000277519226,
+              "ny": 0.5852000117301941,
+              "along_t": 0.42114,
+              "distance_from_batter_m": 4.2367,
+              "conf": 0.7992
+            },
+            {
+              "frame": 785,
+              "nx": 0.48954999446868896,
+              "ny": 0.5888299942016602,
+              "along_t": 0.41595,
+              "distance_from_batter_m": 4.1845,
+              "conf": 0.7103
+            },
+            {
+              "frame": 786,
+              "nx": 0.4881100058555603,
+              "ny": 0.5886899828910828,
+              "along_t": 0.41615,
+              "distance_from_batter_m": 4.1865,
+              "conf": 0.7254
+            },
+            {
+              "frame": 787,
+              "nx": 0.4880099892616272,
+              "ny": 0.5886499881744385,
+              "along_t": 0.41622,
+              "distance_from_batter_m": 4.1871,
+              "conf": 0.7342
+            },
+            {
+              "frame": 788,
+              "nx": 0.48736000061035156,
+              "ny": 0.5885599851608276,
+              "along_t": 0.41634,
+              "distance_from_batter_m": 4.1884,
+              "conf": 0.7228
+            },
+            {
+              "frame": 789,
+              "nx": 0.4865399897098541,
+              "ny": 0.5900999903678894,
+              "along_t": 0.41414,
+              "distance_from_batter_m": 4.1663,
+              "conf": 0.6172
+            },
+            {
+              "frame": 790,
+              "nx": 0.4867199957370758,
+              "ny": 0.5900099873542786,
+              "along_t": 0.41428,
+              "distance_from_batter_m": 4.1676,
+              "conf": 0.6027
+            },
+            {
+              "frame": 791,
+              "nx": 0.48221999406814575,
+              "ny": 0.5897300243377686,
+              "along_t": 0.41468,
+              "distance_from_batter_m": 4.1716,
+              "conf": 0.6104
+            },
+            {
+              "frame": 793,
+              "nx": 0.4446699917316437,
+              "ny": 0.5926200151443481,
+              "along_t": 0.41054,
+              "distance_from_batter_m": 4.1301,
+              "conf": 0.5161
+            },
+            {
+              "frame": 794,
+              "nx": 0.44721999764442444,
+              "ny": 0.5926100015640259,
+              "along_t": 0.41056,
+              "distance_from_batter_m": 4.1302,
+              "conf": 0.5216
+            },
+            {
+              "frame": 795,
+              "nx": 0.42263999581336975,
+              "ny": 0.5876100063323975,
+              "along_t": 0.4177,
+              "distance_from_batter_m": 4.2021,
+              "conf": 0.7844
+            }
+          ],
           "bounce": {
             "nx": 0.63302,
             "ny": 0.54253,
@@ -4366,13 +6509,13 @@
           "session_median_speed_rescale"
         ],
         "shot_num": 10,
-        "display_num": 8,
+        "display_num": 9,
         "peak_frame": 771,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 10,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.2859,
-        "shot_confirmed": false
+        "shot_classifier_conf": 0.3508,
+        "shot_confirmed": true
       },
       {
         "delivery_id": "d11",
@@ -4841,12 +6984,12 @@
           "session_median_speed_rescale"
         ],
         "shot_num": 11,
-        "display_num": 9,
+        "display_num": 10,
         "peak_frame": 830,
         "ball_track_matched": true,
         "matched_confirmed_shot_num": 11,
         "match_source": "shot_time_window",
-        "shot_classifier_conf": 0.3036,
+        "shot_classifier_conf": 0.351,
         "shot_confirmed": true
       }
     ],
@@ -17597,6 +19740,351 @@
         ]
       },
       {
+        "track_id": 2,
+        "bgr": [
+          180,
+          105,
+          255
+        ],
+        "points": [
+          {
+            "frame": 163,
+            "x": 193,
+            "y": 182
+          },
+          {
+            "frame": 164,
+            "x": 193,
+            "y": 181
+          },
+          {
+            "frame": 165,
+            "x": 193,
+            "y": 181
+          },
+          {
+            "frame": 166,
+            "x": 193,
+            "y": 181
+          },
+          {
+            "frame": 167,
+            "x": 192,
+            "y": 181
+          },
+          {
+            "frame": 168,
+            "x": 192,
+            "y": 181
+          },
+          {
+            "frame": 169,
+            "x": 191,
+            "y": 181
+          },
+          {
+            "frame": 170,
+            "x": 191,
+            "y": 181
+          },
+          {
+            "frame": 171,
+            "x": 191,
+            "y": 181
+          },
+          {
+            "frame": 172,
+            "x": 191,
+            "y": 182
+          },
+          {
+            "frame": 173,
+            "x": 191,
+            "y": 182
+          },
+          {
+            "frame": 174,
+            "x": 191,
+            "y": 182
+          },
+          {
+            "frame": 175,
+            "x": 190,
+            "y": 182
+          },
+          {
+            "frame": 176,
+            "x": 189,
+            "y": 182
+          },
+          {
+            "frame": 177,
+            "x": 188,
+            "y": 182
+          },
+          {
+            "frame": 178,
+            "x": 188,
+            "y": 182
+          },
+          {
+            "frame": 179,
+            "x": 187,
+            "y": 181
+          },
+          {
+            "frame": 180,
+            "x": 185,
+            "y": 182
+          },
+          {
+            "frame": 181,
+            "x": 184,
+            "y": 182
+          },
+          {
+            "frame": 182,
+            "x": 184,
+            "y": 182
+          },
+          {
+            "frame": 183,
+            "x": 183,
+            "y": 182
+          },
+          {
+            "frame": 184,
+            "x": 184,
+            "y": 182
+          },
+          {
+            "frame": 185,
+            "x": 179,
+            "y": 182
+          },
+          {
+            "frame": 186,
+            "x": 179,
+            "y": 182
+          },
+          {
+            "frame": 187,
+            "x": 182,
+            "y": 182
+          },
+          {
+            "frame": 188,
+            "x": 181,
+            "y": 182
+          },
+          {
+            "frame": 189,
+            "x": 178,
+            "y": 183
+          },
+          {
+            "frame": 190,
+            "x": 178,
+            "y": 183
+          },
+          {
+            "frame": 191,
+            "x": 175,
+            "y": 182
+          },
+          {
+            "frame": 192,
+            "x": 174,
+            "y": 181
+          },
+          {
+            "frame": 193,
+            "x": 172,
+            "y": 179
+          },
+          {
+            "frame": 194,
+            "x": 172,
+            "y": 179
+          },
+          {
+            "frame": 195,
+            "x": 171,
+            "y": 178
+          },
+          {
+            "frame": 196,
+            "x": 171,
+            "y": 177
+          },
+          {
+            "frame": 197,
+            "x": 171,
+            "y": 184
+          },
+          {
+            "frame": 198,
+            "x": 171,
+            "y": 183
+          },
+          {
+            "frame": 199,
+            "x": 170,
+            "y": 186
+          },
+          {
+            "frame": 200,
+            "x": 168,
+            "y": 189
+          },
+          {
+            "frame": 201,
+            "x": 167,
+            "y": 189
+          },
+          {
+            "frame": 202,
+            "x": 167,
+            "y": 189
+          },
+          {
+            "frame": 203,
+            "x": 166,
+            "y": 190
+          },
+          {
+            "frame": 204,
+            "x": 164,
+            "y": 190
+          },
+          {
+            "frame": 205,
+            "x": 162,
+            "y": 190
+          },
+          {
+            "frame": 206,
+            "x": 162,
+            "y": 190
+          },
+          {
+            "frame": 207,
+            "x": 169,
+            "y": 193
+          },
+          {
+            "frame": 208,
+            "x": 155,
+            "y": 191
+          },
+          {
+            "frame": 209,
+            "x": 153,
+            "y": 190
+          },
+          {
+            "frame": 210,
+            "x": 153,
+            "y": 190
+          },
+          {
+            "frame": 211,
+            "x": 154,
+            "y": 189
+          },
+          {
+            "frame": 212,
+            "x": 156,
+            "y": 186
+          },
+          {
+            "frame": 213,
+            "x": 150,
+            "y": 185
+          },
+          {
+            "frame": 214,
+            "x": 151,
+            "y": 186
+          },
+          {
+            "frame": 215,
+            "x": 157,
+            "y": 185
+          },
+          {
+            "frame": 216,
+            "x": 152,
+            "y": 185
+          },
+          {
+            "frame": 217,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 218,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 219,
+            "x": 149,
+            "y": 185
+          },
+          {
+            "frame": 220,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 221,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 222,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 223,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 224,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 225,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 226,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 227,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 228,
+            "x": 148,
+            "y": 185
+          },
+          {
+            "frame": 229,
+            "x": 170,
+            "y": 88
+          }
+        ]
+      },
+      {
         "track_id": 3,
         "bgr": [
           60,
@@ -18562,6 +21050,1031 @@
         ]
       },
       {
+        "track_id": 6,
+        "bgr": [
+          255,
+          60,
+          160
+        ],
+        "points": [
+          {
+            "frame": 462,
+            "x": 216,
+            "y": 216
+          },
+          {
+            "frame": 463,
+            "x": 218,
+            "y": 216
+          },
+          {
+            "frame": 464,
+            "x": 217,
+            "y": 215
+          },
+          {
+            "frame": 465,
+            "x": 216,
+            "y": 216
+          },
+          {
+            "frame": 466,
+            "x": 214,
+            "y": 217
+          },
+          {
+            "frame": 467,
+            "x": 210,
+            "y": 216
+          },
+          {
+            "frame": 468,
+            "x": 207,
+            "y": 217
+          },
+          {
+            "frame": 469,
+            "x": 207,
+            "y": 216
+          },
+          {
+            "frame": 470,
+            "x": 206,
+            "y": 217
+          },
+          {
+            "frame": 471,
+            "x": 206,
+            "y": 217
+          },
+          {
+            "frame": 472,
+            "x": 206,
+            "y": 216
+          },
+          {
+            "frame": 473,
+            "x": 217,
+            "y": 218
+          },
+          {
+            "frame": 474,
+            "x": 205,
+            "y": 219
+          },
+          {
+            "frame": 475,
+            "x": 203,
+            "y": 220
+          },
+          {
+            "frame": 476,
+            "x": 200,
+            "y": 220
+          },
+          {
+            "frame": 477,
+            "x": 195,
+            "y": 222
+          },
+          {
+            "frame": 478,
+            "x": 193,
+            "y": 221
+          },
+          {
+            "frame": 479,
+            "x": 188,
+            "y": 223
+          },
+          {
+            "frame": 480,
+            "x": 186,
+            "y": 223
+          },
+          {
+            "frame": 481,
+            "x": 181,
+            "y": 223
+          },
+          {
+            "frame": 482,
+            "x": 178,
+            "y": 224
+          },
+          {
+            "frame": 483,
+            "x": 175,
+            "y": 225
+          },
+          {
+            "frame": 484,
+            "x": 173,
+            "y": 226
+          },
+          {
+            "frame": 485,
+            "x": 170,
+            "y": 227
+          },
+          {
+            "frame": 486,
+            "x": 169,
+            "y": 227
+          },
+          {
+            "frame": 487,
+            "x": 169,
+            "y": 227
+          },
+          {
+            "frame": 488,
+            "x": 169,
+            "y": 227
+          },
+          {
+            "frame": 489,
+            "x": 178,
+            "y": 267
+          },
+          {
+            "frame": 490,
+            "x": 181,
+            "y": 267
+          },
+          {
+            "frame": 491,
+            "x": 181,
+            "y": 267
+          },
+          {
+            "frame": 492,
+            "x": 178,
+            "y": 267
+          },
+          {
+            "frame": 493,
+            "x": 183,
+            "y": 267
+          },
+          {
+            "frame": 494,
+            "x": 183,
+            "y": 267
+          },
+          {
+            "frame": 495,
+            "x": 180,
+            "y": 267
+          },
+          {
+            "frame": 496,
+            "x": 180,
+            "y": 267
+          },
+          {
+            "frame": 497,
+            "x": 180,
+            "y": 267
+          },
+          {
+            "frame": 498,
+            "x": 183,
+            "y": 268
+          },
+          {
+            "frame": 499,
+            "x": 184,
+            "y": 272
+          },
+          {
+            "frame": 500,
+            "x": 184,
+            "y": 272
+          },
+          {
+            "frame": 501,
+            "x": 184,
+            "y": 272
+          },
+          {
+            "frame": 502,
+            "x": 166,
+            "y": 271
+          },
+          {
+            "frame": 503,
+            "x": 166,
+            "y": 271
+          },
+          {
+            "frame": 504,
+            "x": 165,
+            "y": 271
+          },
+          {
+            "frame": 505,
+            "x": 166,
+            "y": 271
+          },
+          {
+            "frame": 506,
+            "x": 166,
+            "y": 271
+          },
+          {
+            "frame": 507,
+            "x": 166,
+            "y": 271
+          },
+          {
+            "frame": 508,
+            "x": 167,
+            "y": 271
+          },
+          {
+            "frame": 509,
+            "x": 169,
+            "y": 274
+          },
+          {
+            "frame": 510,
+            "x": 169,
+            "y": 275
+          },
+          {
+            "frame": 511,
+            "x": 169,
+            "y": 275
+          },
+          {
+            "frame": 512,
+            "x": 173,
+            "y": 277
+          },
+          {
+            "frame": 513,
+            "x": 171,
+            "y": 277
+          },
+          {
+            "frame": 514,
+            "x": 171,
+            "y": 277
+          },
+          {
+            "frame": 515,
+            "x": 181,
+            "y": 276
+          },
+          {
+            "frame": 516,
+            "x": 181,
+            "y": 277
+          },
+          {
+            "frame": 517,
+            "x": 182,
+            "y": 277
+          },
+          {
+            "frame": 518,
+            "x": 165,
+            "y": 277
+          },
+          {
+            "frame": 519,
+            "x": 167,
+            "y": 277
+          },
+          {
+            "frame": 520,
+            "x": 164,
+            "y": 277
+          },
+          {
+            "frame": 521,
+            "x": 165,
+            "y": 279
+          },
+          {
+            "frame": 522,
+            "x": 165,
+            "y": 279
+          }
+        ]
+      },
+      {
+        "track_id": 7,
+        "bgr": [
+          0,
+          255,
+          255
+        ],
+        "points": [
+          {
+            "frame": 534,
+            "x": 187,
+            "y": 294
+          },
+          {
+            "frame": 535,
+            "x": 187,
+            "y": 293
+          },
+          {
+            "frame": 536,
+            "x": 171,
+            "y": 263
+          },
+          {
+            "frame": 537,
+            "x": 171,
+            "y": 263
+          },
+          {
+            "frame": 538,
+            "x": 192,
+            "y": 314
+          },
+          {
+            "frame": 539,
+            "x": 180,
+            "y": 265
+          },
+          {
+            "frame": 540,
+            "x": 179,
+            "y": 264
+          },
+          {
+            "frame": 541,
+            "x": 179,
+            "y": 264
+          },
+          {
+            "frame": 542,
+            "x": 200,
+            "y": 264
+          },
+          {
+            "frame": 543,
+            "x": 200,
+            "y": 264
+          },
+          {
+            "frame": 544,
+            "x": 199,
+            "y": 264
+          },
+          {
+            "frame": 545,
+            "x": 193,
+            "y": 262
+          },
+          {
+            "frame": 546,
+            "x": 193,
+            "y": 262
+          },
+          {
+            "frame": 547,
+            "x": 195,
+            "y": 261
+          },
+          {
+            "frame": 548,
+            "x": 195,
+            "y": 260
+          },
+          {
+            "frame": 549,
+            "x": 195,
+            "y": 260
+          },
+          {
+            "frame": 550,
+            "x": 188,
+            "y": 241
+          },
+          {
+            "frame": 551,
+            "x": 189,
+            "y": 241
+          },
+          {
+            "frame": 552,
+            "x": 187,
+            "y": 241
+          },
+          {
+            "frame": 553,
+            "x": 164,
+            "y": 241
+          },
+          {
+            "frame": 554,
+            "x": 165,
+            "y": 239
+          },
+          {
+            "frame": 555,
+            "x": 184,
+            "y": 241
+          },
+          {
+            "frame": 556,
+            "x": 165,
+            "y": 239
+          },
+          {
+            "frame": 557,
+            "x": 178,
+            "y": 241
+          },
+          {
+            "frame": 558,
+            "x": 171,
+            "y": 242
+          },
+          {
+            "frame": 559,
+            "x": 181,
+            "y": 242
+          },
+          {
+            "frame": 560,
+            "x": 180,
+            "y": 242
+          },
+          {
+            "frame": 561,
+            "x": 184,
+            "y": 241
+          },
+          {
+            "frame": 562,
+            "x": 177,
+            "y": 240
+          },
+          {
+            "frame": 563,
+            "x": 173,
+            "y": 241
+          },
+          {
+            "frame": 564,
+            "x": 184,
+            "y": 244
+          },
+          {
+            "frame": 565,
+            "x": 183,
+            "y": 244
+          },
+          {
+            "frame": 566,
+            "x": 184,
+            "y": 243
+          },
+          {
+            "frame": 567,
+            "x": 182,
+            "y": 245
+          },
+          {
+            "frame": 568,
+            "x": 184,
+            "y": 245
+          },
+          {
+            "frame": 569,
+            "x": 183,
+            "y": 245
+          },
+          {
+            "frame": 570,
+            "x": 183,
+            "y": 245
+          },
+          {
+            "frame": 571,
+            "x": 183,
+            "y": 245
+          },
+          {
+            "frame": 572,
+            "x": 180,
+            "y": 243
+          },
+          {
+            "frame": 573,
+            "x": 180,
+            "y": 241
+          },
+          {
+            "frame": 574,
+            "x": 66,
+            "y": 289
+          },
+          {
+            "frame": 575,
+            "x": 176,
+            "y": 236
+          },
+          {
+            "frame": 576,
+            "x": 179,
+            "y": 237
+          },
+          {
+            "frame": 577,
+            "x": 175,
+            "y": 224
+          },
+          {
+            "frame": 578,
+            "x": 180,
+            "y": 245
+          },
+          {
+            "frame": 579,
+            "x": 180,
+            "y": 245
+          },
+          {
+            "frame": 580,
+            "x": 179,
+            "y": 242
+          },
+          {
+            "frame": 581,
+            "x": 179,
+            "y": 238
+          },
+          {
+            "frame": 582,
+            "x": 179,
+            "y": 247
+          },
+          {
+            "frame": 583,
+            "x": 177,
+            "y": 248
+          },
+          {
+            "frame": 584,
+            "x": 176,
+            "y": 248
+          },
+          {
+            "frame": 585,
+            "x": 176,
+            "y": 248
+          },
+          {
+            "frame": 586,
+            "x": 176,
+            "y": 250
+          },
+          {
+            "frame": 587,
+            "x": 176,
+            "y": 250
+          },
+          {
+            "frame": 588,
+            "x": 176,
+            "y": 249
+          },
+          {
+            "frame": 589,
+            "x": 176,
+            "y": 250
+          },
+          {
+            "frame": 590,
+            "x": 176,
+            "y": 250
+          },
+          {
+            "frame": 591,
+            "x": 177,
+            "y": 251
+          },
+          {
+            "frame": 592,
+            "x": 177,
+            "y": 251
+          },
+          {
+            "frame": 593,
+            "x": 177,
+            "y": 250
+          },
+          {
+            "frame": 594,
+            "x": 178,
+            "y": 250
+          },
+          {
+            "frame": 595,
+            "x": 179,
+            "y": 250
+          }
+        ]
+      },
+      {
+        "track_id": 9,
+        "bgr": [
+          180,
+          105,
+          255
+        ],
+        "points": [
+          {
+            "frame": 719,
+            "x": 235,
+            "y": 252
+          },
+          {
+            "frame": 720,
+            "x": 233,
+            "y": 252
+          },
+          {
+            "frame": 721,
+            "x": 233,
+            "y": 252
+          },
+          {
+            "frame": 722,
+            "x": 231,
+            "y": 252
+          },
+          {
+            "frame": 723,
+            "x": 231,
+            "y": 253
+          },
+          {
+            "frame": 724,
+            "x": 231,
+            "y": 253
+          },
+          {
+            "frame": 725,
+            "x": 230,
+            "y": 253
+          },
+          {
+            "frame": 726,
+            "x": 228,
+            "y": 253
+          },
+          {
+            "frame": 727,
+            "x": 229,
+            "y": 253
+          },
+          {
+            "frame": 728,
+            "x": 229,
+            "y": 254
+          },
+          {
+            "frame": 729,
+            "x": 229,
+            "y": 254
+          },
+          {
+            "frame": 730,
+            "x": 73,
+            "y": 240
+          },
+          {
+            "frame": 731,
+            "x": 73,
+            "y": 239
+          },
+          {
+            "frame": 732,
+            "x": 229,
+            "y": 253
+          },
+          {
+            "frame": 733,
+            "x": 229,
+            "y": 253
+          },
+          {
+            "frame": 734,
+            "x": 229,
+            "y": 253
+          },
+          {
+            "frame": 735,
+            "x": 228,
+            "y": 253
+          },
+          {
+            "frame": 736,
+            "x": 100,
+            "y": 328
+          },
+          {
+            "frame": 737,
+            "x": 100,
+            "y": 328
+          },
+          {
+            "frame": 738,
+            "x": 223,
+            "y": 251
+          },
+          {
+            "frame": 739,
+            "x": 223,
+            "y": 251
+          },
+          {
+            "frame": 740,
+            "x": 223,
+            "y": 249
+          },
+          {
+            "frame": 741,
+            "x": 222,
+            "y": 249
+          },
+          {
+            "frame": 742,
+            "x": 219,
+            "y": 244
+          },
+          {
+            "frame": 743,
+            "x": 219,
+            "y": 243
+          },
+          {
+            "frame": 744,
+            "x": 216,
+            "y": 241
+          },
+          {
+            "frame": 745,
+            "x": 216,
+            "y": 241
+          },
+          {
+            "frame": 746,
+            "x": 213,
+            "y": 241
+          },
+          {
+            "frame": 747,
+            "x": 213,
+            "y": 241
+          },
+          {
+            "frame": 748,
+            "x": 210,
+            "y": 240
+          },
+          {
+            "frame": 749,
+            "x": 210,
+            "y": 240
+          },
+          {
+            "frame": 750,
+            "x": 205,
+            "y": 240
+          },
+          {
+            "frame": 751,
+            "x": 205,
+            "y": 240
+          },
+          {
+            "frame": 752,
+            "x": 204,
+            "y": 240
+          },
+          {
+            "frame": 753,
+            "x": 204,
+            "y": 240
+          },
+          {
+            "frame": 754,
+            "x": 203,
+            "y": 240
+          },
+          {
+            "frame": 755,
+            "x": 203,
+            "y": 240
+          },
+          {
+            "frame": 756,
+            "x": 201,
+            "y": 241
+          },
+          {
+            "frame": 757,
+            "x": 201,
+            "y": 241
+          },
+          {
+            "frame": 758,
+            "x": 202,
+            "y": 241
+          },
+          {
+            "frame": 759,
+            "x": 202,
+            "y": 241
+          },
+          {
+            "frame": 760,
+            "x": 205,
+            "y": 238
+          },
+          {
+            "frame": 761,
+            "x": 205,
+            "y": 238
+          },
+          {
+            "frame": 762,
+            "x": 196,
+            "y": 234
+          },
+          {
+            "frame": 763,
+            "x": 196,
+            "y": 233
+          },
+          {
+            "frame": 764,
+            "x": 200,
+            "y": 230
+          },
+          {
+            "frame": 765,
+            "x": 201,
+            "y": 230
+          },
+          {
+            "frame": 766,
+            "x": 194,
+            "y": 230
+          },
+          {
+            "frame": 767,
+            "x": 195,
+            "y": 231
+          },
+          {
+            "frame": 768,
+            "x": 197,
+            "y": 231
+          },
+          {
+            "frame": 769,
+            "x": 198,
+            "y": 231
+          },
+          {
+            "frame": 770,
+            "x": 203,
+            "y": 230
+          },
+          {
+            "frame": 771,
+            "x": 203,
+            "y": 230
+          },
+          {
+            "frame": 772,
+            "x": 167,
+            "y": 264
+          },
+          {
+            "frame": 773,
+            "x": 167,
+            "y": 264
+          },
+          {
+            "frame": 774,
+            "x": 166,
+            "y": 264
+          },
+          {
+            "frame": 775,
+            "x": 180,
+            "y": 266
+          },
+          {
+            "frame": 776,
+            "x": 178,
+            "y": 266
+          },
+          {
+            "frame": 777,
+            "x": 180,
+            "y": 266
+          },
+          {
+            "frame": 778,
+            "x": 179,
+            "y": 266
+          },
+          {
+            "frame": 779,
+            "x": 178,
+            "y": 269
+          },
+          {
+            "frame": 780,
+            "x": 170,
+            "y": 269
+          },
+          {
+            "frame": 781,
+            "x": 170,
+            "y": 269
+          },
+          {
+            "frame": 782,
+            "x": 176,
+            "y": 271
+          },
+          {
+            "frame": 783,
+            "x": 178,
+            "y": 272
+          },
+          {
+            "frame": 784,
+            "x": 177,
+            "y": 272
+          },
+          {
+            "frame": 785,
+            "x": 180,
+            "y": 273
+          },
+          {
+            "frame": 786,
+            "x": 180,
+            "y": 273
+          },
+          {
+            "frame": 787,
+            "x": 180,
+            "y": 273
+          },
+          {
+            "frame": 788,
+            "x": 179,
+            "y": 273
+          },
+          {
+            "frame": 789,
+            "x": 179,
+            "y": 274
+          },
+          {
+            "frame": 790,
+            "x": 179,
+            "y": 274
+          },
+          {
+            "frame": 791,
+            "x": 177,
+            "y": 274
+          },
+          {
+            "frame": 793,
+            "x": 164,
+            "y": 275
+          },
+          {
+            "frame": 794,
+            "x": 165,
+            "y": 275
+          },
+          {
+            "frame": 795,
+            "x": 156,
+            "y": 273
+          }
+        ]
+      },
+      {
         "track_id": 10,
         "bgr": [
           60,
@@ -18855,8 +22368,8 @@
             "pace_band": "slow",
             "length_zone": "good_length",
             "shot_outcome": {
-              "shot_label": "flick",
-              "shot_score": 6.2,
+              "shot_label": "cover",
+              "shot_score": 6.4,
               "shot_quality": "Average",
               "confirmed": true
             }
@@ -18868,10 +22381,10 @@
             "pace_band": "slow",
             "length_zone": "good_length",
             "shot_outcome": {
-              "shot_label": "flick",
+              "shot_label": "cover",
               "shot_score": 6.2,
               "shot_quality": "Average",
-              "confirmed": false
+              "confirmed": true
             }
           },
           {
@@ -18881,7 +22394,7 @@
             "pace_band": "slow",
             "length_zone": "short",
             "shot_outcome": {
-              "shot_label": "flick",
+              "shot_label": "cover",
               "shot_score": 7.1,
               "shot_quality": "Good",
               "confirmed": true
@@ -18920,10 +22433,10 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "flick",
+              "shot_label": "cover",
               "shot_score": 5.6,
               "shot_quality": "Average",
-              "confirmed": false
+              "confirmed": true
             }
           },
           {
@@ -18933,10 +22446,10 @@
             "pace_band": "medium",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "flick",
-              "shot_score": 7.2,
+              "shot_label": "cover",
+              "shot_score": 7.3,
               "shot_quality": "Good",
-              "confirmed": false
+              "confirmed": true
             }
           },
           {
@@ -18946,9 +22459,9 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "sweep",
-              "shot_score": 6.5,
-              "shot_quality": "Good",
+              "shot_label": "cover",
+              "shot_score": 5.9,
+              "shot_quality": "Average",
               "confirmed": false
             }
           },
@@ -18959,10 +22472,10 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "flick",
-              "shot_score": 6.7,
+              "shot_label": "cover",
+              "shot_score": 6.8,
               "shot_quality": "Good",
-              "confirmed": false
+              "confirmed": true
             }
           },
           {
@@ -18972,7 +22485,7 @@
             "pace_band": "slow",
             "length_zone": "full",
             "shot_outcome": {
-              "shot_label": "flick",
+              "shot_label": "cover",
               "shot_score": 5.7,
               "shot_quality": "Average",
               "confirmed": true
@@ -18995,12 +22508,12 @@
     },
     "session_aggregates": {
       "delivery_count": 11,
-      "confirmed_shot_count": 6,
+      "confirmed_shot_count": 10,
       "moving_track_segments": 0,
       "raw_track_segments": 1,
       "shot_assignment_pool": "raw_longest",
       "shot_ball_mapping": "per_peak_time_window",
-      "video_trajectory_layers": 6,
+      "video_trajectory_layers": 10,
       "unmatched_tracks_after_assignment": 1,
       "unmatched_moving_tracks_after_assignment": 1,
       "pace_band_counts": {

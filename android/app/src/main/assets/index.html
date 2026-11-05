@@ -165,8 +165,10 @@
               <span class="material-symbols-outlined">scoreboard</span><span class="sidebar-label">Session Score</span></button></li>
             <li><button type="button" class="ce-nav-link" data-nav-target="pitch" data-tip="Pitch &amp; Wagon">
               <span class="material-symbols-outlined">sports_cricket</span><span class="sidebar-label">Pitch &amp; Wagon</span></button></li>
+            <!-- Biomechanics tab streamlined into Session Score
             <li><button type="button" class="ce-nav-link" data-nav-target="biomech" data-tip="Biomechanics">
               <span class="material-symbols-outlined">accessibility_new</span><span class="sidebar-label">Biomechanics</span></button></li>
+            -->
           </ul>
 
           <p class="ce-nav-heading sidebar-label">Library</p>
@@ -190,9 +192,11 @@
             <span class="sidebar-label" id="themeToggleLabel">Dark mode</span>
           </button>
 
+          <!-- Settings button disabled as per request
           <button type="button" class="ce-nav-link" data-nav-target="settings" data-tip="Settings">
             <span class="material-symbols-outlined">tune</span><span class="sidebar-label">Settings</span>
           </button>
+          -->
 
           <p id="headerAuthHint" class="sidebar-label rounded-field bg-base-200/50 px-3 py-2 text-[0.65rem] leading-snug text-base-content/45" hidden>
             Configure Supabase in <code class="font-mono text-primary/80">backend/.env</code>
@@ -238,8 +242,8 @@
             <span class="verdict-text text-xs font-medium text-base-content/70" id="batsmanLabel">AWAITING ANALYSIS</span>
           </div>
 
-          <!-- Font Size Adjuster (A- A A+) -->
-          <div class="font-size-switcher" role="group" aria-label="Font Size">
+          <!-- Font Size Adjuster (A- A A+) - hidden on mobile to avoid header clutter -->
+          <div class="font-size-switcher hidden sm:flex" role="group" aria-label="Font Size">
             <button type="button" class="font-size-btn font-size-btn-sm" data-font-size="sm" title="Small text" aria-label="Small text">A</button>
             <button type="button" class="font-size-btn font-size-btn-md is-active" data-font-size="md" title="Default text" aria-label="Default text" aria-pressed="true">A</button>
             <button type="button" class="font-size-btn font-size-btn-lg" data-font-size="lg" title="Large text" aria-label="Large text">A</button>
@@ -540,6 +544,7 @@
   </div>
 
   <!-- ═══════════════ MODALS ═══════════════ -->
+  <!-- Settings Modal disabled as per request
   <div id="serverSettingsModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="serverModalTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="serverSettingsModal"></div>
     <div class="ce-dialog">
@@ -595,6 +600,8 @@
       </footer>
     </div>
   </div>
+
+  -->
 
   <div id="profileModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="profileModal"></div>
@@ -732,9 +739,11 @@
     <button type="button" class="mobile-nav-item active" data-nav-target="capture"><span class="material-symbols-outlined mobile-nav-icon">videocam</span><span class="mobile-nav-label">Capture</span></button>
     <button type="button" class="mobile-nav-item" data-nav-target="score"><span class="material-symbols-outlined mobile-nav-icon">speed</span><span class="mobile-nav-label">Score</span></button>
     <button type="button" class="mobile-nav-item" data-nav-target="pitch"><span class="material-symbols-outlined mobile-nav-icon">track_changes</span><span class="mobile-nav-label">Pitch</span></button>
+    <!-- Biomech streamlined into Session Score
     <button type="button" class="mobile-nav-item" data-nav-target="biomech"><span class="material-symbols-outlined mobile-nav-icon">accessibility_new</span><span class="mobile-nav-label">Biomech</span></button>
+    -->
     <button type="button" class="mobile-nav-item" data-nav-target="sessions"><span class="material-symbols-outlined mobile-nav-icon">video_library</span><span class="mobile-nav-label">Sessions</span></button>
-    <button type="button" class="mobile-nav-item" data-nav-target="settings"><span class="material-symbols-outlined mobile-nav-icon">tune</span><span class="mobile-nav-label">Settings</span></button>
+    <!-- <button type="button" class="mobile-nav-item" data-nav-target="settings"><span class="material-symbols-outlined mobile-nav-icon">tune</span><span class="mobile-nav-label">Settings</span></button> -->
   </nav>
 
   <script src="components/react.production.min.js"></script>

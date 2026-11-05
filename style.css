@@ -9477,3 +9477,528 @@ button, [role="button"], a {
   }
 }
 
+
+
+/* ==========================================================================
+   SESSION SCORE REDESIGN (Exact Replica of User Mobile Scheme)
+   ========================================================================== */
+
+.pc-v3-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #0F172A;
+  padding: 4px 0 16px;
+}
+
+.pc-v3-card {
+  background: #FFFFFF;
+  border-radius: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  padding: 20px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 1. Hero Score Card */
+.pc-v3-hero-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.pc-v3-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.pc-v3-header-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.pc-v3-rhb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F0F9FF;
+  color: #0369A1;
+  border: 1px solid #BAE6FD;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pc-v3-rhb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #0284C7;
+  display: inline-block;
+}
+
+.pc-v3-hero-score-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 16px 0 12px;
+}
+
+.pc-v3-score-main {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.pc-v3-big-score-val {
+  font-size: 3.25rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.pc-v3-big-score-slash {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #94A3B8;
+}
+
+.pc-v3-score-meta {
+  text-align: right;
+}
+
+.pc-v3-meta-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.pc-v3-meta-shots {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1E293B;
+  margin: 3px 0 0;
+}
+
+.pc-v3-meta-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748B;
+}
+
+/* Technique Biomechanical Metric Bars */
+.pc-v3-metrics-container {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.pc-v3-metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pc-v3-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pc-v3-metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+}
+
+.pc-v3-metric-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.pc-v3-metric-icon-wrap {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.pc-v3-metric-svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pc-v3-metric-val {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.pc-v3-progress-track {
+  width: 100%;
+  height: 7px;
+  background: #F1F5F9;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.pc-v3-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* 2. Shot Highlights Section */
+.pc-v3-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pc-v3-section-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.pc-v3-section-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.pc-v3-section-title--pad {
+  padding: 0 4px;
+  margin-bottom: 2px;
+}
+
+.pc-v3-section-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.pc-v3-highlights-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pc-v3-hl-card {
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.pc-v3-hl-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pc-v3-hl-tag-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pc-v3-hl-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+.pc-v3-hl-tag {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.pc-v3-hl-timecode {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #F1F5F9;
+  color: #475569;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 500;
+}
+
+.pc-v3-play-icon {
+  width: 11px;
+  height: 11px;
+  color: #94A3B8;
+}
+
+.pc-v3-hl-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.pc-v3-hl-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.pc-v3-hl-note {
+  font-size: 12px;
+  color: #64748B;
+  margin: 3px 0 0;
+}
+
+.pc-v3-hl-score-box {
+  text-align: right;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.pc-v3-hl-score-num {
+  font-size: 1.65rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pc-v3-hl-score-denom {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+/* 3. Detailed Breakdown Navigation Menu */
+.pc-v3-nav-group {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pc-v3-nav-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 14px 16px !important;
+  border: none !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  width: 100% !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease !important;
+}
+
+.pc-v3-nav-btn:last-child {
+  border-bottom: none !important;
+}
+
+.pc-v3-nav-btn:hover {
+  background: #F8FAFC !important;
+}
+
+.pc-v3-nav-btn:active {
+  background: #F1F5F9 !important;
+}
+
+.pc-v3-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pc-v3-nav-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pc-v3-nav-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.pc-v3-nav-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pc-v3-nav-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1E293B;
+  line-height: 1.25;
+}
+
+.pc-v3-nav-subtitle {
+  font-size: 11.5px;
+  color: #94A3B8;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.pc-v3-chevron {
+  width: 18px;
+  height: 18px;
+  color: #94A3B8;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.pc-v3-nav-btn:hover .pc-v3-chevron {
+  color: #475569;
+  transform: translateX(2px);
+}
+
+
+
+/* Remove extra outer panel boundary and header for Session Score (PlayCard) */
+.playcard-panel.ce-panel {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.playcard-panel .ce-panel-head {
+  display: none !important;
+}
+
+.playcard-panel .playcard {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.playcard-panel .playcard-body {
+  background: transparent !important;
+  border: none !important;
+}
+
+.playcard-panel .playcard-inner {
+  background: transparent !important;
+  border: none !important;
+}
+
+.playcard-panel .pc-inner {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+
+
+/* ═══ GUARANTEED TOP-LEVEL OVERRIDE FOR GRAPH ZOOM ═══ */
+.rp-graph-wrap--zoomed {
+  position: fixed !important;
+  inset: 16px !important;
+  margin: auto !important;
+  max-width: 680px !important;
+  max-height: 82vh !important;
+  height: auto !important;
+  z-index: 100000 !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), 0 0 0 9999px rgba(10, 15, 26, 0.8) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: 24px 20px !important;
+  border-radius: 20px !important;
+  border: 1.5px solid rgba(148, 163, 184, 0.3) !important;
+  background: #ffffff !important;
+  animation: rpGraphZoomInAnim 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+[data-theme="dark"] .rp-graph-wrap--zoomed {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.rp-graph-wrap--zoomed .rp-graph-zoom-hint {
+  display: none !important;
+}
+
+.rp-graph-wrap--zoomed .rp-graph-close-btn {
+  display: flex !important;
+  background: rgba(15, 23, 42, 0.1) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="dark"] .rp-graph-wrap--zoomed .rp-graph-close-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #f8fafc !important;
+}
+
+.rp-graph-wrap--zoomed .rp-graph-head-bar .rp-graph-title {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="dark"] .rp-graph-wrap--zoomed .rp-graph-head-bar .rp-graph-title {
+  color: #f8fafc !important;
+}
+
+.rp-graph-wrap--zoomed svg {
+  height: auto !important;
+  max-height: 58vh !important;
+  margin: 10px 0 !important;
+}
+
+@keyframes rpGraphZoomInAnim {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}

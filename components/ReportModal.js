@@ -1044,7 +1044,101 @@ const ReportModal = (() => {
 .rp-fw-label { font-family: JetBrains Mono,monospace; font-size: 0.62rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.1em; margin-top: 6px; text-transform: uppercase; line-height: 1.3; }
 
 /* ── Line graphs ── */
-.rp-graph-wrap { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 16px 18px 12px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.rp-graph-wrap {
+  background: var(--bg-panel);
+  border: 1px solid var(--legacy-border);
+  border-radius: 14px;
+  padding: 16px 18px 12px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.rp-graph-wrap:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.08);
+}
+.rp-graph-head-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.rp-graph-head-bar .rp-graph-title {
+  margin-bottom: 0 !important;
+  font-family: Manrope, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.rp-graph-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rp-graph-zoom-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-inset);
+  color: #64748b;
+  font-size: 16px;
+}
+.rp-graph-zoom-hint span { font-size: 18px; }
+.rp-graph-close-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.rp-graph-close-btn span { font-size: 20px; }
+.rp-graph-close-btn:hover {
+  background: rgba(15, 23, 42, 0.16);
+  transform: scale(1.05);
+}
+.rp-graph-wrap--zoomed {
+  position: fixed !important;
+  inset: 16px !important;
+  margin: auto !important;
+  max-width: 680px !important;
+  max-height: 82vh !important;
+  height: auto !important;
+  z-index: 10500 !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), 0 0 0 9999px rgba(10, 15, 26, 0.75) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: 24px 20px !important;
+  border-radius: 20px !important;
+  border: 1.5px solid var(--legacy-border) !important;
+  background: var(--bg-panel) !important;
+  animation: rpGraphZoomIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+.rp-graph-wrap--zoomed .rp-graph-zoom-hint { display: none !important; }
+.rp-graph-wrap--zoomed .rp-graph-close-btn { display: flex !important; }
+.rp-graph-wrap--zoomed .rp-graph-head-bar .rp-graph-title { font-size: 1.12rem !important; }
+.rp-graph-wrap--zoomed svg {
+  height: auto !important;
+  max-height: 60vh !important;
+  margin: 10px 0 !important;
+}
+@keyframes rpGraphZoomIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
 .rp-graph-title { font-family: Manrope,sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; }
 .rp-graph-empty { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 32px; text-align: center; font-family: JetBrains Mono,monospace; font-size: 0.7rem; color: #94A3B8; letter-spacing: 0.1em; margin-bottom: 14px; }
 
@@ -1762,6 +1856,15 @@ const ReportModal = (() => {
      donut sized by score/sum misread them (a low score became a thin slice
      and looked "small", not "weak"). Each gets its own track, coloured by
      the shared range scale instead of the metric's identity. */
+  /* SVGs matching user mockup for technique biomechanical metrics */
+  const METRIC_SVGS_V3 = {
+    head: `<svg class="pc-v3-metric-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round"></path></svg>`,
+    stance: `<svg class="pc-v3-metric-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"></path></svg>`,
+    foot: `<svg class="pc-v3-metric-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2" stroke-linecap="round" stroke-linejoin="round"></path></svg>`,
+    swing: `<svg class="pc-v3-metric-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.828 2.828a4 4 0 01-5.656 0l-.707-.707a4 4 0 010-5.656L9.879 2.757a2 2 0 012.828 0l1.414 1.414a2 2 0 010 2.828L11.293 9.88" stroke-linecap="round" stroke-linejoin="round"></path></svg>`,
+    exec: `<svg class="pc-v3-metric-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle></svg>`,
+  };
+
   function buildPlayCardMetricBars(summary) {
     const read = (v) => (v == null || !Number.isFinite(Number(v))
       ? null
@@ -1774,28 +1877,33 @@ const ReportModal = (() => {
       exec: read(summary.avgExecution),
     };
     return `
-      <ul class="pc-metrics" aria-label="Technique breakdown">
+      <div class="pc-v3-metrics-list" aria-label="Technique biomechanical metrics">
         ${METRIC_INFO_PLAYCARD.map((m) => {
           const v = values[m.key];
-          // Stored 0–100; shown out of 10 so it matches the headline and shot scores.
-          const outOf10 = v == null ? null : Math.round(v) / 10;
-          const tone = metricColor(v);
+          const outOf10 = v == null ? null : (Math.round(v) / 10).toFixed(1);
+          // Color tone: >= 7.0 green (#059669), 5.0 - 6.9 amber (#D97706), < 5.0 red/orange (#DC2626)
+          let color = '#059669';
+          if (v != null) {
+            if (v < 50) color = '#DC2626';
+            else if (v < 70) color = '#D97706';
+            else color = '#059669';
+          }
+          const svgIcon = METRIC_SVGS_V3[m.key] || '';
           return `
-          <li class="pc-metric" title="${escapeHtml(m.tip)}">
-            <div class="pc-metric-top">
-              <span class="pc-metric-label">
-                <span class="material-symbols-outlined pc-metric-ico" aria-hidden="true">${m.icon}</span>
-                <span class="pc-metric-name">${escapeHtml(m.title)}</span>
+          <div class="pc-v3-metric-item" title="${escapeHtml(m.tip)}">
+            <div class="pc-v3-metric-head">
+              <span class="pc-v3-metric-name">
+                <span class="pc-v3-metric-icon-wrap" aria-hidden="true">${svgIcon}</span>
+                ${escapeHtml(m.title)}
               </span>
-              <span class="pc-metric-val" style="color:${tone}">${outOf10 == null ? '—' : outOf10.toFixed(1)}</span>
+              <span class="pc-v3-metric-val" style="color:${color}">${outOf10 == null ? '—' : outOf10}</span>
             </div>
-            <div class="pc-metric-track" role="meter" aria-label="${escapeHtml(m.title)} out of 10"
-                 aria-valuemin="0" aria-valuemax="10" aria-valuenow="${outOf10 == null ? 0 : outOf10}">
-              <div class="pc-metric-fill" style="width:${v || 0}%;background:${tone}"></div>
+            <div class="pc-v3-progress-track">
+              <div class="pc-v3-progress-fill" style="width:${v || 0}%;background:${color}"></div>
             </div>
-          </li>`;
+          </div>`;
         }).join('')}
-      </ul>`;
+      </div>`;
   }
 
   function buildPlayCardDeliveriesRows(confirmedShots, ballByShot) {
@@ -1955,7 +2063,7 @@ const ReportModal = (() => {
     if (section === 'length') {
       return `<div class="pc-modal-section">${m.lengthTabHtml}</div>`;
     }
-    if (section === 'deliveries') {
+            if (section === 'deliveries') {
       // ── Exact replica of the Net Session Report "All Deliveries" table ──
       const tableRows = confirmedShots.map((s) => {
         const ballDel = ballByShot.get(Number(s.shot_num));
@@ -2079,64 +2187,150 @@ const ReportModal = (() => {
     return '<p class="pc-empty">Unknown section.</p>';
   }
 
+  const LINK_METAS_V3 = [
+    {
+      key: 'ai',
+      label: 'AI insights',
+      sub: 'Bio-feedback & coaching recommendations',
+      bg: '#F5F3FF',
+      color: '#7C3AED',
+      svg: `<svg class="pc-v3-nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke-linecap="round" stroke-linejoin="round"></path></svg>`
+    },
+    {
+      key: 'length',
+      label: 'Ball length analysis',
+      sub: 'Short, good & full length pitch map',
+      bg: '#EFF6FF',
+      color: '#2563EB',
+      svg: `<svg class="pc-v3-nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"></path></svg>`
+    },
+    {
+      key: 'deliveries',
+      label: 'Deliveries',
+      sub: 'Ball-by-ball video replay & tags',
+      bg: '#ECFDF5',
+      color: '#059669',
+      svg: `<svg class="pc-v3-nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7" stroke-linecap="round" stroke-linejoin="round"></path></svg>`
+    },
+    {
+      key: 'zones',
+      label: 'Scoring zones',
+      sub: 'Wagon wheel & ground dispersal',
+      bg: '#FFF7ED',
+      color: '#EA580C',
+      svg: `<svg class="pc-v3-nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><line x1="12" x2="12" y1="3" y2="21"></line><line x1="3" x2="21" y1="12" y2="12"></line></svg>`
+    },
+  ];
+
   function buildLivePlayCardHtml(data) {
     const m = derivePlayCardModel(data);
     const { summary, best, worst, totalShots, avgScore } = m;
     const shots = summary.shotsConfirmed || totalShots;
     const avg = Number(avgScore);
 
-    const highlight = (s, kind, tag) => {
+    // Headline score color
+    let headlineCol = '#D97706';
+    if (Number.isFinite(avg)) {
+      if (avg >= 7.0) headlineCol = '#059669';
+      else if (avg < 5.0) headlineCol = '#DC2626';
+    }
+
+    const highlightCard = (s, kind, tag, dotColor) => {
       const label = escapeHtml((SHOT_LABELS[s.label] || s.label || '—').toUpperCase());
-      const score = s.shot_score != null ? s.shot_score : null;
+      const score = s.shot_score != null ? Number(s.shot_score).toFixed(1) : '—';
+      const scoreCol = (s.shot_score != null && Number(s.shot_score) >= 7.0) ? '#059669' : '#D97706';
+      const timecode = s.timestamp || '00:00.00';
+      const note = s.shot_quality || (kind === 'best' ? 'Optimal execution' : 'Technique check required');
+
       return `
-        <div class="pc-hl-card pc-hl-card--${kind}">
-          <div class="pc-hl-tag">${tag}</div>
-          <div class="pc-hl-title pc-hl-title--${kind}" title="#${s.shot_num || '—'} ${label}">#${s.shot_num || '—'} ${label}</div>
-          <div class="pc-hl-sub">
-            <span class="pc-hl-score" style="color:${scoreColor(score)}">${score != null ? score : '—'}<span class="pc-hl-denom">/10</span></span>
-            <span class="pc-hl-time">${escapeHtml(s.timestamp || '—')}</span>
+        <article class="pc-v3-hl-card pc-v3-hl-card--${kind}">
+          <div class="pc-v3-hl-top">
+            <div class="pc-v3-hl-tag-wrap">
+              <span class="pc-v3-hl-dot" style="background:${dotColor}"></span>
+              <span class="pc-v3-hl-tag">${escapeHtml(tag)}</span>
+            </div>
+            <div class="pc-v3-hl-timecode">
+              <svg class="pc-v3-play-icon" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path>
+              </svg>
+              ${escapeHtml(timecode)}
+            </div>
           </div>
-        </div>`;
+          <div class="pc-v3-hl-body">
+            <div>
+              <h3 class="pc-v3-hl-title">#${s.shot_num || '—'} ${label}</h3>
+              <p class="pc-v3-hl-note">${escapeHtml(note)}</p>
+            </div>
+            <div class="pc-v3-hl-score-box">
+              <span class="pc-v3-hl-score-num" style="color:${scoreCol}">${score}</span>
+              <span class="pc-v3-hl-score-denom">/10</span>
+            </div>
+          </div>
+        </article>`;
     };
 
-    const links = [
-      ['ai', 'auto_awesome', 'AI insights'],
-      ['length', 'straighten', 'Ball length analysis'],
-      ['deliveries', 'format_list_numbered', 'Deliveries'],
-      ['zones', 'radar', 'Scoring zones'],
-    ];
-
     return `
-      <div class="pc-inner">
-        <div class="pc-summary">
-          <div class="pc-summary-score">
-            <span class="pc-summary-val" style="color:${scoreColor(avg)}">${Number.isFinite(avg) ? avgScore : '—'}</span><span class="pc-summary-denom">/10</span>
+      <div class="pc-v3-shell">
+        <!-- 1. HERO SCORE CARD -->
+        <section class="pc-v3-card pc-v3-hero-card">
+          <div class="pc-v3-card-header">
+            <span class="pc-v3-header-label">SESSION OVERVIEW</span>
+            <div class="pc-v3-rhb-badge">
+              <span class="pc-v3-rhb-dot"></span>
+              ${escapeHtml(data.stance || 'RHB')}
+            </div>
           </div>
-          <div class="pc-summary-meta">
-            <span class="pc-summary-label">Avg shot score</span>
-            <span class="pc-summary-sub">${shots} shots
-              <span class="pc-badge" title="Batting stance">${escapeHtml(data.stance || 'RHB')}</span></span>
+
+          <div class="pc-v3-hero-score-row">
+            <div class="pc-v3-score-main">
+              <span class="pc-v3-big-score-val" style="color:${headlineCol}">${Number.isFinite(avg) ? avgScore : '—'}</span>
+              <span class="pc-v3-big-score-slash">/10</span>
+            </div>
+            <div class="pc-v3-score-meta">
+              <p class="pc-v3-meta-title">AVG SHOT SCORE</p>
+              <p class="pc-v3-meta-shots">${shots} Shots <span class="pc-v3-meta-sub">analyzed</span></p>
+            </div>
           </div>
-        </div>
 
-        ${buildPlayCardMetricBars(summary)}
-
-        <div class="pc-hl-section">
-          <div class="pc-hl-section-title">Shot highlights</div>
-          <div class="pc-highlights-grid">
-            ${highlight(best, 'best', 'Signature shot')}
-            ${highlight(worst, 'work', 'Work-on shot')}
+          <!-- Technique Biomechanical Metric Bars -->
+          <div class="pc-v3-metrics-container">
+            ${buildPlayCardMetricBars(summary)}
           </div>
-        </div>
+        </section>
 
-        <div class="pc-links">
-          ${links.map(([key, icon, label]) => `
-          <button type="button" class="pc-acc-btn" data-pc-open="${key}">
-            <span class="material-symbols-outlined pc-acc-ico" aria-hidden="true">${icon}</span>
-            <span class="pc-acc-label">${label}</span>
-            <span class="material-symbols-outlined pc-acc-chev" aria-hidden="true">chevron_right</span>
-          </button>`).join('')}
-        </div>
+        <!-- 2. SHOT HIGHLIGHTS SECTION -->
+        <section class="pc-v3-section pc-v3-highlights-section">
+          <div class="pc-v3-section-title-bar">
+            <h2 class="pc-v3-section-title">SHOT HIGHLIGHTS</h2>
+            <span class="pc-v3-section-count">2 Key Shots</span>
+          </div>
+          <div class="pc-v3-highlights-stack">
+            ${highlightCard(best, 'best', 'SIGNATURE SHOT', '#10B981')}
+            ${highlightCard(worst, 'work', 'WORK-ON SHOT', '#F59E0B')}
+          </div>
+        </section>
+
+        <!-- 3. DETAILED BREAKDOWN NAVIGATION MENU -->
+        <section class="pc-v3-section pc-v3-nav-section">
+          <h2 class="pc-v3-section-title pc-v3-section-title--pad">DETAILED BREAKDOWN</h2>
+          <div class="pc-v3-nav-group">
+            ${LINK_METAS_V3.map((link) => `
+            <button type="button" class="pc-acc-btn pc-v3-nav-btn" data-pc-open="${link.key}">
+              <div class="pc-v3-nav-left">
+                <div class="pc-v3-nav-icon-box" style="background:${link.bg};color:${link.color}">
+                  ${link.svg}
+                </div>
+                <div class="pc-v3-nav-texts">
+                  <span class="pc-v3-nav-title">${escapeHtml(link.label)}</span>
+                  <p class="pc-v3-nav-subtitle">${escapeHtml(link.sub)}</p>
+                </div>
+              </div>
+              <svg class="pc-v3-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>`).join('')}
+          </div>
+        </section>
       </div>`;
   }
 
@@ -2228,3 +2422,5 @@ const ReportModal = (() => {
       }
     };
   }
+
+  
