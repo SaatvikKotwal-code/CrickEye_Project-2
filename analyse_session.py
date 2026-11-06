@@ -184,7 +184,7 @@ PRESHOT_END              = 3
 
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
-CONF_THRESHOLD           = 0.28
+CONF_THRESHOLD           = 0.20
 
 # User-specified shot hardcodes / overrides (1-indexed shot number -> {'label': ..., 'conf': ...})
 SHOT_OVERRIDES = {

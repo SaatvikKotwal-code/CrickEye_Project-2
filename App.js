@@ -792,7 +792,7 @@ function parseSessionSummary(results) {
 
   const replay = getSessionReplay(results);
   const shots = replay && Array.isArray(replay.shots) ? replay.shots : null;
-  const confirmed = shots ? shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3) : [];
+  const confirmed = shots ? shots.filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20) : [];
   if (confirmed.length) {
     const mean = (field) => {
       const vals = confirmed.map((s) => Number(s[field])).filter((n) => Number.isFinite(n));
@@ -1524,7 +1524,7 @@ function getAnalysisSummary(analysis) {
 function getAvgShotScoreFromResults(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return null;
-  const confirmed = replay.shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3 && s.shot_score != null && !Number.isNaN(Number(s.shot_score)));
+  const confirmed = replay.shots.filter((s) => (s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20) && s.shot_score != null && !Number.isNaN(Number(s.shot_score)));
   if (!confirmed.length) return null;
   const sum = confirmed.reduce((acc, s) => acc + Number(s.shot_score || 0), 0);
   return sum / confirmed.length;
@@ -1607,7 +1607,7 @@ function getConfirmedTrendShotsFromResults(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return [];
   return replay.shots
-    .filter((s) => Number(s.conf ?? s.confidence) >= 0.3)
+    .filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20)
     .map((s) => ({
       shot_num: s.shot_num,
       speed: parseFloat((s.peak_swing_speed || 0).toFixed(1)),
@@ -1629,7 +1629,7 @@ function getConfirmedTrendShotsFromResults(results) {
 function getConfirmedReplayShotsForLength(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return [];
-  return replay.shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+  return replay.shots.filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
 }
 
 function buildCompareLengthPairHtml(sessionA, sessionB) {
@@ -2434,7 +2434,7 @@ function buildMonthPlayerInsightHtml(monthSessions, analyses) {
     const replay = getSessionReplay(s.results);
     if (!replay?.shots) return;
     for (const sh of replay.shots) {
-      if (Number(sh.conf ?? sh.confidence) < 0.3) continue;
+      if (sh.confirmed === false && Number(sh.conf ?? sh.confidence) < 0.20) continue;
       totalShots += 1;
       for (const f of sh.flags || []) {
         const base = String(f).split(':')[0];
@@ -2992,7 +2992,7 @@ function buildCrossPlayerInsightHtml(sessionA, sessionB, analysisA, analysisB, s
 
   function summarizePlayer(session, rows) {
     const replay = getSessionReplay(session.results);
-    const confirmed = (replay?.shots || []).filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+    const confirmed = (replay?.shots || []).filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
     const shotBuckets = new Map();
     for (const sh of confirmed) {
       const key = shotLabelPretty(sh.shot_type || sh.label || 'Unknown');
@@ -3915,7 +3915,7 @@ function rebuildDerivedShotStateFromShots(shots) {
   state.pendingSpokes = [];
   state.countedShotNums = new Set();
   for (const msg of state.shotLog) {
-    if (msg.confirmed === false || (msg.conf != null && msg.conf < 0.28)) continue;
+    if (msg.confirmed === false && (msg.conf != null && msg.conf < 0.20)) continue;
     if (!state.shotStats[msg.label]) state.shotStats[msg.label] = { count: 0 };
     state.shotStats[msg.label].count++;
     const zone = SHOT_ZONE[msg.label];
@@ -4297,7 +4297,7 @@ function onProgress(msg) {
 }
 
 function onShotReceived(msg) {
-  const isConfirmed = msg.confirmed !== false && ((msg.conf ?? msg.confidence) == null || (msg.conf ?? msg.confidence) >= 0.28);
+  const isConfirmed = msg.confirmed === true || ((msg.conf ?? msg.confidence) == null || (msg.conf ?? msg.confidence) >= 0.20);
   const existingIdx = state.shotLog.findIndex(s => s.shot_num === msg.shot_num);
   if (existingIdx >= 0) {
     state.shotLog[existingIdx] = msg;
@@ -4473,7 +4473,7 @@ function flushDashboard() {
     const sm = getAnalysisSummary(state.sessionAnalysis);
     let avgScore = sm.avgShotScore != null ? sm.avgShotScore : null;
     if (avgScore === null && state.shotLog.length > 0) {
-      const confirmed = state.shotLog.filter(s => Number(s.conf ?? s.confidence) >= 0.28);
+      const confirmed = state.shotLog.filter(s => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
       if (confirmed.length > 0) {
         avgScore = confirmed.reduce((sum, s) => sum + (s.shot_score || 0), 0) / confirmed.length;
       }

@@ -17,7 +17,7 @@
     "session_handedness": "RHB",
     "stance_conf": 0.89,
     "shots_total": 11,
-    "shots_confirmed": 9,
+    "shots_confirmed": 11,
     "best_shot": {
       "shot_num": 6,
       "label": "sweep",
@@ -26,14 +26,14 @@
       "timestamp": "00:14.23"
     },
     "worst_shot": {
-      "shot_num": 7,
+      "shot_num": 11,
       "label": "flick",
       "shot_score": 6.2,
       "shot_quality": "Average",
-      "timestamp": "00:16.60"
+      "timestamp": "00:27.67"
     },
     "session_summary": {
-      "shots_confirmed": 9,
+      "shots_confirmed": 11,
       "shots_total_detected": 11,
       "avg_bat_speed_kmh": 33.4,
       "avg_head_quality_score": 79.07,
@@ -869,7 +869,7 @@
       "display_num": null,
       "label": "flick",
       "confidence": 0.2627,
-      "confirmed": false,
+      "confirmed": true,
       "timestamp": "00:19.03",
       "annotated_timestamp_sec": 19.4997,
       "peak_frame": 571,
@@ -941,7 +941,7 @@
       "display_num": null,
       "label": "sweep",
       "confidence": 0.2603,
-      "confirmed": false,
+      "confirmed": true,
       "timestamp": "00:21.87",
       "annotated_timestamp_sec": 22.3997,
       "peak_frame": 656,

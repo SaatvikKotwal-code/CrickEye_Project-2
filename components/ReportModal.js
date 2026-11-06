@@ -1353,7 +1353,7 @@ const ReportModal = (() => {
     const alerts = analysis.coaching_alerts || [];
     const stance = data.stance || 'RHB';
 
-    const confirmedShots = shots.filter(s => Number(s.conf ?? s.confidence) >= 0.3);
+    const confirmedShots = (shots || []).filter(s => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
     const totalShots = confirmedShots.length;
     const confirmedCount = summary.shotsConfirmed || totalShots;
     const avgScore = summary.avgShotScore != null
@@ -1837,7 +1837,7 @@ const ReportModal = (() => {
     const best = analysis.best_shot || {};
     const worst = analysis.worst_shot || {};
     const alerts = analysis.coaching_alerts || [];
-    const confirmedShots = shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+    const confirmedShots = (shots || []).filter(s => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
     const totalShots = confirmedShots.length;
     const avgScore = summary.avgShotScore != null
       ? Number(summary.avgShotScore).toFixed(1)
@@ -1941,7 +1941,7 @@ const ReportModal = (() => {
       analysis?.llm_insights ??
       buildUiFallbackInsights(analysis);
     const ballByShot = indexBallDeliveriesByShot(ballAnalytics);
-    const confirmedShots = shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+    const confirmedShots = (shots || []).filter(s => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
     const alerts = analysis.coaching_alerts || [];
 
     const m = derivePlayCardModel(data);
