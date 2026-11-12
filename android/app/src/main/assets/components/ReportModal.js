@@ -413,59 +413,90 @@ const ReportModal = (() => {
     const metrics = [
       {
         icon: '🎯', color: '#06B6D4', title: 'Head position',
+        sub: '0–100 stability & axis tracking',
         what: 'Axis-aware head quality (0–100): lateral drift is always penalised; vertical movement uses a shot-type free zone so pull/sweep tracking is not misread as a fault.',
         how: 'Nose/ear-midpoint spread vs shoulder width, with HEAD_RULES weights per classifier label.',
         tip: 'On drives, minimise lateral head movement; on pull/sweep, trust vertical tracking but keep the head on the rotational axis.',
       },
       {
         icon: '👟', color: '#0891B2', title: 'Foot movement',
+        sub: '0–100 plant timing & press',
         what: 'Pre-shot foot activity and front-foot plant timing relative to contact (0–100).',
         how: 'Ankle movement before the swing, normalized by shoulder width, plus plant frame vs contact.',
         tip: 'Trigger a small press or lift early; get the front foot down on time on front-foot shots.',
       },
       {
         icon: '⚖️', color: '#10B981', title: 'Batting stance',
+        sub: '0–100 shoulder & hip horizontal symmetry',
         what: 'Pre-shot shoulder and hip line tilt vs horizontal (0–100).',
         how: 'Mean tilt in the stationary window before onset; flags need enough clean frames.',
         tip: 'Level shoulders before the bowler runs in — avoid showing a preset bias too early.',
       },
       {
         icon: '〰️', color: '#8B5CF6', title: 'Swing arc',
+        sub: '0–100 swing plane consistency',
         what: 'How smooth your swing shape is into the ball (0–100), from your hands on video — the path between both wrists.',
         how: 'Steadier, smoother motion into contact scores higher; we scale for camera distance so nets compare fairly.',
         tip: 'Hands together — smooth arc through the ball, not just harder.',
       },
       {
         icon: '📏', color: '#F97316', title: 'Shot execution',
+        sub: '0–100 length match & decision',
         what: 'In simple words: did you play the right shot for that ball length (0–100).',
         how: 'Coach matrix per length zone × shot type; down-weighted when bounce or track is uncertain.',
         tip: 'Match stroke to length — drives when full, pull/hook when short, defence when good length.',
       },
       {
         icon: '💫', color: '#EAB308', title: 'Swing intensity',
+        sub: '0–100 bat acceleration & intent',
         what: 'How much intent and bat acceleration showed in your swing (0–100), session-normalized.',
         how: 'P90 rolling bilateral wrist velocity vs session ceiling.',
         tip: 'Use as context; good technique beats empty effort.',
       },
       {
         icon: '🏏', color: '#EF4444', title: 'Overall score (/10)',
-        what: 'Composite: head 28%, footwork 20%, stance 12%, elbow 12%, shot execution 22%, swing arc 6%.',
-        how: 'Ball merge updates length × shot; footwork can blend with line of ball when the ball is tracked.',
-        tip: 'Fix head and feet first — then shot choice vs length and swing arc.',
-      },
+        sub: 'Weighted composite rating',
+        what: 'Composite single rating reflecting head stability, base balance, footwork, and impact execution.',
+        how: 'Weighted sum normalized from 0 to 10 with progressive penalties for technical faults.',
+        tip: 'Focus on repeating your setup consistently rather than chasing isolated numbers.',
+      }
     ];
-    return metrics.map(m => `
-      <div class="rp-metric-card" style="border-top:3px solid ${m.color}">
-        <div class="rp-metric-icon">${m.icon}</div>
-        <div class="rp-metric-title" style="color:${m.color}">${m.title}</div>
-        <div class="rp-metric-section"><span class="rp-metric-tag">What it measures</span><p>${m.what}</p></div>
-        <div class="rp-metric-section"><span class="rp-metric-tag">How it's calculated</span><p>${m.how}</p></div>
-        <div class="rp-metric-section"><span class="rp-metric-tag" style="background:color-mix(in srgb, ${m.color} 12%, transparent);color:${m.color}">Coaching tip</span><p>${m.tip}</p></div>
-      </div>`).join('');
+
+    return metrics.map((m, idx) => `
+      <article class="rp-explain-card${idx === 0 ? ' is-open' : ''}" data-purpose="metric-explain-card">
+        <header class="rp-explain-head" onclick="window.toggleExplainCard && window.toggleExplainCard(this)" role="button" tabindex="0">
+          <div class="rp-explain-title-wrap">
+            <div class="rp-explain-icon-box" style="background:color-mix(in srgb, ${m.color} 12%, transparent);color:${m.color}">
+              ${m.icon}
+            </div>
+            <div>
+              <div class="rp-explain-title" style="color:${m.color}">${escapeHtml(m.title)}</div>
+              <div class="rp-explain-sub">${escapeHtml(m.sub)}</div>
+            </div>
+          </div>
+          <div class="rp-explain-chevron">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+        </header>
+        <div class="rp-explain-body">
+          <div class="rp-explain-section">
+            <span class="rp-explain-badge">What it measures</span>
+            <p class="rp-explain-text">${escapeHtml(m.what)}</p>
+          </div>
+          <div class="rp-explain-section">
+            <span class="rp-explain-badge">How it's calculated</span>
+            <p class="rp-explain-text">${escapeHtml(m.how)}</p>
+          </div>
+          <div class="rp-explain-tip-box" style="border-left:3px solid ${m.color}">
+            <span class="rp-explain-badge" style="color:${m.color}">Coaching tip</span>
+            <p class="rp-explain-text" style="font-weight:600;color:#0f172a;">${escapeHtml(m.tip)}</p>
+          </div>
+        </div>
+      </article>`).join('');
   }
 
-  // Labels keep their four words; the cut-offs and colours follow tone.js
-  // (70 / 45) so a value reads the same here as on the dashboard.
   function qualityBand(v, emptyLabel = 'No data') {
     if (v == null || !Number.isFinite(Number(v))) return { label: emptyLabel, color: TONE.neutral };
     const n = Number(v);
@@ -1450,7 +1481,7 @@ const ReportModal = (() => {
   transform: rotate(180deg);
 }
 
-/* Key Metrics Row (Always Visible) */
+/* Key Metrics Row (Always Visible - Numbers as Main Text, Metric & Tags as Sub Text) */
 .rp-deliv-key-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -1460,30 +1491,49 @@ const ReportModal = (() => {
 
 .rp-deliv-mini-metric {
   background: #f8fafc;
-  border-radius: 12px;
-  padding: 8px 10px;
-  border: 1px solid #f1f5f9;
+  border-radius: 14px;
+  padding: 10px 6px 10px;
+  border: 1px solid #eef2f6;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.15s ease, background 0.15s ease;
 }
 
-.rp-deliv-mini-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #64748b;
-  letter-spacing: 0.04em;
+.rp-deliv-mini-metric:active {
+  background: #f1f5f9;
 }
 
+/* Number is the main highlight / hero text */
 .rp-deliv-mini-val {
-  font-size: 0.92rem;
+  font-size: 1.65rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
+
+/* Sub text: Metric name and status/tag */
+.rp-deliv-mini-label {
+  font-size: 0.64rem;
   font-weight: 800;
-  margin-top: 2px;
+  text-transform: uppercase;
+  color: #475569;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+  line-height: 1.15;
 }
 
 .rp-deliv-mini-sub {
-  font-size: 0.62rem;
-  font-weight: 700;
-  margin-top: 1px;
+  font-size: 0.60rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  line-height: 1;
 }
 
 /* Collapsible Detailed Section */
@@ -1500,36 +1550,50 @@ const ReportModal = (() => {
 
 .rp-deliv-grid-more {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 12px;
 }
 
 .rp-deliv-more-box {
   background: #ffffff;
-  border-radius: 10px;
-  padding: 8px;
-  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 9px 6px;
+  border: 1px solid #eef2f6;
   text-align: center;
-}
-
-.rp-deliv-more-label {
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
 }
 
 .rp-deliv-more-val {
-  font-size: 0.88rem;
+  font-size: 1.05rem;
+  font-weight: 850;
+  color: #0f172a;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-deliv-more-label {
+  font-size: 0.62rem;
   font-weight: 800;
-  margin-top: 2px;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.03em;
+  margin-top: 3px;
 }
 
 .rp-deliv-more-sub {
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: #64748b;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .rp-deliv-coach-section {
@@ -1550,6 +1614,123 @@ const ReportModal = (() => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+
+/* ── What Metrics Mean Collapsible Cards ── */
+.rp-explain-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 3px 14px -2px rgba(15, 23, 42, 0.05), 0 1px 4px -1px rgba(15, 23, 42, 0.02);
+  overflow: hidden;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.rp-explain-head {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  background: #ffffff;
+}
+
+.rp-explain-head:active {
+  background: #f8fafc;
+}
+
+.rp-explain-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rp-explain-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.rp-explain-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+.rp-explain-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.rp-explain-chevron {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.rp-explain-card.is-open .rp-explain-chevron {
+  transform: rotate(180deg);
+}
+
+.rp-explain-body {
+  display: none;
+  border-top: 1px solid #f1f5f9;
+  padding: 14px 16px 16px;
+  background: #fafafa;
+}
+
+.rp-explain-card.is-open .rp-explain-body {
+  display: block;
+}
+
+.rp-explain-section {
+  margin-bottom: 12px;
+}
+
+.rp-explain-section:last-child {
+  margin-bottom: 0;
+}
+
+.rp-explain-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.rp-explain-text {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #334155;
+  margin: 0;
+}
+
+.rp-explain-tip-box {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid #f1f5f9;
+  margin-top: 6px;
 }
 
 
@@ -2156,6 +2337,17 @@ const ReportModal = (() => {
     document.head.appendChild(style);
   }
 
+  
+    if (typeof window !== 'undefined') {
+      window.toggleExplainCard = function(headEl) {
+        if (!headEl) return;
+        const card = headEl.closest('.rp-explain-card');
+        if (card) {
+          card.classList.toggle('is-open');
+        }
+      };
+    }
+
   function buildModal(data) {
     const { shots, analysis } = data;
     const ballAnalytics = data.ballAnalytics ?? data.completePayload?.ball_analytics ?? null;
@@ -2560,41 +2752,57 @@ const ReportModal = (() => {
                     </div>
                   </header>
 
-                  <!-- Key Metrics Row (Always Visible) -->
+                  <!-- Key Metrics Row (Numbers are Main Highlight, Names/Status are Sub Text) -->
                   <div class="rp-deliv-key-metrics">
                     <div class="rp-deliv-mini-metric">
-                      <div class="rp-deliv-mini-label">Head Position</div>
                       <div class="rp-deliv-mini-val" style="color:${headTagCol}">${headVal}</div>
+                      <div class="rp-deliv-mini-label">Head Position</div>
                       <div class="rp-deliv-mini-sub" style="color:${headTagCol}">${headTag}</div>
                     </div>
                     <div class="rp-deliv-mini-metric">
-                      <div class="rp-deliv-mini-label">Bat Speed</div>
                       <div class="rp-deliv-mini-val" style="color:${spdTagCol}">${spdVal}</div>
+                      <div class="rp-deliv-mini-label">Bat Speed</div>
                       <div class="rp-deliv-mini-sub" style="color:${spdTagCol}">${spdTag}</div>
                     </div>
                     <div class="rp-deliv-mini-metric">
+                      <div class="rp-deliv-mini-val" style="color:${(fw || 0) >= 70 ? '#059669' : (fw || 0) >= 50 ? '#0d9488' : '#d97706'}">${fw != null ? fw : '—'}</div>
                       <div class="rp-deliv-mini-label">Footwork</div>
-                      <div class="rp-deliv-mini-val" style="color:${(fw || 0) >= 70 ? '#059669' : '#d97706'}">${fw != null ? fw : '—'}</div>
-                      <div class="rp-deliv-mini-sub" style="color:#64748b">${s.footwork_label || 'Balanced'}</div>
+                      <div class="rp-deliv-mini-sub" style="color:#64748b">${s.footwork_label || 'BALANCED'}</div>
                     </div>
                   </div>
 
-                  <!-- Collapsible Section with Full Breakdown -->
+                  <!-- Collapsible Section with Full Breakdown (All Table Data Preserved) -->
                   <div class="rp-deliv-details-wrap">
                     <div class="rp-deliv-grid-more">
                       <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-val" style="color:#0f172a;">${stab != null ? stab : '—'}</div>
                         <div class="rp-deliv-more-label">Stance</div>
-                        <div class="rp-deliv-more-val">${stab != null ? stab : '—'}</div>
-                        <div class="rp-deliv-more-sub">${s.symmetry_label || 'Setup'}</div>
+                        <div class="rp-deliv-more-sub">${escapeHtml(s.symmetry_label || 'Balanced')}</div>
                       </div>
                       <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-val" style="color:#0f172a;">${pathSc != null ? pathSc : '—'}</div>
                         <div class="rp-deliv-more-label">Swing Arc</div>
-                        <div class="rp-deliv-more-val">${pathSc != null ? pathSc : '—'}</div>
-                        <div class="rp-deliv-more-sub">${s.swing_path_label || 'Plane'}</div>
+                        <div class="rp-deliv-more-sub">${escapeHtml(s.swing_path_label || 'Plane')}</div>
                       </div>
                       <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-val" style="color:#0f172a;">${exSc != null ? exSc : Math.round(exec * 10)}</div>
+                        <div class="rp-deliv-more-label">Execution</div>
+                        <div class="rp-deliv-more-sub">${escapeHtml(s.execution_label || 'Timing')}</div>
+                      </div>
+                      <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-val" style="color:#0f172a;">${sw != null ? sw : '—'}</div>
+                        <div class="rp-deliv-more-label">Intensity</div>
+                        <div class="rp-deliv-more-sub">${escapeHtml(s.swing_intensity_label || 'Bat Torque')}</div>
+                      </div>
+                      <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-val" style="color:#0f172a;font-size:0.85rem;white-space:nowrap;">${ballDel?.length?.label ? String(ballDel.length.label).toUpperCase().replace(/_/g, ' ') : '—'}</div>
+                        <div class="rp-deliv-more-label">Ball Pitch</div>
+                        <div class="rp-deliv-more-sub">${ballDel?.speed_kmh_est ? `${Math.round(ballDel.speed_kmh_est)} km/h` : 'Pace —'}</div>
+                      </div>
+                      <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-val" style="color:#0284c7;font-size:0.82rem;line-height:1.2;font-weight:800;">${escapeHtml(s.shot_quality || 'Good Impact')}</div>
                         <div class="rp-deliv-more-label">Impact Cue</div>
-                        <div class="rp-deliv-more-val" style="font-size:0.75rem;margin-top:4px;color:#0369a1;">${escapeHtml(s.shot_quality || 'Good impact')}</div>
+                        <div class="rp-deliv-more-sub">${headSub}</div>
                       </div>
                     </div>
 
