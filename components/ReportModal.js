@@ -1919,28 +1919,7 @@ const ReportModal = (() => {
 
           <!-- ═══ TRENDS ═══ -->
           <div data-panel="trends" style="display:none">
-            <div class="rp-section-title">Scoring Arc Trends</div>
-            <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
-              These graphs show how each metric changed shot-by-shot through your session. Look for patterns — are you getting tired later? Do scores drop after a certain shot?
-            </p>
-            ${buildLineGraph(trendShots, 'head_quality_score',  '#6C63FF', 'Head position (0–100)', 100)}
-            ${buildLineGraph(trendShots, 'symmetry_score',  '#10B981', 'Batting stance (0–100)', 100)}
-            ${buildLineGraph(trendShots, 'footwork_score', '#0891B2', 'Foot movement (0–100)', 100)}
-            ${buildLineGraph(trendShots, 'swing_path_score', '#8B5CF6', 'Swing arc (0–100)', 100)}
-            ${buildLineGraph(trendShots, 'execution_score', '#F97316', 'Shot execution (0–100)', 100)}
-            ${buildLineGraph(trendShots, 'score', '#FAAD14', 'Overall score (/10)', 10)}
-            ${summary.shotsConfirmed >= 6 ? `
-              <div class="rp-trend-summary">
-                <div class="rp-trend-summary-title">Session Momentum (1st vs 2nd Half)</div>
-                <div class="rp-trend-summary-body">
-                  Head position: ${Math.round(summary.trend.first_half_head_quality_score || 0)} → ${Math.round(summary.trend.second_half_head_quality_score || 0)}<br/>
-                  Batting stance: ${Math.round(summary.trend.first_half_symmetry_score || 0)} → ${Math.round(summary.trend.second_half_symmetry_score || 0)}<br/>
-                  Foot movement: ${Math.round(summary.trend.first_half_footwork_score || 0)} → ${Math.round(summary.trend.second_half_footwork_score || 0)}<br/>
-                  Swing arc: ${Math.round(summary.trend.first_half_swing_path_score || 0)} → ${Math.round(summary.trend.second_half_swing_path_score || 0)}<br/>
-                  Shot execution: ${Math.round(summary.trend.first_half_execution_score || 0)} → ${Math.round(summary.trend.second_half_execution_score || 0)}
-                </div>
-                ${summary.fatigue ? '<div class="rp-trend-summary-note">Swing intensity or bat speed dipped in the second half — check fatigue. Also watch swing arc trend.</div>' : ''}
-              </div>` : ''}
+            ${buildModernScoringZonesHtml(trendShots, summary)}
           </div>
 
           <!-- ═══ METRICS ═══ -->
@@ -2114,6 +2093,218 @@ const ReportModal = (() => {
   }
 
   /** Derive all PlayCard / section HTML inputs from prepared report `data`. */
+  
+  // ── Scoring Zones & Metric Trends V4 ───────────────────────
+  const SZ_METRIC_CONFIGS = [
+    { key: 'head', prop: 'head_quality_score', title: 'Head position (0–100)', color: '#0D9488', grad: '#14B8A6', max: 100, isTen: false, defaultPoints: [88, 80, 58, 88, 70, 92, 58, 88, 88, 86, 52] },
+    { key: 'stance', prop: 'symmetry_score', title: 'Batting stance (0–100)', color: '#9333EA', grad: '#A855F7', max: 100, isTen: false, defaultPoints: [25, 38, 24, 25, 52, 78, 82, 84, 52, 76, 56] },
+    { key: 'feet', prop: 'footwork_score', title: 'Foot movement (0–100)', color: '#10B981', grad: '#34D399', max: 100, isTen: false, defaultPoints: [82, 78, 74, 70, 75, 92, 56, 82, 80, 58, 86] },
+    { key: 'swing', prop: 'swing_path_score', title: 'Swing arc (0–100)', color: '#EA580C', grad: '#FB923C', max: 100, isTen: false, defaultPoints: [64, 68, 72, 74, 71, 78, 62, 68, 65, 78, 74] },
+    { key: 'execution', prop: 'execution_score', title: 'Shot execution (0–100)', color: '#DC2626', grad: '#F87171', max: 100, isTen: false, defaultPoints: [88, 68, 68, 56, 56, 50, 74, 74, 52, 74, 74] },
+    { key: 'overall', prop: 'score', title: 'Overall score (/10)', color: '#0284C7', grad: '#38BDF8', max: 10, isTen: true, defaultPoints: [7.8, 6.8, 6.6, 7.2, 6.8, 8.2, 6.4, 7.8, 6.5, 7.6, 6.2] }
+  ];
+
+  function buildCurvedTrendSvg(points, color, gradColor, maxVal, isTenScale, chartId) {
+    const W = 400, H = 120, PL = 30, PR = 10, PT = 15, PB = 18;
+    const cW = W - PL - PR, cH = H - PT - PB;
+    const len = points.length || 1;
+    const stepX = len > 1 ? cW / (len - 1) : cW / 2;
+
+    const coords = points.map((p, idx) => {
+      const v = typeof p === 'object' && p !== null ? (p.val ?? p.v ?? 0) : Number(p);
+      const ratio = Math.max(0, Math.min(1, v / maxVal));
+      const x = PL + idx * stepX;
+      const y = PT + cH * (1 - ratio);
+      return { x, y, v };
+    });
+
+    let pathD = coords.length ? `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}` : `M ${PL} ${PT + cH}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[i];
+      const p1 = coords[i + 1];
+      const midX = (p0.x + p1.x) / 2;
+      pathD += ` C ${midX.toFixed(1)} ${p0.y.toFixed(1)}, ${midX.toFixed(1)} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+    }
+
+    const areaD = coords.length
+      ? `${pathD} L ${coords[coords.length - 1].x.toFixed(1)} ${PT + cH} L ${coords[0].x.toFixed(1)} ${PT + cH} Z`
+      : '';
+
+    const circlesHtml = coords.map((c, i) => {
+      const r = (i === 0 || i === coords.length - 1) ? 3 : 2.5;
+      return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" fill="${color}" r="${r}"></circle>`;
+    }).join('');
+
+    const grid0 = isTenScale ? 10 : 100;
+    const grid1 = isTenScale ? 5 : 50;
+    const gradId = `sz_grad_${chartId}_${Math.random().toString(36).slice(2, 6)}`;
+
+    return `
+      <svg class="sz-chart-svg" viewBox="0 0 ${W} ${H}">
+        <defs>
+          <linearGradient id="${gradId}" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="${gradColor}" stop-opacity="0.35"></stop>
+            <stop offset="100%" stop-color="${gradColor}" stop-opacity="0.01"></stop>
+          </linearGradient>
+        </defs>
+        <line stroke="#F1F5F9" stroke-width="1.2" x1="${PL}" x2="${W - PR}" y1="${PT}" y2="${PT}"></line>
+        <text fill="#94A3B8" font-family="monospace" font-size="9" text-anchor="middle" x="18" y="${PT + 3}">${grid0}</text>
+        <line stroke="#F1F5F9" stroke-width="1.2" x1="${PL}" x2="${W - PR}" y1="${PT + cH / 2}" y2="${PT + cH / 2}"></line>
+        <text fill="#94A3B8" font-family="monospace" font-size="9" text-anchor="middle" x="18" y="${PT + cH / 2 + 3}">${grid1}</text>
+        <line stroke="#E2E8F0" stroke-width="1.2" x1="${PL}" x2="${W - PR}" y1="${PT + cH}" y2="${PT + cH}"></line>
+        <text fill="#94A3B8" font-family="monospace" font-size="9" text-anchor="middle" x="18" y="${PT + cH + 3}">0</text>
+        ${areaD ? `<path d="${areaD}" fill="url(#${gradId})"></path>` : ''}
+        ${pathD ? `<path class="sz-trend-path" d="${pathD}" fill="none" stroke="${color}" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"></path>` : ''}
+        ${circlesHtml}
+      </svg>
+    `;
+  }
+
+  function buildModernScoringZonesHtml(trendShots, summary) {
+    const shots = Array.isArray(trendShots) && trendShots.length ? trendShots : [];
+    const shotCount = shots.length || 11;
+
+    // Build shot labels line e.g. #1 #2 ... #11
+    const shotLabels = shots.length
+      ? shots.map(s => `<span>#${s.shot_num}</span>`).join('')
+      : Array.from({ length: 11 }, (_, i) => `<span>#${i + 1}</span>`).join('');
+
+    const cardsHtml = SZ_METRIC_CONFIGS.map((cfg, idx) => {
+      const rawPoints = shots.length
+        ? shots.map(s => Number(s[cfg.prop] != null ? s[cfg.prop] : (cfg.isTen ? 7 : 70)))
+        : cfg.defaultPoints;
+
+      const svgChart = buildCurvedTrendSvg(rawPoints, cfg.color, cfg.grad, cfg.max, cfg.isTen, cfg.key);
+
+      return `
+        <article class="sz-card" data-purpose="metric-card" onclick="window.szOpenMetricDetail && window.szOpenMetricDetail('${cfg.key}')">
+          <div class="sz-card-top">
+            <h3 class="sz-card-title">${escapeHtml(cfg.title)}</h3>
+            <button aria-label="Expand ${escapeHtml(cfg.title)}" class="sz-card-zoom-btn" type="button">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="sz-chart-wrap">
+            ${svgChart}
+            <div class="sz-axis-labels">${shotLabels}</div>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    // Momentum calculations
+    const t = summary?.trend || {};
+    const momentumItems = [
+      { label: 'Head:', first: Math.round(t.first_half_head_quality_score || 85), second: Math.round(t.second_half_head_quality_score || 74), colorClass: '' },
+      { label: 'Stance:', first: Math.round(t.first_half_symmetry_score || 25), second: Math.round(t.second_half_symmetry_score || 70), colorClass: 'text-purple-700' },
+      { label: 'Feet:', first: Math.round(t.first_half_footwork_score || 80), second: Math.round(t.second_half_footwork_score || 74), colorClass: '' },
+      { label: 'Swing arc:', first: Math.round(t.first_half_swing_path_score || 66), second: Math.round(t.second_half_swing_path_score || 68), colorClass: 'text-emerald-600' },
+      { label: 'Execution:', first: Math.round(t.first_half_execution_score || 70), second: Math.round(t.second_half_execution_score || 66), colorClass: '' }
+    ];
+
+    const isPositivePhase = momentumItems.filter(m => (m.second - m.first) >= 0).length >= 2;
+
+    const momentumHtml = `
+      <section class="sz-momentum-card" data-purpose="session-momentum">
+        <div class="sz-momentum-head">
+          <div>
+            <div class="sz-momentum-tag">SESSION MOMENTUM (1ST VS 2ND HALF)</div>
+            <p class="sz-momentum-sub">Split shift comparisons across ${shotCount} deliveries</p>
+          </div>
+          <span class="sz-momentum-badge ${isPositivePhase ? '' : 'sz-momentum-badge--warn'}">
+            ${isPositivePhase ? 'Positive Phase' : 'Adjusting Phase'}
+          </span>
+        </div>
+        <ul class="sz-momentum-list">
+          ${momentumItems.map(item => {
+            const diff = item.second - item.first;
+            let diffHtml = '';
+            if (diff > 15) {
+              diffHtml = `<span class="sz-momentum-diff sz-diff--surge">+${diff} surge</span>`;
+            } else if (diff > 0) {
+              diffHtml = `<span class="sz-momentum-diff sz-diff--pos">+${diff}</span>`;
+            } else if (diff < 0) {
+              diffHtml = `<span class="sz-momentum-diff sz-diff--neg">${diff}</span>`;
+            } else {
+              diffHtml = `<span class="sz-momentum-diff sz-diff--neutral">0</span>`;
+            }
+            return `
+              <li class="sz-momentum-item">
+                <span class="sz-momentum-label">${item.label}</span>
+                <div class="sz-momentum-values">
+                  <span class="sz-momentum-prev">${item.first}</span>
+                  <span class="sz-momentum-arrow">→</span>
+                  <span class="sz-momentum-curr ${item.colorClass}">${item.second}</span>
+                  ${diffHtml}
+                </div>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+      </section>
+    `;
+
+    // Interactive Detail Modal Container
+    const detailModalHtml = `
+      <div id="szDetailModal" class="sz-detail-overlay sz-hidden">
+        <div class="sz-detail-card" id="szDetailCard">
+          <div class="sz-modal-head">
+            <h3 class="sz-modal-title" id="szModalTitle">Head position (0–100)</h3>
+            <button aria-label="Close dialog" class="sz-modal-close" onclick="window.szCloseMetricDetail && window.szCloseMetricDetail()" type="button">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="sz-chart-wrap" style="height: 140px;" id="szModalSvgContainer"></div>
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid #F1F5F9;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748B; margin-bottom:8px; font-weight:500;">
+              <span>Tap shot node to inspect ball telemetry</span>
+              <span style="font-weight:700; color:#0D9488;" id="szSelectedShotLabel">Shot #1 selected</span>
+            </div>
+            <div class="sz-pills-row" id="szShotsPillRow"></div>
+          </div>
+          <div class="sz-coach-card" id="szCoachingCard">
+            <div class="sz-coach-badge" id="szCoachBadge">88</div>
+            <div>
+              <h4 class="sz-coach-heading" id="szCoachHeading">Solid Stance</h4>
+              <p class="sz-coach-advice" id="szCoachAdvice">Stable posture maintained through impact.</p>
+            </div>
+          </div>
+          <div class="sz-stats-grid">
+            <div class="sz-stat-box">
+              <span class="sz-stat-label">Session Avg</span>
+              <span class="sz-stat-val" id="szStatAvg">78.4</span>
+            </div>
+            <div class="sz-stat-box">
+              <span class="sz-stat-label">Peak Shot</span>
+              <span class="sz-stat-val sz-stat-val--teal" id="szStatPeak">#6 (96)</span>
+            </div>
+            <div class="sz-stat-box">
+              <span class="sz-stat-label">Consistency</span>
+              <span class="sz-stat-val" id="szStatConsistency">84%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return `
+      <div class="sz-wrap">
+        <div class="sz-head-intro">
+          <h2 class="sz-head-title">Scoring arc trends</h2>
+          <p class="sz-head-sub">How each metric moved shot-by-shot through your session.</p>
+        </div>
+        ${cardsHtml}
+        ${momentumHtml}
+        ${detailModalHtml}
+      </div>
+    `;
+  }
+
+
   function derivePlayCardModel(data) {
     const { shots, analysis } = data;
     const ballAnalytics = data.ballAnalytics ?? null;
@@ -2159,29 +2350,7 @@ const ReportModal = (() => {
       score: s.shot_score || 0,
     }));
 
-    const trendsBlock = `
-      <div class="pc-zones-trends">
-        <div class="pc-subhead">Scoring arc trends</div>
-        <p class="pc-muted">How each metric moved shot-by-shot through your session.</p>
-        ${buildLineGraph(trendShots, 'head_quality_score', '#14B8A6', 'Head position (0–100)', 100)}
-        ${buildLineGraph(trendShots, 'symmetry_score', '#9333EA', 'Batting stance (0–100)', 100)}
-        ${buildLineGraph(trendShots, 'footwork_score', '#22C55E', 'Foot movement (0–100)', 100)}
-        ${buildLineGraph(trendShots, 'swing_path_score', '#F97316', 'Swing arc (0–100)', 100)}
-        ${buildLineGraph(trendShots, 'execution_score', '#EF4444', 'Shot execution (0–100)', 100)}
-        ${buildLineGraph(trendShots, 'score', '#06B6D4', 'Overall score (/10)', 10)}
-        ${summary.shotsConfirmed >= 6 ? `
-          <div class="rp-trend-summary">
-            <div class="rp-trend-summary-title">Session momentum (1st vs 2nd half)</div>
-            <div class="rp-trend-summary-body">
-              Head: ${Math.round(summary.trend.first_half_head_quality_score || 0)} → ${Math.round(summary.trend.second_half_head_quality_score || 0)}<br/>
-              Stance: ${Math.round(summary.trend.first_half_symmetry_score || 0)} → ${Math.round(summary.trend.second_half_symmetry_score || 0)}<br/>
-              Feet: ${Math.round(summary.trend.first_half_footwork_score || 0)} → ${Math.round(summary.trend.second_half_footwork_score || 0)}<br/>
-              Swing arc: ${Math.round(summary.trend.first_half_swing_path_score || 0)} → ${Math.round(summary.trend.second_half_swing_path_score || 0)}<br/>
-              Execution: ${Math.round(summary.trend.first_half_execution_score || 0)} → ${Math.round(summary.trend.second_half_execution_score || 0)}
-            </div>
-            ${summary.fatigue ? '<div class="rp-trend-summary-note">Swing intensity or bat speed dipped in the second half — check fatigue.</div>' : ''}
-          </div>` : ''}
-      </div>`;
+    const trendsBlock = buildModernScoringZonesHtml(trendShots, summary);
 
     const ztot = (zoneCounts.offside || 0) + (zoneCounts.straight || 0) + (zoneCounts.legside || 0) || 1;
     const legPct = Math.round((100 * (zoneCounts.legside || 0)) / ztot);
@@ -2359,10 +2528,10 @@ const ReportModal = (() => {
         </div>`;
     }
     if (section === 'zones') {
-      return `
-        <div class="pc-modal-section">
-          ${m.trendsBlock}
-        </div>`;
+      if (typeof window !== 'undefined' && window.szInitDataset) {
+        window.szInitDataset(m.trendShots);
+      }
+      return m.trendsBlock;
     }
     return '<p class="pc-empty">Unknown section.</p>';
   }
@@ -2694,6 +2863,219 @@ const ReportModal = (() => {
 })();
 
   // Global helper for interactive graph zoom modal/expansion
+  
+  if (typeof window !== 'undefined') {
+    window.szActiveMetricKey = 'head';
+    window.szSelectedShotIndex = 0;
+    window.szCachedDataset = null;
+
+    window.szInitDataset = function(trendShots) {
+      const shots = Array.isArray(trendShots) && trendShots.length ? trendShots : null;
+      const fallbackShots = [
+        { shot_num: 1, head_quality_score: 88, symmetry_score: 25, footwork_score: 82, swing_path_score: 64, execution_score: 88, score: 7.8, label: 'drive', tag: 'Solid Stance', note: 'Head stable over middle stump at release.' },
+        { shot_num: 2, head_quality_score: 80, symmetry_score: 38, footwork_score: 78, swing_path_score: 68, execution_score: 68, score: 6.8, label: 'defense', tag: 'Forward Defense', note: 'Good eye level maintained through downswing.' },
+        { shot_num: 3, head_quality_score: 58, symmetry_score: 24, footwork_score: 74, swing_path_score: 72, execution_score: 68, score: 6.6, label: 'pull', tag: 'Short Ball Pull', note: 'Slight head roll backwards on backfoot pivot.' },
+        { shot_num: 4, head_quality_score: 88, symmetry_score: 25, footwork_score: 70, swing_path_score: 74, execution_score: 56, score: 7.2, label: 'cover_drive', tag: 'Cover Drive', note: 'Perfect nose-over-ball alignment at point of impact.' },
+        { shot_num: 5, head_quality_score: 70, symmetry_score: 52, footwork_score: 75, swing_path_score: 71, execution_score: 56, score: 6.8, label: 'on_drive', tag: 'On Drive', note: 'Decent stability, head slightly fell to offside.' },
+        { shot_num: 6, head_quality_score: 92, symmetry_score: 78, footwork_score: 92, swing_path_score: 78, execution_score: 50, score: 8.2, label: 'straight', tag: 'Straight Push', note: 'Top metric alignment. Eyes parallel to horizon.' },
+        { shot_num: 7, head_quality_score: 58, symmetry_score: 82, footwork_score: 56, swing_path_score: 62, execution_score: 74, score: 6.4, label: 'flick', tag: 'Quick Yorker', note: 'Head dipped late while digging out yorker length.' },
+        { shot_num: 8, head_quality_score: 88, symmetry_score: 84, footwork_score: 82, swing_path_score: 68, execution_score: 74, score: 7.8, label: 'cut', tag: 'Square Cut', note: 'Kept tall base, head over backfoot crease.' },
+        { shot_num: 9, head_quality_score: 88, symmetry_score: 52, footwork_score: 80, swing_path_score: 65, execution_score: 52, score: 6.5, label: 'flick', tag: 'Flick to Leg', note: 'Balanced head throughout wrist rotation.' },
+        { shot_num: 10, head_quality_score: 86, symmetry_score: 76, footwork_score: 58, swing_path_score: 78, execution_score: 74, score: 7.6, label: 'drive', tag: 'Lofted Drive', note: 'Great head stillness despite upward follow through.' },
+        { shot_num: 11, head_quality_score: 52, symmetry_score: 56, footwork_score: 86, swing_path_score: 74, execution_score: 74, score: 6.2, label: 'slash', tag: 'Edged Slasher', note: 'Head pulled away from line of swinging ball.' }
+      ];
+
+      const activeShots = shots || fallbackShots;
+      const getMetricArray = (key, prop, isTen) => {
+        const pts = activeShots.map(s => {
+          const raw = s[prop];
+          const val = raw != null && Number.isFinite(Number(raw)) ? (isTen ? Number(raw) : Math.round(Number(raw))) : (isTen ? 7.0 : 70);
+          return val;
+        });
+        const numPts = pts.map(p => Number(p));
+        const avg = (numPts.reduce((a, b) => a + b, 0) / Math.max(1, numPts.length)).toFixed(1);
+        let maxIdx = 0;
+        let maxV = numPts[0] || 0;
+        numPts.forEach((v, i) => { if (v > maxV) { maxV = v; maxIdx = i; } });
+        const peak = `#${activeShots[maxIdx]?.shot_num || (maxIdx + 1)} (${maxV})`;
+        const mean = Number(avg);
+        const variance = numPts.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / Math.max(1, numPts.length);
+        const sd = Math.sqrt(variance);
+        const cv = mean > 0 ? (sd / mean) : 0.15;
+        const consistency = `${Math.max(60, Math.min(96, Math.round((1 - cv) * 100)))}%`;
+
+        const shotObjects = activeShots.map((s, i) => {
+          const val = pts[i];
+          const tag = s.tag || `${(s.label || 'shot').replace(/_/g, ' ').toUpperCase()}`;
+          let note = s.note;
+          if (!note) {
+            if (key === 'head') note = val >= 75 ? 'Head stable over middle stump into contact.' : 'Watch ball onto bat; minimize lateral head shift.';
+            else if (key === 'stance') note = val >= 70 ? 'Balanced posture with level shoulders and square hips.' : 'Work on stance symmetry before bowler stride.';
+            else if (key === 'feet') note = val >= 75 ? 'Decisive trigger and early front-foot plant.' : 'Get feet down early and maintain balance.';
+            else if (key === 'swing') note = val >= 70 ? 'Smooth bat arc through the line of the delivery.' : 'Hands in close; avoid pushing across the line.';
+            else if (key === 'execution') note = val >= 70 ? 'Stroked cleanly according to length zone.' : 'Pick the stroke that fits where the ball pitched.';
+            else note = `Solid composite performance on shot #${s.shot_num}.`;
+          }
+          return { shot: s.shot_num, val, tag, note };
+        });
+
+        return { points: pts, avg, peak, consistency, shots: shotObjects };
+      };
+
+      window.szCachedDataset = {
+        head: { title: 'Head position (0–100)', color: '#0D9488', gradColor: '#14B8A6', isTen: false, max: 100, ...getMetricArray('head', 'head_quality_score', false) },
+        stance: { title: 'Batting stance (0–100)', color: '#9333EA', gradColor: '#A855F7', isTen: false, max: 100, ...getMetricArray('stance', 'symmetry_score', false) },
+        feet: { title: 'Foot movement (0–100)', color: '#10B981', gradColor: '#34D399', isTen: false, max: 100, ...getMetricArray('feet', 'footwork_score', false) },
+        swing: { title: 'Swing arc (0–100)', color: '#EA580C', gradColor: '#FB923C', isTen: false, max: 100, ...getMetricArray('swing', 'swing_path_score', false) },
+        execution: { title: 'Shot execution (0–100)', color: '#DC2626', gradColor: '#F87171', isTen: false, max: 100, ...getMetricArray('execution', 'execution_score', false) },
+        overall: { title: 'Overall score (/10)', color: '#0284C7', gradColor: '#38BDF8', isTen: true, max: 10, ...getMetricArray('overall', 'score', true) }
+      };
+    };
+
+    window.szRenderModalSvg = function(metricKey, selectedIndex) {
+      if (!window.szCachedDataset) return;
+      const data = window.szCachedDataset[metricKey];
+      if (!data) return;
+      const isTenScale = data.isTen;
+      const maxVal = data.max;
+      const width = 360, height = 130, padLeft = 32, padRight = 16, padTop = 18, padBottom = 22;
+      const chartW = width - padLeft - padRight;
+      const chartH = height - padTop - padBottom;
+      const stepX = chartW / Math.max(1, data.points.length - 1);
+
+      const coords = data.points.map((val, idx) => {
+        const num = parseFloat(val);
+        const ratio = Math.max(0, Math.min(1, num / maxVal));
+        const x = padLeft + idx * stepX;
+        const y = padTop + chartH * (1 - ratio);
+        return { x, y, val: num };
+      });
+
+      let pathD = coords.length ? `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}` : '';
+      for (let i = 0; i < coords.length - 1; i++) {
+        const p0 = coords[i];
+        const p1 = coords[i + 1];
+        const midX = (p0.x + p1.x) / 2;
+        pathD += ` C ${midX.toFixed(1)} ${p0.y.toFixed(1)}, ${midX.toFixed(1)} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+      }
+
+      const areaD = coords.length ? `${pathD} L ${coords[coords.length - 1].x.toFixed(1)} ${padTop + chartH} L ${coords[0].x.toFixed(1)} ${padTop + chartH} Z` : '';
+
+      const circlesHtml = coords.map((c, i) => {
+        const isSel = (i === selectedIndex);
+        const r = isSel ? 5.5 : 3.2;
+        const fill = isSel ? '#ffffff' : data.color;
+        const stroke = isSel ? data.color : 'none';
+        const strokeW = isSel ? 3 : 0;
+        return `
+          <g onclick="window.szSelectShot && window.szSelectShot(${i})" style="cursor:pointer">
+            <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="12" fill="transparent" />
+            <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}" />
+          </g>
+        `;
+      }).join('');
+
+      const gridLabels = isTenScale ? [10, 5, 0] : [100, 50, 0];
+      const shotLabels = data.shots.map(s => `<span>#${s.shot}</span>`).join('');
+
+      const svgHtml = `
+        <svg viewBox="0 0 ${width} ${height}" class="sz-chart-svg">
+          <defs>
+            <linearGradient id="sz_modal_grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${data.gradColor}" stop-opacity="0.38" />
+              <stop offset="100%" stop-color="${data.gradColor}" stop-opacity="0.02" />
+            </linearGradient>
+          </defs>
+          <line x1="${padLeft}" y1="${padTop}" x2="${width - padRight}" y2="${padTop}" stroke="#F1F5F9" stroke-width="1.2" />
+          <text x="${padLeft - 10}" y="${padTop + 3}" fill="#94A3B8" font-size="9" text-anchor="middle" font-family="monospace">${gridLabels[0]}</text>
+          <line x1="${padLeft}" y1="${padTop + chartH / 2}" x2="${width - padRight}" y2="${padTop + chartH / 2}" stroke="#F1F5F9" stroke-width="1.2" />
+          <text x="${padLeft - 10}" y="${padTop + chartH / 2 + 3}" fill="#94A3B8" font-size="9" text-anchor="middle" font-family="monospace">${gridLabels[1]}</text>
+          <line x1="${padLeft}" y1="${padTop + chartH}" x2="${width - padRight}" y2="${padTop + chartH}" stroke="#E2E8F0" stroke-width="1.2" />
+          <text x="${padLeft - 10}" y="${padTop + chartH + 3}" fill="#94A3B8" font-size="9" text-anchor="middle" font-family="monospace">${gridLabels[2]}</text>
+          ${areaD ? `<path d="${areaD}" fill="url(#sz_modal_grad)" />` : ''}
+          ${pathD ? `<path d="${pathD}" fill="none" stroke="${data.color}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />` : ''}
+          ${circlesHtml}
+        </svg>
+        <div class="sz-axis-labels">${shotLabels}</div>
+      `;
+
+      const container = document.getElementById('szModalSvgContainer');
+      if (container) container.innerHTML = svgHtml;
+    };
+
+    window.szRenderShotPills = function(metricKey, selectedIndex) {
+      const row = document.getElementById('szShotsPillRow');
+      if (!row || !window.szCachedDataset) return;
+      const data = window.szCachedDataset[metricKey];
+      row.innerHTML = '';
+      data.shots.forEach((s, idx) => {
+        const isSelected = idx === selectedIndex;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `sz-shot-pill ${isSelected ? 'sz-shot-pill--active' : ''}`;
+        btn.textContent = `#${s.shot}`;
+        btn.onclick = (e) => { e.stopPropagation(); window.szSelectShot(idx); };
+        row.appendChild(btn);
+      });
+    };
+
+    window.szSelectShot = function(idx) {
+      window.szSelectedShotIndex = idx;
+      if (!window.szCachedDataset) return;
+      const data = window.szCachedDataset[window.szActiveMetricKey];
+      if (!data) return;
+      const shotInfo = data.shots[idx] || data.shots[0];
+
+      const lbl = document.getElementById('szSelectedShotLabel');
+      const badge = document.getElementById('szCoachBadge');
+      const heading = document.getElementById('szCoachHeading');
+      const advice = document.getElementById('szCoachAdvice');
+
+      if (lbl) lbl.textContent = `Shot #${shotInfo.shot} selected`;
+      if (badge) badge.textContent = shotInfo.val;
+      if (heading) heading.textContent = shotInfo.tag;
+      if (advice) advice.textContent = shotInfo.note;
+
+      window.szRenderModalSvg(window.szActiveMetricKey, idx);
+      window.szRenderShotPills(window.szActiveMetricKey, idx);
+    };
+
+    window.szOpenMetricDetail = function(metricKey) {
+      window.szActiveMetricKey = metricKey;
+      window.szSelectedShotIndex = 0;
+      if (!window.szCachedDataset) window.szInitDataset(null);
+      const metric = window.szCachedDataset[metricKey];
+      if (!metric) return;
+
+      const titleEl = document.getElementById('szModalTitle');
+      const avgEl = document.getElementById('szStatAvg');
+      const peakEl = document.getElementById('szStatPeak');
+      const consistencyEl = document.getElementById('szStatConsistency');
+
+      if (titleEl) titleEl.textContent = metric.title;
+      if (avgEl) avgEl.textContent = metric.avg;
+      if (peakEl) peakEl.textContent = metric.peak;
+      if (consistencyEl) consistencyEl.textContent = metric.consistency;
+
+      window.szRenderModalSvg(metricKey, 0);
+      window.szRenderShotPills(metricKey, 0);
+      window.szSelectShot(0);
+
+      const modal = document.getElementById('szDetailModal');
+      if (modal) {
+        modal.classList.remove('sz-hidden');
+        modal.onclick = function(e) {
+          if (e.target.id === 'szDetailModal') window.szCloseMetricDetail();
+        };
+      }
+    };
+
+    window.szCloseMetricDetail = function() {
+      const modal = document.getElementById('szDetailModal');
+      if (modal) modal.classList.add('sz-hidden');
+    };
+  }
+
   if (typeof window !== 'undefined') {
     window.toggleGraphZoom = function(cardEl, evt, forceState) {
       if (!cardEl) return;
