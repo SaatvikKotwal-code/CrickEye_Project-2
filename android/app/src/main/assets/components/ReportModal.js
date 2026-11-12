@@ -454,7 +454,7 @@ const ReportModal = (() => {
         tip: 'Use as context; good technique beats empty effort.',
       },
       {
-        icon: '🏏', color: '#EF4444', title: 'Overall score (/10)',
+        icon: '🏏', color: '#EF4444', title: 'Overall Score out of 10',
         sub: 'Weighted composite rating',
         what: 'Composite single rating reflecting head stability, base balance, footwork, and impact execution.',
         how: 'Weighted sum normalized from 0 to 10 with progressive penalties for technical faults.',
@@ -3027,7 +3027,7 @@ const ReportModal = (() => {
     { key: 'feet', prop: 'footwork_score', title: 'Foot movement (0–100)', color: '#10B981', grad: '#34D399', max: 100, isTen: false, defaultPoints: [82, 78, 74, 70, 75, 92, 56, 82, 80, 58, 86] },
     { key: 'swing', prop: 'swing_path_score', title: 'Swing arc (0–100)', color: '#EA580C', grad: '#FB923C', max: 100, isTen: false, defaultPoints: [64, 68, 72, 74, 71, 78, 62, 68, 65, 78, 74] },
     { key: 'execution', prop: 'execution_score', title: 'Shot execution (0–100)', color: '#DC2626', grad: '#F87171', max: 100, isTen: false, defaultPoints: [88, 68, 68, 56, 56, 50, 74, 74, 52, 74, 74] },
-    { key: 'overall', prop: 'score', title: 'Overall score (/10)', color: '#0284C7', grad: '#38BDF8', max: 10, isTen: true, defaultPoints: [7.8, 6.8, 6.6, 7.2, 6.8, 8.2, 6.4, 7.8, 6.5, 7.6, 6.2] }
+    { key: 'overall', prop: 'score', title: 'Overall Score out of 10', color: '#0284C7', grad: '#38BDF8', max: 10, isTen: true, defaultPoints: [7.8, 6.8, 6.6, 7.2, 6.8, 8.2, 6.4, 7.8, 6.5, 7.6, 6.2] }
   ];
 
   function buildCurvedTrendSvg(points, color, gradColor, maxVal, isTenScale, chartId) {
@@ -3896,7 +3896,7 @@ const ReportModal = (() => {
         feet: { title: 'Foot movement (0–100)', color: '#10B981', gradColor: '#34D399', isTen: false, max: 100, ...getMetricArray('feet', 'footwork_score', false) },
         swing: { title: 'Swing arc (0–100)', color: '#EA580C', gradColor: '#FB923C', isTen: false, max: 100, ...getMetricArray('swing', 'swing_path_score', false) },
         execution: { title: 'Shot execution (0–100)', color: '#DC2626', gradColor: '#F87171', isTen: false, max: 100, ...getMetricArray('execution', 'execution_score', false) },
-        overall: { title: 'Overall score (/10)', color: '#0284C7', gradColor: '#38BDF8', isTen: true, max: 10, ...getMetricArray('overall', 'score', true) }
+        overall: { title: 'Overall Score out of 10', color: '#0284C7', gradColor: '#38BDF8', isTen: true, max: 10, ...getMetricArray('overall', 'score', true) }
       };
     };
 
