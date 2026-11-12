@@ -10866,3 +10866,244 @@ button, [role="button"], a {
   color: #0D9488;
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODERN CRICKET PITCH & BALL ANALYTICS REDESIGN
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Section headers & card wrappers */
+.analytics-split-row.ce-panel,
+section[data-section="wagon"].ce-panel,
+#ballAnalyticsSection.ce-panel {
+  border-radius: 24px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03) !important;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.analytics-split-row .ce-panel-head,
+section[data-section="wagon"] .ce-panel-head,
+#ballAnalyticsSection .ce-panel-head {
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  background: #ffffff !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.analytics-split-row .ce-panel-title,
+section[data-section="wagon"] .ce-panel-title,
+#ballAnalyticsSection .ce-panel-title {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: #64748b !important;
+}
+
+/* Ball Analytics Session Speed Callout Banner */
+.ball-speed-session-strip {
+  margin: 0 0 20px !important;
+  padding: 18px 20px !important;
+  border-radius: 18px !important;
+  border: 1px solid #e0f2fe !important;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.06) !important;
+}
+
+.ball-speed-session-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  color: #0f172a !important;
+  margin-bottom: 4px !important;
+  letter-spacing: -0.01em;
+}
+
+.ball-speed-session-range {
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: #0369a1 !important;
+}
+
+.ball-speed-session-sub {
+  font-size: 0.75rem !important;
+  color: #64748b !important;
+  margin-top: 8px !important;
+  line-height: 1.5 !important;
+}
+
+/* Split cards: Pace band & Length zone */
+.ball-split-card {
+  padding: 18px 20px !important;
+  border: 1px solid #f1f5f9 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+}
+
+.ball-split-title {
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  color: #0f172a !important;
+  margin-bottom: 4px !important;
+}
+
+.ball-split-hint {
+  font-size: 0.72rem !important;
+  color: #94a3b8 !important;
+  line-height: 1.4 !important;
+  margin: 0 0 16px !important;
+  font-weight: 500 !important;
+}
+
+.ball-split-row {
+  display: grid !important;
+  grid-template-columns: 84px 1fr 48px !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-bottom: 12px !important;
+  font-size: 0.82rem !important;
+}
+
+.ball-split-label {
+  color: #334155 !important;
+  font-weight: 700 !important;
+  font-size: 0.8rem !important;
+}
+
+.ball-split-pct {
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  font-size: 0.82rem !important;
+  text-align: right !important;
+}
+
+/* Delivery log table redesign */
+.ball-table-card {
+  background: #ffffff !important;
+  border: 1px solid #f1f5f9 !important;
+}
+
+.ball-delivery-table.ball-mini-table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  font-size: 0.85rem !important;
+  margin-top: 8px;
+}
+
+.ball-delivery-table.ball-mini-table thead th {
+  padding: 10px 12px !important;
+  background: #f8fafc !important;
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  color: #64748b !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.ball-delivery-table.ball-mini-table thead th:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.ball-delivery-table.ball-mini-table thead th:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.ball-delivery-table.ball-mini-table tbody td {
+  padding: 12px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  vertical-align: middle !important;
+}
+
+.ball-delivery-table.ball-mini-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.ball-delivery-table.ball-mini-table tbody tr:hover {
+  background: #f8fafc !important;
+}
+
+.ball-delivery-table.ball-mini-table tbody tr.ball-row-selected {
+  background: #f0fdf4 !important;
+}
+
+.ball-shot-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 0.78rem !important;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.ball-length-label {
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  font-size: 0.75rem !important;
+  color: #0f172a !important;
+}
+
+.ball-speed-val {
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  font-size: 0.82rem !important;
+}
+
+/* Bowler insights card */
+.ball-insights-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+}
+
+.ball-insights-card .ball-split-title {
+  color: #0f172a !important;
+}
+
+.ball-insight-list {
+  padding-left: 0 !important;
+  list-style: none !important;
+}
+
+.ball-insight-list li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.ball-insight-list li::before {
+  content: "•";
+  position: absolute;
+  left: 6px;
+  color: #0284c7;
+  font-size: 1.1rem;
+}
+
+/* Toggle controls in header */
+.ball-analytics-control {
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  gap: 8px !important;
+}
+
+.ball-analytics-control input.toggle {
+  accent-color: #0d9488 !important;
+}
