@@ -1345,6 +1345,214 @@ const ReportModal = (() => {
   display: none !important;
 }
 
+/* ── Modern Vertical Delivery Cards (Net Session Report) ── */
+.rp-deliv-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.rp-deliv-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 3px 14px -2px rgba(15, 23, 42, 0.05), 0 1px 4px -1px rgba(15, 23, 42, 0.02);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.rp-deliv-card-head {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  background: #ffffff;
+}
+
+.rp-deliv-card-head:active {
+  background: #f8fafc;
+}
+
+.rp-deliv-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rp-deliv-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.rp-deliv-shot-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.rp-deliv-ball-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.rp-deliv-head-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rp-deliv-score-box {
+  text-align: right;
+}
+
+.rp-deliv-score-num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rp-deliv-score-sub {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.rp-deliv-chevron {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  transition: transform 0.25s ease;
+}
+
+.rp-deliv-card.is-open .rp-deliv-chevron {
+  transform: rotate(180deg);
+}
+
+/* Key Metrics Row (Always Visible) */
+.rp-deliv-key-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 0 16px 14px;
+}
+
+.rp-deliv-mini-metric {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 8px 10px;
+  border: 1px solid #f1f5f9;
+  text-align: center;
+}
+
+.rp-deliv-mini-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+
+.rp-deliv-mini-val {
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.rp-deliv-mini-sub {
+  font-size: 0.62rem;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+/* Collapsible Detailed Section */
+.rp-deliv-details-wrap {
+  display: none;
+  border-top: 1px solid #f1f5f9;
+  padding: 14px 16px;
+  background: #fafafa;
+}
+
+.rp-deliv-card.is-open .rp-deliv-details-wrap {
+  display: block;
+}
+
+.rp-deliv-grid-more {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rp-deliv-more-box {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 8px;
+  border: 1px solid #f1f5f9;
+  text-align: center;
+}
+
+.rp-deliv-more-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.rp-deliv-more-val {
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.rp-deliv-more-sub {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.rp-deliv-coach-section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #f1f5f9;
+  margin-top: 10px;
+}
+
+.rp-deliv-coach-head {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #0f172a;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
 @layer legacy {
 
 .rp-overlay {
@@ -2086,8 +2294,8 @@ const ReportModal = (() => {
         <section class="rp-header" data-purpose="session-header-summary">
           <div class="rp-header-top">
             <div style="flex:1">
-              <h1 class="rp-title">
-                Net Session<br/>Report
+              <h1 class="rp-title" style="white-space:nowrap;">
+                Net Session Report
               </h1>
             </div>
             <!-- Dismiss Modal Action Button -->
@@ -2240,138 +2448,170 @@ const ReportModal = (() => {
           <div data-panel="shots" style="display:none">
             <div class="rp-section-title">
               <span>All Deliveries</span>
-              <span style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:none;">Swipe horizontally &rarr;</span>
+              <span style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:none;">${confirmedShots.length} shots recorded</span>
             </div>
             <p style="font-size:12px;color:#64748b;margin:0 4px 14px;line-height:1.5;">
-              Coaching-first table. Per-delivery cues, work-on flags, and footwork tags are grouped here.
+              Tap any delivery card to view comprehensive coaching cues, stance metrics, and ball tracking.
             </p>
             
-            <div class="rp-table-card">
-              <div class="rp-table-scroll">
-                <table class="rp-modern-table">
-                  <thead>
-                    <tr>
-                      <th style="width:36px;padding-left:16px;">#</th>
-                      <th>Delivery</th>
-                      <th>Execution <span style="font-weight:normal;color:#94a3b8;">/10</span></th>
-                      <th>Head Position <span style="font-weight:normal;color:#94a3b8;">/100</span></th>
-                      <th>Bat Speed</th>
-                      <th>Stance</th>
-                      <th>Footwork</th>
-                      <th>Swing Arc</th>
-                      <th>Ball Info</th>
-                      <th style="padding-right:16px;">Coaching Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${confirmedShots.map((s) => {
-                      const ballDel = ballByShot.get(Number(s.shot_num));
-                      const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
-                      const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
-                      const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
-                      const pathSc = s.swing_path_score != null ? Math.round(s.swing_path_score) : null;
-                      const exSc = s.execution_score != null ? Math.round(s.execution_score) : null;
-                      const sw = s.swing_intensity != null ? Math.round(s.swing_intensity) : null;
-                      
-                      const flagRows = [];
-                      const seenFlags = new Set();
-                      const pushFlag = (row) => {
-                        if (!row) return;
-                        const key = String(row.label || '').trim().toLowerCase();
-                        if (!key || seenFlags.has(key)) return;
-                        seenFlags.add(key);
-                        flagRows.push(row);
-                      };
-                      for (const f of s.flags || []) {
-                        const base = String(f).split(':')[0];
-                        const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
-                        pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
-                      }
-                      if (s.footwork_flag) {
-                        const ff = String(s.footwork_flag);
-                        const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
-                        pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
-                      }
-                      const chips = flagRows.length
-                        ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:color-mix(in srgb, ${r.color} 12%, transparent);color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
-                        : '<span class="rp-shots-chip" style="background:#ecfdf5;color:#059669;font-weight:700">Clean delivery</span>';
-                      const flagDetails = flagRows.length
-                        ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
-                        : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
-                      
-                      const llmShotNote = resolveShotTypeNoteForDelivery(llmInsights, s.shot_type || s.label || '');
-                      const deliveryShotKey = resolveLlmShotKey(s.shot_type || s.label || '');
-                      const llmStrengthRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.strength || '').trim() : '';
-                      const llmFocusRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.focus || '').trim() : '';
-                      const llmStrengthRaw = textMentionsOtherShot(llmStrengthRaw0, deliveryShotKey) ? '' : llmStrengthRaw0;
-                      const llmFocusRaw = textMentionsOtherShot(llmFocusRaw0, deliveryShotKey) ? '' : llmFocusRaw0;
-                      const metricNotes = llmInsights?.metric_notes && typeof llmInsights.metric_notes === 'object' ? llmInsights.metric_notes : null;
-                      const cueMetricKey = resolveMetricKeyFromScores(head, stab, fw, pathSc, exSc);
-                      const aiMetricHint = metricNotes
-                        ? (
-                            (cueMetricKey === 'head' && metricNotes.head) ? metricNotes.head :
-                            (cueMetricKey === 'footwork' && metricNotes.footwork) ? metricNotes.footwork :
-                            (cueMetricKey === 'stance' && metricNotes.stance) ? metricNotes.stance :
-                            (cueMetricKey === 'swing_path' && metricNotes.swing_path) ? metricNotes.swing_path :
-                            (cueMetricKey === 'swing' && metricNotes.swing) ? metricNotes.swing :
-                            (cueMetricKey === 'execution' && metricNotes.shot_vs_length) ? metricNotes.shot_vs_length :
-                            metricNotes.shot_vs_length || metricNotes.execution || ''
-                          )
-                        : '';
-                      const llmStrength = llmStrengthRaw || llmInsights?.strengths?.[0] || 'Good base; keep repeating this setup under pressure.';
-                      const llmFocus = llmFocusRaw || llmInsights?.improvements?.[0] || clarifyCoachCue(cueMetricKey, aiMetricHint);
-                      const aiCue = clarifyCoachCue(cueMetricKey, aiMetricHint);
-                      const llmDetailRows = [];
-                      llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#059669">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
-                      llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#d97706">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
-                      llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0284c7">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
-                      const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
+            <div class="rp-deliv-cards-list">
+              ${confirmedShots.map((s) => {
+                const ballDel = ballByShot.get(Number(s.shot_num));
+                const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
+                const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
+                const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
+                const pathSc = s.swing_path_score != null ? Math.round(s.swing_path_score) : null;
+                const exSc = s.execution_score != null ? Math.round(s.execution_score) : null;
+                const sw = s.swing_intensity != null ? Math.round(s.swing_intensity) : null;
+                
+                const flagRows = [];
+                const seenFlags = new Set();
+                const pushFlag = (row) => {
+                  if (!row) return;
+                  const key = String(row.label || '').trim().toLowerCase();
+                  if (!key || seenFlags.has(key)) return;
+                  seenFlags.add(key);
+                  flagRows.push(row);
+                };
+                for (const f of s.flags || []) {
+                  const base = String(f).split(':')[0];
+                  const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
+                  pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
+                }
+                if (s.footwork_flag) {
+                  const ff = String(s.footwork_flag);
+                  const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
+                  pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
+                }
+                const chips = flagRows.length
+                  ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:color-mix(in srgb, ${r.color} 12%, transparent);color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
+                  : '<span class="rp-shots-chip" style="background:#ecfdf5;color:#059669;font-weight:700">Clean delivery</span>';
+                const flagDetails = flagRows.length
+                  ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
+                  : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
+                
+                const llmShotNote = resolveShotTypeNoteForDelivery(llmInsights, s.shot_type || s.label || '');
+                const deliveryShotKey = resolveLlmShotKey(s.shot_type || s.label || '');
+                const llmStrengthRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.strength || '').trim() : '';
+                const llmFocusRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.focus || '').trim() : '';
+                const llmStrengthRaw = textMentionsOtherShot(llmStrengthRaw0, deliveryShotKey) ? '' : llmStrengthRaw0;
+                const llmFocusRaw = textMentionsOtherShot(llmFocusRaw0, deliveryShotKey) ? '' : llmFocusRaw0;
+                const metricNotes = llmInsights?.metric_notes && typeof llmInsights.metric_notes === 'object' ? llmInsights.metric_notes : null;
+                const cueMetricKey = resolveMetricKeyFromScores(head, stab, fw, pathSc, exSc);
+                const aiMetricHint = metricNotes
+                  ? (
+                      (cueMetricKey === 'head' && metricNotes.head) ? metricNotes.head :
+                      (cueMetricKey === 'footwork' && metricNotes.footwork) ? metricNotes.footwork :
+                      (cueMetricKey === 'stance' && metricNotes.stance) ? metricNotes.stance :
+                      (cueMetricKey === 'swing_path' && metricNotes.swing_path) ? metricNotes.swing_path :
+                      (cueMetricKey === 'swing' && metricNotes.swing) ? metricNotes.swing :
+                      (cueMetricKey === 'execution' && metricNotes.shot_vs_length) ? metricNotes.shot_vs_length :
+                      metricNotes.shot_vs_length || metricNotes.execution || ''
+                    )
+                  : '';
+                const llmStrength = llmStrengthRaw || llmInsights?.strengths?.[0] || 'Good base; keep repeating this setup under pressure.';
+                const llmFocus = llmFocusRaw || llmInsights?.improvements?.[0] || clarifyCoachCue(cueMetricKey, aiMetricHint);
+                const aiCue = clarifyCoachCue(cueMetricKey, aiMetricHint);
+                const llmDetailRows = [];
+                llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#059669">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
+                llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#d97706">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
+                llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0284c7">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
+                const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
 
-                      const exec = s.shot_score != null ? Number(s.shot_score) : 0;
-                      const execCol = exec >= 7.0 ? '#059669' : exec >= 5.0 ? '#d97706' : '#ea580c';
-                      
-                      // Head quality
-                      const headVal = head != null ? head : '—';
-                      const headTag = head >= 80 ? 'ELITE' : head >= 60 ? 'GOOD' : 'WORK ON';
-                      const headTagCol = head >= 80 ? '#059669' : head >= 60 ? '#0d9488' : '#ea580c';
-                      const headSub = head >= 80 ? 'Very still — eyes on ball' : head >= 60 ? 'Head mostly quiet' : 'Noticeable head movement';
-                      
-                      // Bat speed
-                      const spdVal = s.peak_swing_speed != null ? Math.round(s.peak_swing_speed) : (sw != null ? sw : 45);
-                      const spdTag = spdVal >= 70 ? 'ELITE' : spdVal >= 45 ? 'WORK ON' : 'NEEDS WORK';
-                      const spdTagCol = spdVal >= 70 ? '#059669' : spdVal >= 45 ? '#d97706' : '#e11d48';
-                      const spdSub = spdVal >= 70 ? 'Near peak torque' : spdVal >= 45 ? 'Moderate swing speed' : 'Slow bat speed';
+                const exec = s.shot_score != null ? Number(s.shot_score) : 0;
+                const execCol = exec >= 7.0 ? '#059669' : exec >= 5.0 ? '#d97706' : '#ea580c';
+                
+                // Head quality
+                const headVal = head != null ? head : '—';
+                const headTag = head >= 80 ? 'ELITE' : head >= 60 ? 'GOOD' : 'WORK ON';
+                const headTagCol = head >= 80 ? '#059669' : head >= 60 ? '#0d9488' : '#ea580c';
+                const headSub = head >= 80 ? 'Very still' : head >= 60 ? 'Mostly quiet' : 'Moving head';
+                
+                // Bat speed
+                const spdVal = s.peak_swing_speed != null ? Math.round(s.peak_swing_speed) : (sw != null ? sw : 45);
+                const spdTag = spdVal >= 70 ? 'ELITE' : spdVal >= 45 ? 'STEADY' : 'SLOW';
+                const spdTagCol = spdVal >= 70 ? '#059669' : spdVal >= 45 ? '#d97706' : '#e11d48';
 
-                      return `
-                      <tr>
-                        <td class="rp-td-num" style="padding-left:16px;">${s.shot_num}</td>
-                        <td class="rp-td-shot">${(SHOT_LABELS[s.label] || s.label || '—').toUpperCase()}</td>
-                        <td class="rp-td-exec" style="color:${execCol}">${exec.toFixed(1)}<span style="font-size:11px;color:#94a3b8;font-weight:normal;">/10</span></td>
-                        <td class="rp-metric-cell">
-                          <div class="rp-cell-score" style="color:${headTagCol}">${headVal}</div>
-                          <div class="rp-cell-tag" style="color:${headTagCol}">${headTag}</div>
-                          <div class="rp-cell-hint">${headSub}</div>
-                        </td>
-                        <td class="rp-metric-cell">
-                          <div class="rp-cell-score" style="color:${spdTagCol}">${spdVal}</div>
-                          <div class="rp-cell-tag" style="color:${spdTagCol}">${spdTag}</div>
-                          <div class="rp-cell-hint">${spdSub}</div>
-                        </td>
-                        <td>${formatDeliveryMetric100(stab, s.symmetry_label)}</td>
-                        <td>${formatDeliveryMetric100(fw, s.footwork_label)}</td>
-                        <td>${formatDeliveryMetric100(pathSc, s.swing_path_label)}</td>
-                        <td>${formatBallContextCell(ballDel)}</td>
-                        <td style="padding-right:16px;">
-                          <div class="rp-flag-stack">${chips}</div>
-                          <details class="rp-shots-detail"><summary>▶ AI coach detail</summary>
-                            ${combinedDetails}
-                          </details>
-                        </td>
-                      </tr>`;
-                    }).join('')}
-                  </tbody>
-                </table>
-              </div>
+                // Ball Length & Pace info
+                const ballLenRaw = ballDel?.length?.label ? String(ballDel.length.label).toUpperCase().replace(/_/g, ' ') : '';
+                const ballSpdRaw = ballDel?.speed_kmh_est ? `${Math.round(ballDel.speed_kmh_est)} km/h` : '';
+                const ballInfoStr = [ballLenRaw, ballSpdRaw].filter(Boolean).join(' • ') || 'Length —';
+
+                return `
+                <article class="rp-deliv-card" data-purpose="delivery-card">
+                  <header class="rp-deliv-card-head" onclick="window.toggleDeliveryCard && window.toggleDeliveryCard(this)" role="button" tabindex="0">
+                    <div class="rp-deliv-head-left">
+                      <span class="rp-deliv-badge">#${s.shot_num}</span>
+                      <div>
+                        <div class="rp-deliv-shot-name">${(SHOT_LABELS[s.label] || s.label || 'SHOT').toUpperCase()}</div>
+                        <div class="rp-deliv-ball-pill">${ballInfoStr}</div>
+                      </div>
+                    </div>
+                    <div class="rp-deliv-head-right">
+                      <div class="rp-deliv-score-box">
+                        <div class="rp-deliv-score-num" style="color:${execCol}">${exec.toFixed(1)}<span style="font-size:0.75rem;color:#94a3b8;font-weight:600;">/10</span></div>
+                        <div class="rp-deliv-score-sub">Execution</div>
+                      </div>
+                      <div class="rp-deliv-chevron">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                          <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                      </div>
+                    </div>
+                  </header>
+
+                  <!-- Key Metrics Row (Always Visible) -->
+                  <div class="rp-deliv-key-metrics">
+                    <div class="rp-deliv-mini-metric">
+                      <div class="rp-deliv-mini-label">Head Position</div>
+                      <div class="rp-deliv-mini-val" style="color:${headTagCol}">${headVal}</div>
+                      <div class="rp-deliv-mini-sub" style="color:${headTagCol}">${headTag}</div>
+                    </div>
+                    <div class="rp-deliv-mini-metric">
+                      <div class="rp-deliv-mini-label">Bat Speed</div>
+                      <div class="rp-deliv-mini-val" style="color:${spdTagCol}">${spdVal}</div>
+                      <div class="rp-deliv-mini-sub" style="color:${spdTagCol}">${spdTag}</div>
+                    </div>
+                    <div class="rp-deliv-mini-metric">
+                      <div class="rp-deliv-mini-label">Footwork</div>
+                      <div class="rp-deliv-mini-val" style="color:${(fw || 0) >= 70 ? '#059669' : '#d97706'}">${fw != null ? fw : '—'}</div>
+                      <div class="rp-deliv-mini-sub" style="color:#64748b">${s.footwork_label || 'Balanced'}</div>
+                    </div>
+                  </div>
+
+                  <!-- Collapsible Section with Full Breakdown -->
+                  <div class="rp-deliv-details-wrap">
+                    <div class="rp-deliv-grid-more">
+                      <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-label">Stance</div>
+                        <div class="rp-deliv-more-val">${stab != null ? stab : '—'}</div>
+                        <div class="rp-deliv-more-sub">${s.symmetry_label || 'Setup'}</div>
+                      </div>
+                      <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-label">Swing Arc</div>
+                        <div class="rp-deliv-more-val">${pathSc != null ? pathSc : '—'}</div>
+                        <div class="rp-deliv-more-sub">${s.swing_path_label || 'Plane'}</div>
+                      </div>
+                      <div class="rp-deliv-more-box">
+                        <div class="rp-deliv-more-label">Impact Cue</div>
+                        <div class="rp-deliv-more-val" style="font-size:0.75rem;margin-top:4px;color:#0369a1;">${escapeHtml(s.shot_quality || 'Good impact')}</div>
+                      </div>
+                    </div>
+
+                    <div class="rp-flag-stack" style="margin-bottom:8px;">${chips}</div>
+
+                    <div class="rp-deliv-coach-section">
+                      <div class="rp-deliv-coach-head">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                        AI Coaching Details
+                      </div>
+                      ${combinedDetails}
+                    </div>
+                  </div>
+                </article>`;
+              }).join('')}
             </div>
           </div>
 
