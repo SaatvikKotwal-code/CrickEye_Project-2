@@ -8472,9 +8472,9 @@ html[data-font-size="lg"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 4px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
   border-radius: 9999px;
   border: none;
   background: transparent;
@@ -8483,6 +8483,7 @@ html[data-font-size="lg"] {
   font-family: var(--font-display, inherit);
   font-weight: 700;
   line-height: 1;
+  touch-action: manipulation;
   transition: all 0.15s ease;
 }
 

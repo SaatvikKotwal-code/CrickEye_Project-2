@@ -1391,17 +1391,23 @@ const ReportModal = (() => {
   box-shadow: 0 3px 14px -2px rgba(15, 23, 42, 0.05), 0 1px 4px -1px rgba(15, 23, 42, 0.02);
   overflow: hidden;
   transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 .rp-deliv-card-head {
-  padding: 14px 16px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   background: #ffffff;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .rp-deliv-card-head:active {
@@ -1411,7 +1417,15 @@ const ReportModal = (() => {
 .rp-deliv-head-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.rp-deliv-head-left > div:last-child {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .rp-deliv-badge {
@@ -1431,33 +1445,44 @@ const ReportModal = (() => {
 }
 
 .rp-deliv-shot-name {
-  font-size: 0.95rem;
+  font-size: 0.90rem;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .rp-deliv-ball-pill {
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   font-weight: 600;
   color: #64748b;
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .rp-deliv-head-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .rp-deliv-score-box {
   text-align: right;
+  flex-shrink: 0;
 }
 
 .rp-deliv-score-num {
   font-size: 1.15rem;
   font-weight: 800;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .rp-deliv-score-sub {
@@ -1465,6 +1490,7 @@ const ReportModal = (() => {
   font-weight: 700;
   color: #94a3b8;
   margin-top: 2px;
+  white-space: nowrap;
 }
 
 .rp-deliv-chevron {
@@ -1475,24 +1501,27 @@ const ReportModal = (() => {
   justify-content: center;
   color: #94a3b8;
   transition: transform 0.25s ease;
+  flex-shrink: 0;
 }
 
 .rp-deliv-card.is-open .rp-deliv-chevron {
   transform: rotate(180deg);
 }
 
-/* Key Metrics Row (Always Visible - Numbers as Main Text, Metric & Tags as Sub Text) */
+/* Key Metrics Row (Numbers are Main Highlight, Clean Mobile Badges) */
 .rp-deliv-key-metrics {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  padding: 0 16px 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 14px 12px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .rp-deliv-mini-metric {
   background: #f8fafc;
-  border-radius: 14px;
-  padding: 10px 6px 10px;
+  border-radius: 12px;
+  padding: 8px 4px 8px;
   border: 1px solid #eef2f6;
   text-align: center;
   display: flex;
@@ -1500,6 +1529,9 @@ const ReportModal = (() => {
   justify-content: center;
   align-items: center;
   transition: transform 0.15s ease, background 0.15s ease;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .rp-deliv-mini-metric:active {
@@ -1508,64 +1540,97 @@ const ReportModal = (() => {
 
 /* Number is the main highlight / hero text */
 .rp-deliv-mini-val {
-  font-size: 1.65rem;
+  font-size: 1.6rem;
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   display: inline-block;
+  white-space: nowrap;
 }
 
-/* Sub text: Metric name and status/tag */
+/* Sub text: Metric name */
 .rp-deliv-mini-label {
   font-size: 0.64rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #475569;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.01em;
   margin-top: 4px;
-  line-height: 1.15;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 2px;
 }
 
-.rp-deliv-mini-sub {
-  font-size: 0.60rem;
+/* Sub text: Refined mobile status pill */
+.rp-deliv-mini-chip {
+  display: inline-block;
+  padding: 2px 4px;
+  border-radius: 6px;
+  font-size: 0.58rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  margin-top: 2px;
-  line-height: 1;
+  margin-top: 4px;
+  line-height: 1.1;
+  max-width: 96%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  text-align: center;
 }
 
-/* Collapsible Detailed Section */
+/* Collapsible Detailed Section with Smooth Height Motion */
 .rp-deliv-details-wrap {
-  display: none;
-  border-top: 1px solid #f1f5f9;
-  padding: 14px 16px;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 0px solid transparent;
   background: #fafafa;
 }
 
+.rp-deliv-details-wrap > div {
+  overflow: hidden;
+  padding: 0 16px;
+  transition: padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .rp-deliv-card.is-open .rp-deliv-details-wrap {
-  display: block;
+  grid-template-rows: 1fr;
+  border-top: 1px solid #f1f5f9;
+}
+
+.rp-deliv-card.is-open .rp-deliv-details-wrap > div {
+  padding: 14px 16px;
 }
 
 .rp-deliv-grid-more {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
   margin-bottom: 12px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .rp-deliv-more-box {
   background: #ffffff;
   border-radius: 12px;
-  padding: 9px 6px;
-  border: 1px solid #eef2f6;
+  padding: 8px 4px;
+  border: 1px solid #e2e8f0;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .rp-deliv-more-val {
@@ -1577,18 +1642,18 @@ const ReportModal = (() => {
 }
 
 .rp-deliv-more-label {
-  font-size: 0.62rem;
+  font-size: 0.64rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: #64748b;
-  letter-spacing: 0.03em;
-  margin-top: 3px;
+  color: #334155;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
 }
 
 .rp-deliv-more-sub {
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: #0369a1;
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -1887,6 +1952,8 @@ const ReportModal = (() => {
   overflow-x: auto;
   scrollbar-width: none;
   flex-shrink: 0;
+  -webkit-mask-image: linear-gradient(to right, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 84%, transparent 100%);
 }
 .rp-tabs::-webkit-scrollbar { display: none; }
 .rp-tab {
@@ -2178,7 +2245,7 @@ const ReportModal = (() => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(226, 232, 240, 0.8);
-  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  padding: 12px 18px calc(14px + max(12px, env(safe-area-inset-bottom)));
   display: flex; align-items: center; gap: 12px;
   z-index: 30;
   box-shadow: 0 -4px 20px -2px rgba(15, 23, 42, 0.05);
@@ -2724,7 +2791,10 @@ const ReportModal = (() => {
                 const spdTag = spdVal >= 70 ? 'ELITE' : spdVal >= 45 ? 'STEADY' : 'SLOW';
                 const spdTagCol = spdVal >= 70 ? '#059669' : spdVal >= 45 ? '#d97706' : '#e11d48';
 
-                // Ball Length & Pace info
+                // Footwork tag mapping for clean mobile chip
+                const fwVal = fw != null ? fw : 0;
+                const fwChip = fwVal >= 80 ? 'ELITE' : fwVal >= 65 ? 'GOOD' : fwVal >= 50 ? 'STEADY' : 'WORK ON';
+                const fwChipCol = fwVal >= 80 ? '#059669' : fwVal >= 65 ? '#0d9488' : fwVal >= 50 ? '#0284c7' : '#d97706';
                 const ballLenRaw = ballDel?.length?.label ? String(ballDel.length.label).toUpperCase().replace(/_/g, ' ') : '';
                 const ballSpdRaw = ballDel?.speed_kmh_est ? `${Math.round(ballDel.speed_kmh_est)} km/h` : '';
                 const ballInfoStr = [ballLenRaw, ballSpdRaw].filter(Boolean).join(' • ') || 'Length —';
@@ -2752,27 +2822,28 @@ const ReportModal = (() => {
                     </div>
                   </header>
 
-                  <!-- Key Metrics Row (Numbers are Main Highlight, Names/Status are Sub Text) -->
+                  <!-- Key Metrics Row (Numbers are Main Highlight, Clean Mobile Badges) -->
                   <div class="rp-deliv-key-metrics">
                     <div class="rp-deliv-mini-metric">
                       <div class="rp-deliv-mini-val" style="color:${headTagCol}">${headVal}</div>
                       <div class="rp-deliv-mini-label">Head Position</div>
-                      <div class="rp-deliv-mini-sub" style="color:${headTagCol}">${headTag}</div>
+                      <span class="rp-deliv-mini-chip" style="background:color-mix(in srgb, ${headTagCol} 14%, #ffffff);color:${headTagCol};">${headTag}</span>
                     </div>
                     <div class="rp-deliv-mini-metric">
                       <div class="rp-deliv-mini-val" style="color:${spdTagCol}">${spdVal}</div>
                       <div class="rp-deliv-mini-label">Bat Speed</div>
-                      <div class="rp-deliv-mini-sub" style="color:${spdTagCol}">${spdTag}</div>
+                      <span class="rp-deliv-mini-chip" style="background:color-mix(in srgb, ${spdTagCol} 14%, #ffffff);color:${spdTagCol};">${spdTag}</span>
                     </div>
                     <div class="rp-deliv-mini-metric">
-                      <div class="rp-deliv-mini-val" style="color:${(fw || 0) >= 70 ? '#059669' : (fw || 0) >= 50 ? '#0d9488' : '#d97706'}">${fw != null ? fw : '—'}</div>
+                      <div class="rp-deliv-mini-val" style="color:${fwChipCol}">${fw != null ? fw : '—'}</div>
                       <div class="rp-deliv-mini-label">Footwork</div>
-                      <div class="rp-deliv-mini-sub" style="color:#64748b">${s.footwork_label || 'BALANCED'}</div>
+                      <span class="rp-deliv-mini-chip" style="background:color-mix(in srgb, ${fwChipCol} 14%, #ffffff);color:${fwChipCol};">${fwChip}</span>
                     </div>
                   </div>
 
                   <!-- Collapsible Section with Full Breakdown (All Table Data Preserved) -->
                   <div class="rp-deliv-details-wrap">
+                    <div>
                     <div class="rp-deliv-grid-more">
                       <div class="rp-deliv-more-box">
                         <div class="rp-deliv-more-val" style="color:#0f172a;">${stab != null ? stab : '—'}</div>
@@ -2816,6 +2887,7 @@ const ReportModal = (() => {
                         AI Coaching Details
                       </div>
                       ${combinedDetails}
+                    </div>
                     </div>
                   </div>
                 </article>`;
@@ -4045,6 +4117,14 @@ const ReportModal = (() => {
   }
 
   if (typeof window !== 'undefined') {
+    window.toggleDeliveryCard = function(headerEl) {
+      if (!headerEl) return;
+      const card = headerEl.closest('.rp-deliv-card');
+      if (card) {
+        card.classList.toggle('is-open');
+      }
+    };
+
     window.toggleGraphZoom = function(cardEl, evt, forceState) {
       if (!cardEl) return;
       if (evt && evt.target && evt.target.closest && evt.target.closest('.rp-graph-close-btn') && forceState === undefined) {
