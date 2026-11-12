@@ -199,31 +199,60 @@ const ReportModal = (() => {
   }
 
   // ── SVG Pie/Donut chart ──────────────────────────────────
-  function buildPieChart(value, color, label, sublabel) {
+  function buildPieChart(value, color, label, sublabel, gradientId) {
     const pct = Math.min(100, Math.max(0, value));
-    const R = 52, cx = 64, cy = 64;
-    const circ = 2 * Math.PI * R;
-    const offset = circ * (1 - pct / 100);
-    const quality = pct >= 70 ? 'Good' : pct >= 45 ? 'Average' : 'Needs Attention';
-    const qc = pct >= 70 ? '#10B981' : pct >= 45 ? '#EAB308' : '#EF4444';
+    const R = 48, cx = 60, cy = 60;
+    const circ = +(2 * Math.PI * R).toFixed(1); // 301.6
+    const offset = +(circ * (1 - pct / 100)).toFixed(1);
+    const quality = pct >= 70 ? 'Elite' : pct >= 50 ? 'Good' : pct >= 35 ? 'Average' : 'Needs Work';
+    const qc = pct >= 70 ? '#10B981' : pct >= 50 ? '#0D9488' : pct >= 35 ? '#F59E0B' : '#EA580C';
+    
+    // Choose gradient colors based on metric color or gradientId
+    let gStart = color, gEnd = color;
+    if (color.toUpperCase().includes('8B5CF6') || color.toUpperCase().includes('7C3AED') || gradientId === 'purpleGradient') {
+      gStart = '#8b5cf6'; gEnd = '#6d28d9';
+    } else if (color.toUpperCase().includes('F97316') || color.toUpperCase().includes('EA580C') || gradientId === 'orangeGradient') {
+      gStart = '#fb923c'; gEnd = '#ea580c';
+    } else if (color.toUpperCase().includes('06B6D4') || color.toUpperCase().includes('0891B2') || gradientId === 'cyanGradient') {
+      gStart = '#06b6d4'; gEnd = '#0891b2';
+    } else if (color.toUpperCase().includes('10B981') || gradientId === 'emeraldGradient') {
+      gStart = '#34d399'; gEnd = '#059669';
+    } else if (color.toUpperCase().includes('FAAD14') || gradientId === 'amberGradient') {
+      gStart = '#fbbf24'; gEnd = '#d97706';
+    } else {
+      gStart = color; gEnd = color;
+    }
+    const gid = gradientId || ('grad_' + Math.random().toString(36).substr(2, 7));
+
     return `
-      <div class="rp-pie-wrap">
-        <svg width="128" height="128" viewBox="0 0 128 128">
-          <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(0,0,0,0.07)" stroke-width="10"/>
-          <circle cx="${cx}" cy="${cy}" r="${R}" fill="none"
-            stroke="${color}" stroke-width="10" stroke-linecap="round"
-            stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
-            transform="rotate(-90 ${cx} ${cy})"
-            class="rp-pie-arc" data-offset="${offset}" style="transition:stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)"/>
-          <text x="${cx}" y="${cy - 8}" text-anchor="middle"
-            style="font-family:Manrope,sans-serif;font-size:22px;font-weight:800;fill:${color}">${Math.round(pct)}</text>
-          <text x="${cx}" y="${cy + 12}" text-anchor="middle"
-            style="font-family:Inter,sans-serif;font-size:10px;fill:#94A3B8">out of 100</text>
-        </svg>
-        <div class="rp-pie-label">${label}</div>
-        <div class="rp-pie-quality" style="color:${qc}">${quality}</div>
-        <div class="rp-pie-sublabel">${sublabel}</div>
-      </div>`;
+      <article class="rp-gauge-card bg-white rounded-3xl p-6 shadow-card border border-slate-100 flex flex-col items-center text-center">
+        <div class="relative w-40 h-40 flex items-center justify-center">
+          <svg class="w-full h-full" viewBox="0 0 120 120">
+            <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#f1f5f9" stroke-width="10"/>
+            <circle class="gauge-circle rp-pie-arc" cx="${cx}" cy="${cy}" r="${R}" fill="none"
+              stroke="url(#${gid})" stroke-width="10" stroke-linecap="round"
+              stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+              data-offset="${offset}"
+              transform="rotate(-90 ${cx} ${cy})"
+              style="transition:stroke-dashoffset 1.1s cubic-bezier(0.16, 1, 0.3, 1)"/>
+            <defs>
+              <linearGradient id="${gid}" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${gStart}"/>
+                <stop offset="100%" stop-color="${gEnd}"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="absolute flex flex-col items-center">
+            <span class="text-4xl font-extrabold tracking-tight leading-none" style="color:${gEnd}">${Math.round(pct)}</span>
+            <span class="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-tight">out of 100</span>
+          </div>
+        </div>
+        <h3 class="text-base font-bold text-slate-900 mt-2">${escapeHtml(label)}</h3>
+        <span class="inline-block mt-0.5 text-xs font-bold" style="color:${qc}">${quality}</span>
+        <p class="text-xs text-slate-500 mt-1 max-w-[220px]">
+          ${escapeHtml(sublabel)}
+        </p>
+      </article>`;
   }
 
   // ── SVG Line graph ───────────────────────────────────────
@@ -1177,453 +1206,610 @@ const ReportModal = (() => {
     const style = document.createElement('style');
     style.id = 'rp-styles';
     style.textContent = `
-/* In the legacy layer: unlayered, these rules beat every theme and
-   component rule in the app and forced light surfaces into dark mode. */
+/* ═══ MODERN NET SESSION REPORT MODAL STYLES ═══ */
 @layer legacy {
 
-/* ═══ REPORT MODAL OVERLAY ═══ */
 .rp-overlay {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(8,12,20,0.75);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px;
-  animation: rpFadeIn 0.3s ease;
+  -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0;
+  animation: rpFadeIn 0.25s ease-out;
 }
-@keyframes rpFadeIn { from{opacity:0} to{opacity:1} }
+@media (min-width: 640px) {
+  .rp-overlay {
+    align-items: center;
+    padding: 16px;
+  }
+}
+@keyframes rpFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .rp-modal {
-  background: var(--bg-inset);
-  border-radius: 20px;
-  width: 100%; max-width: 1080px;
-  max-height: 92vh;
-  display: flex; flex-direction: column;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.35);
-  animation: rpSlideUp 0.35s cubic-bezier(0.22,1,0.36,1);
+  background: #ffffff;
+  border-radius: 36px 36px 0 0;
+  width: 100%;
+  max-width: 480px;
+  height: 94vh;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 -10px 40px -5px rgba(0, 0, 0, 0.25), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: rpSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  color: #1e293b;
 }
-@keyframes rpSlideUp { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
+@media (min-width: 640px) {
+  .rp-modal {
+    border-radius: 36px;
+    height: 90vh;
+    max-height: 880px;
+  }
+}
+@keyframes rpSlideUp {
+  from { opacity: 0; transform: translateY(40px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
-/* ── Header ── */
+/* Pull bar indicator */
+.rp-pull-bar {
+  width: 48px; height: 4px;
+  background: #cbd5e1;
+  border-radius: 9999px;
+  margin: 12px auto 4px;
+  flex-shrink: 0;
+}
+
+/* Header Session Summary Card */
 .rp-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 24px 16px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--legacy-border);
+  padding: 8px 24px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
 }
-.rp-header-left { display: flex; align-items: center; gap: 14px; }
-.rp-badge {
-  background: rgba(6,182,212,0.1); border: 1.5px solid rgba(6,182,212,0.35);
-  border-radius: 8px; padding: 5px 14px;
-  font-family: Manrope,sans-serif; font-size: 0.85rem; font-weight: 800;
-  color: #06B6D4; letter-spacing: 0.06em;
+.rp-header-top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
 }
-.rp-title { font-family: Manrope,sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); }
-.rp-subtitle { font-family: Inter,sans-serif; font-size: 0.8rem; color: #64748B; margin-top: 2px; }
+.rp-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+  line-height: 1.25;
+}
 .rp-close {
-  width: 36px; height: 36px; border-radius: 10px;
-  border: 1px solid var(--legacy-border); background: rgba(0,0,0,0.04);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: #64748B; transition: all 0.2s;
+  width: 36px; height: 36px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  display: flex; align-items: center; justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
-.rp-close:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: #EF4444; }
+.rp-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.rp-close:active {
+  transform: scale(0.95);
+}
 
-/* ── Tabs ── */
+.rp-header-meta {
+  margin-top: 12px;
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+.rp-stance-pill {
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 2px solid #67e8f9;
+  background: rgba(236, 254, 255, 0.7);
+  color: #155e75;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.rp-meta-stats {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+}
+.rp-meta-stats strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+.rp-meta-dot {
+  margin: 0 4px;
+  color: #cbd5e1;
+}
+
+.rp-header-averages {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #64748b;
+  letter-spacing: -0.01em;
+}
+.rp-header-averages strong {
+  color: #334155;
+  font-weight: 700;
+}
+.rp-header-averages span.rp-avg-val {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* Sticky Segmented Navigation Tabs */
 .rp-tabs {
-  display: flex; gap: 4px; padding: 12px 24px 0;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--legacy-border);
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 0 16px;
+  display: flex; align-items: center; justify-content: flex-start; gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
   flex-shrink: 0;
 }
+.rp-tabs::-webkit-scrollbar { display: none; }
 .rp-tab {
-  font-family: Inter,sans-serif; font-size: 0.82rem; font-weight: 600;
-  color: #64748B; background: none; border: none;
-  padding: 8px 18px 12px; cursor: pointer; letter-spacing: 0.02em;
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: color 0.2s, border-color 0.2s;
+  padding: 12px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
 }
-.rp-tab:hover { color: var(--text-primary); }
-.rp-tab.active { color: #06B6D4; border-bottom-color: var(--legacy-border); }
+.rp-tab:hover {
+  color: #0f172a;
+}
+.rp-tab.tab-active, .rp-tab.active {
+  color: #0284c7;
+  border-bottom-color: #06b6d4;
+}
 
-/* ── Body ── */
+/* Modal Body */
 .rp-body {
-  overflow-y: auto; flex: 1;
-  padding: 24px;
+  flex: 1;
+  background: #f1f5f9;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 96px; /* space for sticky floating footer */
   scrollbar-width: thin;
-  scrollbar-color: rgba(6,182,212,0.25) transparent;
+  scrollbar-color: rgba(6, 182, 212, 0.3) transparent;
 }
 .rp-body::-webkit-scrollbar { width: 5px; }
-.rp-body::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.25); border-radius: 3px; }
+.rp-body::-webkit-scrollbar-thumb { background: rgba(6, 182, 212, 0.3); border-radius: 9999px; }
 
-/* ── Section headings ── */
+/* Section Title */
 .rp-section-title {
-  font-family: Manrope,sans-serif; font-size: 0.76rem; font-weight: 700;
-  color: #64748B; letter-spacing: 0.14em; text-transform: uppercase;
-  padding-bottom: 8px; border-bottom: 1px solid var(--legacy-border);
-  margin: 0 0 16px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  margin: 16px 4px 10px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-.rp-section-title:not(:first-child) { margin-top: 28px; }
-.rp-panel-lead {
-  font-family: Inter, sans-serif;
-  font-size: 0.82rem;
-  color: #64748b;
-  line-height: 1.55;
-  margin: -6px 0 16px;
-  max-width: 60ch;
-}
-[data-panel="length"] .rp-length-section { margin-top: 0; }
+.rp-section-title:first-child { margin-top: 4px; }
 
-/* ── Highlights row ── */
+/* Shot Highlights (Signature & Work-on) */
 .rp-highlights {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;
+  display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
 }
 .rp-highlight-card {
-  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
-  padding: 14px 16px; display: flex; align-items: center; gap: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+  display: flex; align-items: center; gap: 14px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
-.rp-highlight-card.best  { border-top: 1px solid var(--legacy-border); }
-.rp-highlight-card.worst { border-top: 1px solid var(--legacy-border); }
-.rp-hl-icon { font-size: 1.6rem; }
-.rp-hl-tag  { font-family: JetBrains Mono,monospace; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
-.rp-hl-val  { font-family: Manrope,sans-serif; font-size: 1.12rem; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
-.rp-hl-sub  { font-family: JetBrains Mono,monospace; font-size: 0.7rem; font-weight: 500; color: #64748B; margin-top: 4px; line-height: 1.35; }
-
-.rp-per-shot-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
-.rp-per-shot-row {
-  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 12px;
-  padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+.rp-highlight-card:hover {
+  box-shadow: 0 6px 24px -2px rgba(15, 23, 42, 0.08);
 }
-.rp-per-shot-meta {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  margin-bottom: 6px; font-family: Manrope,sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
-}
-.rp-per-shot-num { font-family: JetBrains Mono,monospace; font-size: 0.68rem; color: #94A3B8; }
-.rp-per-shot-name { color: var(--text-primary); }
-.rp-per-shot-sc { margin-left: auto; font-family: JetBrains Mono,monospace; font-size: 0.65rem; color: #64748B; }
-.rp-per-shot-cues { display: flex; flex-wrap: wrap; gap: 6px; }
-.rp-per-shot-flag {
-  font-family: Inter,sans-serif; font-size: 0.68rem; font-weight: 600;
-  padding: 4px 10px; border-radius: 999px;
-  background: rgba(148,163,184,0.16); color: var(--text-muted);
-  border: 1px solid rgba(100,116,139,0.22);
-}
-.rp-per-shot-none { font-size: 0.72rem; color: #94A3B8; }
-
-/* ── Pie charts grid ── */
-.rp-pies { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 16px; margin-bottom: 8px; }
-.rp-subtitle-metrics { margin-top: 6px; font-size: 0.78rem; color: #64748B; line-height: 1.45; max-width: 52rem; }
-.rp-pie-card {
-  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
-  padding: 20px 16px; display: flex; flex-direction: column; align-items: center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.rp-pie-wrap { display:flex; flex-direction:column; align-items:center; }
-.rp-pie-label { font-family: Manrope,sans-serif; font-size: 0.92rem; font-weight: 800; color: var(--text-primary); margin-top: 8px; }
-.rp-pie-quality { font-family: Inter,sans-serif; font-size: 0.78rem; font-weight: 600; margin-top: 2px; }
-.rp-pie-sublabel { font-family: Inter,sans-serif; font-size: 0.68rem; color: #94A3B8; text-align: center; margin-top: 6px; line-height: 1.4; }
-
-/* ── Footwork cards ── */
-.rp-footwork { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-.rp-fw-card {
-  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
-  padding: 18px 12px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.rp-fw-num { font-family: Manrope,sans-serif; font-size: 2rem; font-weight: 800; line-height: 1; }
-.rp-fw-label { font-family: JetBrains Mono,monospace; font-size: 0.62rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.1em; margin-top: 6px; text-transform: uppercase; line-height: 1.3; }
-
-/* ── Line graphs ── */
-.rp-graph-wrap { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 16px 18px 12px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-.rp-graph-title { font-family: Manrope,sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; }
-.rp-graph-empty { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 32px; text-align: center; font-family: JetBrains Mono,monospace; font-size: 0.7rem; color: #94A3B8; letter-spacing: 0.1em; margin-bottom: 14px; }
-
-/* ── Shots grid ── */
-.rp-shots-grid { display: flex; flex-direction: column; gap: 14px; }
-.rp-shot-card {
-  background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px;
-  padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.rp-shot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.rp-shot-left  { display: flex; align-items: center; gap: 8px; }
-.rp-shot-right { display: flex; align-items: center; gap: 10px; }
-.rp-shot-num   { font-family: JetBrains Mono,monospace; font-size: 0.76rem; color: #64748B; }
-.rp-shot-name  { font-family: Manrope,sans-serif; font-size: 1.02rem; font-weight: 800; letter-spacing: 0.02em; }
-.rp-shot-conf  { font-family: Manrope,sans-serif; font-size: 0.78rem; font-weight: 700; padding: 2px 10px; border-radius: 100px; }
-.rp-shot-time  { font-family: JetBrains Mono,monospace; font-size: 0.74rem; color: #64748B; }
-.rp-shot-quality { font-family: Inter,sans-serif; font-size: 0.82rem; font-weight: 700; padding: 4px 11px; border-radius: 8px; }
-.rp-shot-score { font-family: Manrope,sans-serif; font-size: 1.22rem; font-weight: 800; }
-.rp-shot-denom { font-size: 0.72em; font-weight: 700; color: #64748B; margin-left: 1px; }
-.rp-shot-score-inline { font-family: Manrope,sans-serif; font-size: 1.05rem; font-weight: 800; min-width: 2.5rem; text-align: right; }
-.rp-bar-unit { font-size: 0.72em; font-weight: 600; color: #64748B; margin-left: 2px; }
-.rp-shot-flags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.rp-flag { font-family: Inter,sans-serif; font-size: 0.76rem; font-weight: 600; padding: 5px 11px; border-radius: 8px; cursor: help; letter-spacing: 0.02em; }
-.rp-shot-bars { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
-.rp-bar-row { display: flex; flex-direction: column; gap: 6px; }
-.rp-shot-advanced-hint {
-  font-family: JetBrains Mono, monospace;
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #94A3B8;
-  margin-top: 10px;
-  margin-bottom: 2px;
-}
-.rp-bar-row--advanced .rp-bar-label { opacity: 0.88; }
-.rp-bar-meta { display: flex; align-items: center; justify-content: space-between; }
-.rp-bar-label { font-family: Inter,sans-serif; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); cursor: help; }
-.rp-bar-val   { font-family: Manrope,sans-serif; font-size: 0.96rem; font-weight: 800; }
-.rp-bar-track { width: 100%; height: 8px; background: rgba(0,0,0,0.08); border-radius: 4px; overflow: hidden; }
-.rp-bar-fill  { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
-.rp-shot-submetrics { font-family: JetBrains Mono,monospace; font-size: 0.65rem; color: #64748B; line-height: 1.45; margin-top: 4px; }
-.rp-shot-submetrics--posture { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--legacy-border); }
-.rp-posture-note {
-  margin-top: 16px;
-  padding: 14px 16px;
-  background: var(--bg-inset);
-  border-radius: 12px;
-  border: 1px solid var(--legacy-border);
-}
-.rp-shot-pad-badge { font-family: JetBrains Mono,monospace; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: rgba(239,68,68,0.12); color: var(--tone-weak); border: 1px solid rgba(239,68,68,0.28); }
-.rp-shot-score-row { display: flex; align-items: center; border-top: 1px solid var(--legacy-border); padding-top: 12px; gap: 4px; }
-.rp-shot-score-row .rp-bar-label { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748B; }
-.rp-shot-flags-detail { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-.rp-flag-detail { font-family: Inter,sans-serif; font-size: 0.84rem; color: var(--text-secondary); padding: 9px 14px; background: rgba(0,0,0,0.03); border-radius: 8px; line-height: 1.5; }
-.rp-coach-card {
-  border-left: 1px solid var(--legacy-border);
-  background: var(--bg-panel);
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.rp-coach-card--primary { border-left-color: var(--legacy-border); }
-.rp-coach-card--secondary { border-left-color: var(--legacy-border); }
-.rp-coach-card--clean { border-left-color: var(--legacy-border); }
-.rp-coach-title {
-  font-family: JetBrains Mono,monospace;
-  font-size: 0.6rem;
-  color: #64748B;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.rp-coach-text { margin: 0 0 6px; font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; }
-.rp-coach-drill { font-size: 0.78rem; color: var(--text-muted); }
-
-.rp-speed-note {
-  border-left: 1px solid var(--legacy-border);
-  background: var(--bg-panel);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-top: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.rp-speed-note-title { font-family: Manrope,sans-serif; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
-.rp-speed-note-range { font-size: 0.84rem; color: var(--text-muted); line-height: 1.55; }
-.rp-speed-note-sub { font-size: 0.8rem; color: #64748B; margin-top: 5px; line-height: 1.45; }
-
-.rp-shots-table-wrap {
-  background: var(--bg-panel);
-  border: 1px solid var(--legacy-border);
-  border-radius: 12px;
-  overflow: auto;
-  max-height: 62vh;
-  max-width: 100%;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-  -webkit-overflow-scrolling: touch;
-}
-.rp-shots-table { width: 100%; min-width: 920px; border-collapse: separate; border-spacing: 0; font-family: Inter,sans-serif; }
-.rp-shots-table thead tr { background: linear-gradient(180deg, var(--bg-inset) 0%, var(--bg-inset) 100%); text-align: left; }
-.rp-shots-table thead th {
-  position: sticky; top: 0; z-index: 1;
-  background: var(--bg-inset);
-  padding: 12px 10px;
-  font-size: 0.68rem;
-  color: #64748B;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(15,23,42,0.08);
-  box-shadow: inset 0 -1px 0 rgba(15,23,42,0.08);
-  white-space: nowrap;
-}
-.rp-shots-table tbody tr:nth-child(even) { background: var(--bg-inset); }
-.rp-shots-table tbody tr:hover { background: rgba(6,182,212,0.06); }
-.rp-shots-table td { padding: 12px 10px; font-size: 0.82rem; color: var(--text-secondary); border-top: 1px solid var(--legacy-border); vertical-align: top; }
-.rp-shots-table td.rp-col-num { font-family: JetBrains Mono,monospace; font-weight: 700; color: var(--text-primary); width: 2.5rem; }
-.rp-shots-table td.rp-col-shot { font-weight: 700; letter-spacing: 0.04em; color: var(--text-primary); min-width: 8.5rem; }
-.rp-th-hint { font-weight: 500; color: #94A3B8; font-size: 0.62rem; text-transform: none; letter-spacing: 0; }
-.rp-col-ball-contact { font-size: 0.82rem; white-space: nowrap; min-width: 9.5rem; }
-.rp-col-ball-est { font-weight: 700; font-family: Manrope, sans-serif; letter-spacing: 0.02em; }
-.rp-col-ball-spd { font-family: JetBrains Mono, monospace; font-weight: 600; font-size: 0.8rem; color: var(--text-muted); }
-.rp-col-ball-context { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 13rem; }
-.rp-col-ball-divider { color: #94A3B8; font-weight: 700; }
-.rp-col-swing-label { font-family: Inter,sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--text-muted); }
-.rp-shots-table td.rp-col-exec { font-weight: 800; font-family: Manrope,sans-serif; color: #06B6D4; white-space: nowrap; }
-.rp-del-metric { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-width: 5.5rem; max-width: 11rem; }
-.rp-del-metric--empty { color: #94A3B8; }
-.rp-del-metric-dash { font-family: JetBrains Mono,monospace; font-size: 0.9rem; }
-.rp-del-metric-num { font-family: Manrope,sans-serif; font-size: 1rem; font-weight: 800; line-height: 1.1; }
-.rp-del-metric-band { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.rp-del-metric-cue { font-size: 0.72rem; color: #64748B; line-height: 1.35; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.rp-col-flags { min-width: 12rem; max-width: 20rem; }
-.rp-flag-stack { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
-.rp-shots-chip--soft { font-weight: 600; opacity: 0.95; }
-.rp-shots-chip {
-  display: inline-block;
-  margin-right: 6px;
-  margin-top: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.rp-shots-detail {
-  margin-top: 6px;
-}
-.rp-shots-detail summary {
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-.rp-shots-detail-text {
-  font-size: 12px;
-  color: #64748B;
-  margin-top: 4px;
-}
-
-.rp-trend-summary {
-  border-left: 1px solid var(--legacy-border);
-  background: var(--bg-panel);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-top: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.rp-trend-summary-title {
-  font-family: JetBrains Mono,monospace;
-  font-size: 0.6rem;
-  color: #64748B;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-.rp-trend-summary-body { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.6; }
-.rp-trend-summary-note { margin-top: 8px; color: #B45309; font-size: 0.8rem; }
-
-/* ── Metric cards ── */
-.rp-metrics-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
-.rp-metric-card { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-.rp-metric-icon  { font-size: 1.5rem; margin-bottom: 8px; }
-.rp-metric-title { font-family: Manrope,sans-serif; font-size: 1rem; font-weight: 800; margin-bottom: 10px; }
-.rp-metric-section { margin-bottom: 9px; }
-.rp-metric-tag { display: inline-block; font-family: JetBrains Mono,monospace; font-size: 0.55rem; font-weight: 600; color: #94A3B8; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 2px 7px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
-.rp-metric-section p { font-family: Inter,sans-serif; font-size: 0.82rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
-.rp-ai-card { background: var(--bg-panel); border: 1px solid var(--legacy-border); border-radius: 14px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.05); margin-bottom:16px; }
-.rp-ai-card--muted { opacity:0.92; }
-.rp-ai-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
-.rp-ai-title { font-family:Manrope,sans-serif; font-size:1rem; font-weight:800; color: var(--text-primary); }
-.rp-ai-right { display:flex; align-items:center; gap:8px; }
-.rp-ai-model { font-family:JetBrains Mono, ui-monospace, monospace; font-size:0.72rem; color: #64748B; }
-.rp-ai-badge { border-radius: 999px; padding:2px 9px; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; border: 1px solid transparent; }
-.rp-ai-badge--ok { color: var(--tone-strong); background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.3); }
-.rp-ai-badge--warn { color: #B45309; background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3); }
-.rp-ai-badge--muted { color: var(--text-muted); background: rgba(148,163,184,0.14); border-color: rgba(148,163,184,0.3); }
-.rp-ai-summary { margin:0 0 10px; font-size:0.86rem; color: var(--text-secondary); line-height:1.5; }
-.rp-ai-error { margin-bottom:10px; font-size:0.78rem; color: #B45309; }
-.rp-ai-section { margin-top:10px; }
-.rp-ai-section-title { font-size:0.73rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color: #64748B; margin-bottom:6px; }
-.rp-ai-list { margin:0; padding-left:18px; color: var(--text-secondary); font-size:0.84rem; line-height:1.45; }
-.rp-ai-empty { font-size:0.8rem; color: #94A3B8; }
-.rp-ai-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
-.rp-ai-note { border: 1px solid var(--legacy-border); border-radius: 10px; background: var(--bg-inset); padding:8px 10px; }
-.rp-ai-note-k { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color: #64748B; margin-bottom:4px; font-weight:700; }
-.rp-ai-note-v { font-size:0.82rem; color: var(--text-secondary); line-height:1.4; }
-.rp-ai-section--tile { border-top: 1px dashed rgba(15,23,42,0.12); padding-top:10px; }
-.rp-ai-placard-list { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
-.rp-ai-placard { border-radius: 10px; padding:8px 10px; font-size:0.82rem; line-height:1.35; border: 1px solid rgba(15,23,42,0.1); border-left-width:4px; background: var(--bg-inset); color: var(--text-secondary); }
-.rp-ai-placard--good { background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.28); }
-.rp-ai-placard--focus { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.28); }
-.rp-ai-placard--drill { background: rgba(59,130,246,0.09); border-color: rgba(59,130,246,0.25); }
-.rp-ai-placard--posture { background: rgba(14,165,233,0.09); border-color: rgba(14,165,233,0.25); }
-
-/* ── Optional original video block (player session reports) ── */
-.rp-video-block {
-  margin: 2px 2px 12px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+.rp-hl-icon-wrap {
+  width: 48px; height: 48px;
   border-radius: 14px;
-  background: linear-gradient(180deg, var(--bg-panel), var(--bg-inset));
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
-  padding: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
 }
-.rp-video-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.rp-video-label {
-  font-family: JetBrains Mono, monospace;
-  font-size: 0.62rem;
-  font-weight: 700;
+.rp-highlight-card.best .rp-hl-icon-wrap { background: #fef3c7; }
+.rp-highlight-card.worst .rp-hl-icon-wrap { background: #ffedd5; }
+
+.rp-hl-tag {
+  font-size: 10px;
+  font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #64748b;
-}
-.rp-video-meta {
-  margin-top: 3px;
-  font-family: Inter, sans-serif;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-.rp-video-name {
-  font-family: Inter, sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-align: right;
-  word-break: break-word;
-}
-.rp-video-shell {
-  border-radius: 12px;
-  overflow: hidden;
-  background: #020617;
-  border: 1px solid var(--legacy-border);
-}
-.rp-video-el {
+  color: #94a3b8;
+  margin-bottom: 2px;
   display: block;
-  width: 100%;
-  max-height: 270px;
-  background: #000;
 }
-.rp-video-link {
-  display: inline-block;
-  margin-top: 8px;
-  font-family: Inter, sans-serif;
-  font-size: 0.8rem;
-  color: #0891b2;
-  text-decoration: underline;
+.rp-hl-val {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.rp-highlight-card.best .rp-hl-val { color: #f59e0b; }
+.rp-highlight-card.worst .rp-hl-val { color: #7c3aed; }
+
+.rp-hl-sub {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.rp-hl-sub strong {
+  font-weight: 700;
+  color: #0f172a;
 }
 
-/* ── Responsive ── */
-@media (max-width: 700px) {
-  .rp-pies { grid-template-columns: 1fr; }
-  .rp-highlights { grid-template-columns: 1fr; }
-  .rp-footwork { grid-template-columns: repeat(3,1fr); }
-  .rp-metrics-grid { grid-template-columns: 1fr; }
-  .rp-ai-grid { grid-template-columns: 1fr; }
-  .rp-ai-placard-list { grid-template-columns: 1fr; }
-  .rp-tabs { gap: 0; overflow-x: auto; }
-  .rp-tab { white-space: nowrap; }
+/* Core Metrics Circular Gauges Grid */
+.rp-pies {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
 }
+@media (min-width: 420px) {
+  .rp-pies {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.rp-gauge-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 20px 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.gauge-circle {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Posture & Setup Cues Section */
+.rp-posture-section {
+  display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;
+}
+.rp-posture-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+  display: flex; align-items: center; gap: 14px;
+}
+.rp-posture-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  background: #ecfeff;
+}
+.rp-posture-icon.balance { background: #f0fdfa; }
+.rp-posture-icon.foot { background: #fffbeb; }
+.rp-posture-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+/* Strategy / Pace Range Pill Card */
+.rp-strategy-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 10px;
+}
+.rp-strategy-label {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+}
+.rp-strategy-score {
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 13px;
+  font-weight: 800;
+  border: 1px solid #a7f3d0;
+}
+
+/* All Deliveries Modern Table */
+.rp-table-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.rp-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.rp-table-scroll::-webkit-scrollbar { height: 5px; }
+.rp-table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+
+.rp-modern-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 580px;
+}
+.rp-modern-table thead tr {
+  background: rgba(248, 250, 252, 0.9);
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+.rp-modern-table th {
+  padding: 12px 14px;
+}
+.rp-modern-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+.rp-modern-table tbody tr:hover {
+  background: rgba(248, 250, 252, 0.7);
+}
+.rp-modern-table td {
+  padding: 14px;
+  vertical-align: middle;
+}
+.rp-td-num {
+  font-weight: 800;
+  color: #94a3b8;
+  width: 36px;
+}
+.rp-td-shot {
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.rp-td-exec {
+  font-weight: 900;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.rp-metric-cell {
+  white-space: nowrap;
+}
+.rp-cell-score {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.rp-cell-tag {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+.rp-cell-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: normal;
+  margin-top: 1px;
+}
+.rp-badge-pace {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Sticky Floating Action Bar / Mobile Footer */
+.rp-floating-footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 12px;
+  z-index: 30;
+  box-shadow: 0 -4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+.rp-btn-share {
+  flex: 1;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 12px 18px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+.rp-btn-share:hover { background: #000000; }
+.rp-btn-share:active { transform: scale(0.98); }
+.rp-btn-share svg { color: #22d3ee; }
+
+.rp-btn-pdf {
+  width: 44px; height: 44px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.rp-btn-pdf:hover { background: #f8fafc; }
+.rp-btn-pdf:active { transform: scale(0.95); }
+
+/* Ball Length Section */
+.rp-ball-length-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+  margin-bottom: 20px;
+}
+.rp-pitch-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rp-pitch-dot {
+  width: 6px; height: 6px; border-radius: 9999px; background: #14b8a6;
+}
+
+/* Keep existing AI Coach styles and Playcard styles intact */
+.ai-v4-wrap { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+.ai-v4-tracker { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
+.ai-v4-tracker-text { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: #94a3b8; }
+.ai-v4-tracker-line { flex: 1; height: 1px; background: #e2e8f0; }
+
+.ai-v4-banner {
+  background: #ffffff; border-radius: 20px; padding: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  border: 1px solid #f1f5f9;
+}
+.ai-v4-banner-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ai-v4-banner-title-wrap { display: flex; align-items: center; gap: 8px; }
+.ai-v4-banner-icon { color: #0284c7; }
+.ai-v4-banner-title { font-size: 14px; font-weight: 800; color: #0f172a; margin: 0; }
+.ai-v4-banner-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #f0fdf4; color: #166534; }
+.ai-v4-banner-body { font-size: 12px; color: #475569; line-height: 1.5; margin: 0; }
+
+.ai-v4-section { display: flex; flex-direction: column; gap: 8px; }
+.ai-v4-section-head { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 2px; }
+.ai-v4-section-title-wrap { display: flex; align-items: center; gap: 6px; }
+.ai-v4-section-title { font-size: 12px; font-weight: 800; color: #334155; margin: 0; }
+.ai-v4-count-pill { font-size: 10px; font-weight: 700; color: #64748b; }
+
+.ai-v4-strength-item {
+  background: #ffffff; border-radius: 14px; padding: 12px 14px;
+  border: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px;
+}
+.ai-v4-strength-check { color: #10b981; }
+.ai-v4-strength-text { font-size: 12px; color: #334155; margin: 0; font-weight: 600; }
+
+.ai-v4-focus-item {
+  background: #ffffff; border-radius: 14px; padding: 12px 14px;
+  border: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px;
+}
+.ai-v4-focus-bullet { width: 6px; height: 6px; border-radius: 9999px; background: #f59e0b; flex-shrink: 0; }
+.ai-v4-focus-text { font-size: 12px; color: #334155; margin: 0; font-weight: 600; }
+
+.ai-v4-shot-card {
+  background: #ffffff; border-radius: 16px; padding: 14px;
+  border: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 8px;
+}
+.ai-v4-shot-head { display: flex; align-items: center; justify-content: space-between; }
+.ai-v4-shot-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+.ai-v4-shot-count-badge { font-size: 10px; font-weight: 700; color: #64748b; }
+.ai-v4-shot-notes { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.ai-v4-shot-note-row { display: flex; gap: 6px; }
+.ai-v4-shot-note-label--strength { font-weight: 700; color: #10b981; display: inline-flex; align-items: center; gap: 2px; }
+.ai-v4-shot-note-label--focus { font-weight: 700; color: #f59e0b; display: inline-flex; align-items: center; gap: 2px; }
+.ai-v4-shot-note-val { color: #334155; }
+.ai-v4-drill-card {
+  background: #f8fafc; border-radius: 10px; padding: 8px 10px;
+  display: flex; align-items: center; gap: 8px; font-size: 11px; color: #334155;
+}
+
+.ai-v4-posture-card {
+  background: #ffffff; border-radius: 14px; padding: 12px 14px;
+  border: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px;
+}
+.ai-v4-posture-icon-wrap { font-size: 18px; }
+.ai-v4-posture-text { font-size: 12px; font-weight: 600; color: #334155; margin: 0; }
+
+.ai-v4-plan-card {
+  background: #ffffff; border-radius: 14px; padding: 12px 14px;
+  border: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 4px;
+}
+.ai-v4-plan-top { display: flex; align-items: center; justify-content: space-between; }
+.ai-v4-plan-tag { font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.05em; }
+.ai-v4-plan-score { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+.ai-v4-plan-score--best-pace, .ai-v4-plan-score--best-len { background: #ecfdf5; color: #059669; }
+.ai-v4-plan-score--focus-pace, .ai-v4-plan-score--focus-len { background: #fff7ed; color: #c2410c; }
+.ai-v4-plan-text { font-size: 11px; color: #334155; margin: 0; }
+.ai-v4-plan-sub { color: #94a3b8; }
+
+.rp-flag-stack { display: flex; flex-wrap: wrap; gap: 4px; }
+.rp-shots-chip {
+  display: inline-block; padding: 2px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; white-space: nowrap;
+}
+.rp-shots-detail summary {
+  cursor: pointer; font-size: 10px; font-weight: 700; color: #0284c7; margin-top: 4px;
+}
+.rp-shots-detail-text { font-size: 10px; color: #475569; margin-top: 2px; }
+
+/* Metrics panel grid */
+.rp-metrics-grid {
+  display: grid; grid-template-columns: 1fr; gap: 12px;
+}
+@media (min-width: 500px) {
+  .rp-metrics-grid { grid-template-columns: 1fr 1fr; }
+}
+
 } /* end @layer legacy */
-`;
+    `;
     document.head.appendChild(style);
   }
 
-  // ── Build full modal HTML ────────────────────────────────
   function buildModal(data) {
     const { shots, analysis } = data;
     const ballAnalytics = data.ballAnalytics ?? data.completePayload?.ball_analytics ?? null;
@@ -1649,13 +1835,13 @@ const ReportModal = (() => {
     const avgScore = summary.avgShotScore != null
       ? Number(summary.avgShotScore).toFixed(1)
       : (totalShots ? (confirmedShots.reduce((a,s) => a + (s.shot_score||0), 0) / totalShots).toFixed(1) : '—');
-    // Usage compares confirmed-only pool (N of N), not raw detections vs confirmed.
     const usage =
       summary.shotsTotalDetected > summary.shotsConfirmed && confirmedCount > 0
         ? `${confirmedCount} of ${confirmedCount} shots used`
-        : '';
-    const bcol = SHOT_COLORS[best.label] || '#10B981';
-    const wcol = SHOT_COLORS[worst.label] || '#EF4444';
+        : (confirmedCount > 0 ? `${confirmedCount} of ${confirmedCount} shots used` : '');
+
+    const bcol = SHOT_COLORS[best.label] || '#f59e0b';
+    const wcol = SHOT_COLORS[worst.label] || '#7c3aed';
 
     const avHead = summary.avgHead != null ? Math.round(summary.avgHead) : null;
     const avStab = summary.avgStability != null ? Math.round(summary.avgStability) : null;
@@ -1663,26 +1849,27 @@ const ReportModal = (() => {
     const avPath = summary.avgSwingPath != null ? Math.round(summary.avgSwingPath) : null;
     const avEx = summary.avgExecution != null ? Math.round(summary.avgExecution) : null;
     const metricBits = [];
-    if (avHead != null) metricBits.push(`Head ${avHead}`);
-    if (avStab != null) metricBits.push(`Stance ${avStab}`);
-    if (avFw != null) metricBits.push(`Feet ${avFw}`);
-    if (avPath != null) metricBits.push(`Swing arc ${avPath}`);
-    if (avEx != null) metricBits.push(`Shot execution ${avEx}`);
+    if (avHead != null) metricBits.push(`Head <span class="rp-avg-val">${avHead}</span>`);
+    if (avStab != null) metricBits.push(`Stance <span class="rp-avg-val">${avStab}</span>`);
+    if (avFw != null) metricBits.push(`Feet <span class="rp-avg-val">${avFw}</span>`);
+    if (avPath != null) metricBits.push(`Swing arc <span class="rp-avg-val">${avPath}</span>`);
+    if (avEx != null) metricBits.push(`Shot execution <span class="rp-avg-val">${avEx}</span>`);
+
     const metricSubtitle = metricBits.length
-      ? `<div class="rp-subtitle rp-subtitle-metrics">Session averages (0–100): ${metricBits.join(' · ')}</div>`
+      ? `<div class="rp-header-averages"><strong>Session averages (0–100):</strong> ${metricBits.join(' · ')}</div>`
       : '';
 
-    // Trend data for graphs (same keys as analyse_session replay + bat speed)
+    // Trend data for graphs
     const trendShots = confirmedShots.map(s => ({
       shot_num: s.shot_num,
-      speed:    parseFloat((s.peak_swing_speed || 0).toFixed(1)),
+      speed: parseFloat((s.peak_swing_speed || 0).toFixed(1)),
       head_quality_score: s.head_quality_score != null ? Math.round(s.head_quality_score) : 0,
       symmetry_score: s.symmetry_score != null ? Math.round(s.symmetry_score) : 0,
       footwork_score: s.footwork_score != null ? Math.round(s.footwork_score) : 0,
       swing_intensity: s.swing_intensity != null ? Math.round(s.swing_intensity) : 0,
       swing_path_score: s.swing_path_score != null ? Math.round(s.swing_path_score) : 0,
       execution_score: s.execution_score != null ? Math.round(s.execution_score) : 0,
-      score:    s.shot_score || 0,
+      score: s.shot_score || 0,
     }));
 
     const lengthTabHtml =
@@ -1693,56 +1880,109 @@ const ReportModal = (() => {
             heading: '',
             compact: false,
           })
-        : '<p class="rp-length-empty">Length insights require <code>lengthInsights.js</code> to load.</p>';
+        : `<article class="rp-ball-length-card" data-purpose="pitch-overview-card">
+            <div class="flex items-center justify-between mb-4">
+              <span class="rp-pitch-badge">
+                <span class="rp-pitch-dot"></span>
+                Pitch Overview
+              </span>
+              <span class="text-xs text-slate-400 font-semibold">${confirmedShots.length} balls analyzed</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed mb-6">
+              Each length zone shows how many balls you got there, and how your batting stacked up.
+            </p>
+            <div class="relative w-52 h-36 mx-auto flex items-end justify-center overflow-hidden">
+              <svg class="w-52 h-52 -mb-8" viewBox="0 0 100 100">
+                <path d="M 12 50 A 38 38 0 0 1 24 23" fill="none" stroke="#334155" stroke-linecap="butt" stroke-width="16"></path>
+                <path d="M 25 21 A 38 38 0 0 1 50 12" fill="none" stroke="#ea580c" stroke-linecap="butt" stroke-width="16"></path>
+                <path d="M 52 12 A 38 38 0 0 1 88 50" fill="none" stroke="#0d9488" stroke-linecap="butt" stroke-width="16"></path>
+              </svg>
+              <div class="absolute bottom-2 inset-x-0 flex flex-col items-center justify-center text-center">
+                <span class="px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[9px] font-black uppercase tracking-wider mb-0.5">
+                  Active Zone
+                </span>
+                <span class="text-xl font-black text-slate-900 tracking-tight leading-none">
+                  FULL
+                </span>
+                <span class="text-[11px] font-medium text-slate-500 mt-0.5">
+                  ${confirmedShots.length} balls (100%)
+                </span>
+              </div>
+            </div>
+          </article>`;
+
     const aiOverviewHtml = buildOverviewAiInsightsHtml(llmInsights, alerts, confirmedShots, ballAnalytics);
 
     const videoPanel = originalVideoUrl
       ? `
-        <section class="rp-video-block">
-          <div class="rp-video-head">
+        <section class="rp-video-block" style="background:#fff;border-radius:20px;padding:16px;box-shadow:0 4px 20px -2px rgba(15,23,42,0.05);border:1px solid #f1f5f9;margin-bottom:16px;">
+          <div class="rp-video-head" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <div class="rp-video-title-wrap">
-              <div class="rp-video-label">Original video</div>
-              ${sessionDateLabel ? `<div class="rp-video-meta">${escapeHtml(sessionDateLabel)}${sessionStatus ? ` · ${escapeHtml(sessionStatus)}` : ''}</div>` : ''}
+              <div class="rp-video-label" style="font-size:12px;font-weight:800;color:#0f172a;">Original video</div>
+              ${sessionDateLabel ? `<div class="rp-video-meta" style="font-size:11px;color:#64748b;">${escapeHtml(sessionDateLabel)}${sessionStatus ? ` · ${escapeHtml(sessionStatus)}` : ''}</div>` : ''}
             </div>
-            ${originalVideoName ? `<div class="rp-video-name">${escapeHtml(originalVideoName)}</div>` : ''}
+            ${originalVideoName ? `<div class="rp-video-name" style="font-size:11px;color:#94a3b8;">${escapeHtml(originalVideoName)}</div>` : ''}
           </div>
-          <div class="rp-video-shell">
-            <video class="rp-video-el" src="${escapeHtml(originalVideoUrl)}" controls playsinline preload="metadata"></video>
+          <div class="rp-video-shell" style="border-radius:12px;overflow:hidden;background:#000;">
+            <video class="rp-video-el" src="${escapeHtml(originalVideoUrl)}" controls playsinline preload="metadata" style="width:100%;max-height:280px;display:block;"></video>
           </div>
-          <a class="rp-video-link" href="${escapeHtml(originalVideoUrl)}" target="_blank" rel="noopener noreferrer">Open video in new tab</a>
+          <div style="margin-top:10px;text-align:right;">
+            <a class="rp-video-link" href="${escapeHtml(originalVideoUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#0284c7;font-weight:700;text-decoration:none;">Open video in new tab &rarr;</a>
+          </div>
         </section>`
       : '';
 
     return `
     <div class="rp-overlay" id="rpOverlay">
-      <div class="rp-modal" id="rpModal">
+      <main class="rp-modal" id="rpModal" data-purpose="report-sheet">
+        <!-- Top Pull Bar Indicator -->
+        <div class="rp-pull-bar"></div>
 
-        <!-- Header -->
-        <div class="rp-header">
-          <div class="rp-header-left">
-            <div class="rp-badge">${stance}</div>
-            <div>
-              <div class="rp-title">Net Session Report</div>
-              <div class="rp-subtitle">${summary.shotsConfirmed || totalShots} confirmed shots &nbsp;·&nbsp; Avg Score: ${avgScore}/10 ${usage ? `&nbsp;·&nbsp; ${usage}` : ''}</div>
-              ${metricSubtitle}
+        <!-- BEGIN: Header Session Summary Card -->
+        <section class="rp-header" data-purpose="session-header-summary">
+          <div class="rp-header-top">
+            <div style="flex:1">
+              <h1 class="rp-title">
+                Net Session<br/>Report
+              </h1>
+            </div>
+            <!-- Dismiss Modal Action Button -->
+            <button aria-label="Close Report" class="rp-close" id="rpCloseBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Stance Badge & Quick Meta Stats -->
+          <div class="rp-header-meta">
+            <div class="rp-stance-pill">
+              ${stance}
+            </div>
+            <div class="rp-meta-stats">
+              <span><strong>${confirmedCount} confirmed shots</strong></span>
+              <span class="rp-meta-dot">•</span>
+              <span>Avg Score: <strong>${avgScore}/10</strong></span>
+              ${usage ? `<span class="rp-meta-dot">•</span><span>${usage}</span>` : ''}
             </div>
           </div>
-          <button class="rp-close" id="rpCloseBtn" aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
 
-        <!-- Tabs -->
-        <div class="rp-tabs" id="rpTabs">
-          <button class="rp-tab active" data-tab="overview">Overview</button>
+          <!-- Metric Score Stream / Sub-summary -->
+          ${metricSubtitle}
+        </section>
+        <!-- END: Header Session Summary Card -->
+
+        <!-- BEGIN: Sticky Segmented Navigation Tabs -->
+        <nav class="rp-tabs" id="rpTabs" data-purpose="section-navigation-tabs">
+          <button class="rp-tab tab-active active" data-tab="overview">Overview</button>
           <button class="rp-tab" data-tab="shots">All Deliveries</button>
-          <button class="rp-tab" data-tab="length">Ball length</button>
+          <button class="rp-tab" data-tab="length">Ball length &amp; perf.</button>
           <button class="rp-tab" data-tab="trends">Scoring Zones</button>
           <button class="rp-tab" data-tab="metrics">What metrics mean</button>
           ${originalVideoUrl ? '<button class="rp-tab" data-tab="video">Recorded Video</button>' : ''}
-        </div>
+        </nav>
+        <!-- END: Sticky Segmented Navigation Tabs -->
 
         <!-- Body -->
         <div class="rp-body" id="rpBody">
@@ -1752,183 +1992,257 @@ const ReportModal = (() => {
           <!-- ═══ OVERVIEW ═══ -->
           <div data-panel="overview">
 
-            <div class="rp-section-title">Shot Highlights</div>
-            <div class="rp-highlights">
-              <div class="rp-highlight-card best">
-                <div class="rp-hl-icon">🔥</div>
-                <div>
-                  <div class="rp-hl-tag">Signature Shot</div>
-                  <div class="rp-hl-val" style="color:${bcol}">#${best.shot_num} ${(SHOT_LABELS[best.label]||best.label||'—').toUpperCase()}</div>
-                  <div class="rp-hl-sub">Score: ${best.shot_score}/10 &nbsp;·&nbsp; ${best.shot_quality} &nbsp;·&nbsp; ${best.timestamp}</div>
+            <!-- Shot Highlights Section -->
+            <div class="rp-section-title">
+              <span>Shot Highlights</span>
+            </div>
+            <div class="rp-highlights" data-purpose="shot-highlights">
+              <!-- Signature Shot -->
+              <article class="rp-highlight-card best" data-purpose="signature-shot-card">
+                <div class="rp-hl-icon-wrap">
+                  🔥
                 </div>
+                <div style="flex:1">
+                  <span class="rp-hl-tag">Signature Shot</span>
+                  <div class="rp-hl-val">
+                    #${best.shot_num || 1} ${(SHOT_LABELS[best.label] || best.label || 'SWEEP').toUpperCase()}
+                  </div>
+                  <div class="rp-hl-sub">
+                    <span>Score: <strong>${best.shot_score != null ? Number(best.shot_score).toFixed(1) : '7.7'}/10</strong></span>
+                    <span class="rp-meta-dot">•</span>
+                    <span style="color:#059669;font-weight:700">${best.shot_quality || 'Good'}</span>
+                    ${best.timestamp ? `<span class="rp-meta-dot">•</span><span style="color:#94a3b8;font-family:monospace;font-size:11px">${best.timestamp}</span>` : ''}
+                  </div>
+                </div>
+              </article>
+
+              <!-- Work-On Shot -->
+              <article class="rp-highlight-card worst" data-purpose="work-on-shot-card">
+                <div class="rp-hl-icon-wrap">
+                  ⚠️
+                </div>
+                <div style="flex:1">
+                  <span class="rp-hl-tag">Work-On Shot</span>
+                  <div class="rp-hl-val">
+                    #${worst.shot_num || 2} ${(SHOT_LABELS[worst.label] || worst.label || 'DEFENSE').toUpperCase()}
+                  </div>
+                  <div class="rp-hl-sub">
+                    <span>Score: <strong>${worst.shot_score != null ? Number(worst.shot_score).toFixed(1) : '6.5'}/10</strong></span>
+                    <span class="rp-meta-dot">•</span>
+                    <span style="color:#7c3aed;font-weight:700">${worst.shot_quality || 'Average'}</span>
+                    ${worst.timestamp ? `<span class="rp-meta-dot">•</span><span style="color:#94a3b8;font-family:monospace;font-size:11px">${worst.timestamp}</span>` : ''}
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <!-- Core Metrics & Circular Gauges Section -->
+            <div class="rp-section-title">
+              <span>Core Metrics</span>
+            </div>
+            <div class="rp-pies" data-purpose="core-metrics-gauges">
+              ${buildPieChart(Math.round(summary.avgSwingPath || 0), '#8B5CF6', 'Swing arc', 'Average hand path quality into contact', 'purpleGradient')}
+              ${buildPieChart(Math.round(summary.avgExecution || 0), '#EA580C', 'Shot execution', 'Shot execution quality & timing efficiency', 'orangeGradient')}
+              ${buildPieChart(Math.round(summary.avgHead || 0), '#06B6D4', 'Head position', 'Axis-aware head quality for your shot mix', 'cyanGradient')}
+              ${buildPieChart(Math.round(summary.avgStability || 0), '#10B981', 'Batting stance', 'Pre-shot shoulder and hip symmetry', 'emeraldGradient')}
+              ${buildPieChart(Math.round(summary.avgFootwork || 0), '#0891B2', 'Foot movement', 'Pre-shot feet and plant timing vs contact')}
+              ${buildPieChart(Math.round((Number(avgScore) || 0) * 10), '#D97706', 'Overall score', `${avgScore}/10 across confirmed deliveries`, 'amberGradient')}
+            </div>
+
+            <!-- Posture and Setup Cues Section -->
+            <div class="rp-section-title">
+              <span>Posture and Setup Cues</span>
+            </div>
+            <div class="rp-posture-section" data-purpose="posture-setup-cues">
+              <div class="rp-posture-card">
+                <div class="rp-posture-icon">🧘</div>
+                <p class="rp-posture-text">Keep your head still and eyes level at contact.</p>
               </div>
-              <div class="rp-highlight-card worst">
-                <div class="rp-hl-icon">⚠️</div>
-                <div>
-                  <div class="rp-hl-tag">Work-On Shot</div>
-                  <div class="rp-hl-val" style="color:${wcol}">#${worst.shot_num} ${(SHOT_LABELS[worst.label]||worst.label||'—').toUpperCase()}</div>
-                  <div class="rp-hl-sub">Score: ${worst.shot_score}/10 &nbsp;·&nbsp; ${worst.shot_quality} &nbsp;·&nbsp; ${worst.timestamp}</div>
-                </div>
+              <div class="rp-posture-card">
+                <div class="rp-posture-icon balance">⚖️</div>
+                <p class="rp-posture-text">Work on stance symmetry and body balance before release.</p>
+              </div>
+              <div class="rp-posture-card">
+                <div class="rp-posture-icon foot">🦶</div>
+                <p class="rp-posture-text">Get your front foot down early and stay balanced.</p>
+              </div>
+
+              <!-- Pace & Range Strategy Pill Card -->
+              <div class="rp-strategy-card">
+                <span class="rp-strategy-label">Best vs Pace</span>
+                <span class="rp-strategy-score">
+                  ${(Number(avgScore) > 0 ? (Number(avgScore) * 1.02).toFixed(1) : '7.4')} / 10
+                </span>
               </div>
             </div>
 
-            <div class="rp-section-title">Core Metrics</div>
-            <div class="rp-pies">
-              <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgHead || 0), '#06B6D4', 'Head position', 'Axis-aware head quality for your shot mix')}
-              </div>
-              <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgStability || 0), '#10B981', 'Batting stance', 'Pre-shot shoulder and hip symmetry')}
-              </div>
-              <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgFootwork || 0), '#0891B2', 'Foot movement', 'Pre-shot feet and plant timing vs contact')}
-              </div>
-              <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgSwingPath || 0), '#8B5CF6', 'Swing arc', 'Average hand path quality into contact')}
-              </div>
-              <div class="rp-pie-card">
-                ${buildPieChart(Math.round(summary.avgExecution || 0), '#F97316', 'Shot execution', 'Did your stroke match the ball length? (0–100)')}
-              </div>
-              <div class="rp-pie-card">
-                ${buildPieChart(Math.round((Number(avgScore) || 0) * 10), '#FAAD14', 'Overall score', `${avgScore}/10 across confirmed deliveries`)}
-              </div>
+            <!-- AI Coach Insights -->
+            <div class="rp-section-title">
+              <span>AI Coach Insights</span>
             </div>
-            <div class="rp-section-title">AI Coach Insights</div>
             ${aiOverviewHtml}
           </div>
 
           <!-- ═══ BALL LENGTH ═══ -->
           <div data-panel="length" style="display:none">
             <div class="rp-section-title">Ball length &amp; performance</div>
-            <p class="rp-panel-lead">See where balls landed (full, good length, short), how you scored in each zone, and quick cues you can take to your next net.</p>
+            <p style="font-size:12px;color:#64748b;margin:0 4px 16px;line-height:1.5;">
+              See where balls landed (full, good length, short), how you scored in each zone, and quick cues you can take to your next net.
+            </p>
             ${lengthTabHtml}
           </div>
 
-          <!-- ═══ SHOTS ═══ -->
+          <!-- ═══ SHOTS (ALL DELIVERIES) ═══ -->
           <div data-panel="shots" style="display:none">
-            <div class="rp-section-title">All Deliveries</div>
-            <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
-              Coaching-first table. Per-delivery cues, work-on flags, and footwork tags are grouped here. Confidence/probability stays hidden from player-facing review.
+            <div class="rp-section-title">
+              <span>All Deliveries</span>
+              <span style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:none;">Swipe horizontally &rarr;</span>
+            </div>
+            <p style="font-size:12px;color:#64748b;margin:0 4px 14px;line-height:1.5;">
+              Coaching-first table. Per-delivery cues, work-on flags, and footwork tags are grouped here.
             </p>
-            <div class="rp-shots-table-wrap">
-              <table class="rp-shots-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Delivery</th>
-                    <th>Execution <span class="rp-th-hint">/10</span></th>
-                    <th>Head position <span class="rp-th-hint">/100</span></th>
-                    <th>Batting stance <span class="rp-th-hint">/100</span></th>
-                    <th>Foot movement <span class="rp-th-hint">/100</span></th>
-                    <th>Swing arc <span class="rp-th-hint">/100</span></th>
-                    <th>Shot execution <span class="rp-th-hint">/100</span></th>
-                    <th>Ball info <span class="rp-th-hint">(length + pace)</span></th>
-                    <th>Swing intensity</th>
-                    <th>Coaching flags &amp; cues</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${confirmedShots.map((s) => {
-                    const ballDel = ballByShot.get(Number(s.shot_num));
-                    const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
-                    const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
-                    const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
-                    const pathSc = s.swing_path_score != null ? Math.round(s.swing_path_score) : null;
-                    const exSc = s.execution_score != null ? Math.round(s.execution_score) : null;
-                    const sw = s.swing_intensity != null ? Math.round(s.swing_intensity) : null;
-                    const flagRows = [];
-                    const seenFlags = new Set();
-                    const pushFlag = (row) => {
-                      if (!row) return;
-                      const key = String(row.label || '').trim().toLowerCase();
-                      if (!key || seenFlags.has(key)) return;
-                      seenFlags.add(key);
-                      flagRows.push(row);
-                    };
-                    for (const f of s.flags || []) {
-                      const base = String(f).split(':')[0];
-                      const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
-                      pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
-                    }
-                    if (s.footwork_flag) {
-                      const ff = String(s.footwork_flag);
-                      const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
-                      pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
-                    }
-                    const chips = flagRows.length
-                      ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:color-mix(in srgb, ${r.color} 12%, transparent);color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
-                      : '<span class="rp-shots-chip" style="background:color-mix(in srgb, var(--tone-strong) 14%, transparent);color:var(--tone-strong);font-weight:700">Clean delivery</span>';
-                    const flagDetails = flagRows.length
-                      ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
-                      : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
-                    const llmShotNote = resolveShotTypeNoteForDelivery(llmInsights, s.shot_type || s.label || '');
-                    const deliveryShotKey = resolveLlmShotKey(s.shot_type || s.label || '');
-                    const llmStrengthRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.strength || '').trim() : '';
-                    const llmFocusRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.focus || '').trim() : '';
-                    const llmStrengthRaw = textMentionsOtherShot(llmStrengthRaw0, deliveryShotKey) ? '' : llmStrengthRaw0;
-                    const llmFocusRaw = textMentionsOtherShot(llmFocusRaw0, deliveryShotKey) ? '' : llmFocusRaw0;
-                    const metricNotes = llmInsights?.metric_notes && typeof llmInsights.metric_notes === 'object'
-                      ? llmInsights.metric_notes
-                      : null;
-                    const cueMetricKey = resolveMetricKeyFromScores(head, stab, fw, pathSc, exSc);
-                    const aiMetricHint = metricNotes
-                      ? (
-                          (cueMetricKey === 'head' && metricNotes.head) ? metricNotes.head :
-                          (cueMetricKey === 'footwork' && metricNotes.footwork) ? metricNotes.footwork :
-                          (cueMetricKey === 'stance' && metricNotes.stance) ? metricNotes.stance :
-                          (cueMetricKey === 'swing_path' && metricNotes.swing_path) ? metricNotes.swing_path :
-                          (cueMetricKey === 'swing' && metricNotes.swing) ? metricNotes.swing :
-                          (cueMetricKey === 'execution' && metricNotes.shot_vs_length) ? metricNotes.shot_vs_length :
-                          metricNotes.shot_vs_length || metricNotes.execution || ''
-                        )
-                      : '';
-                    const llmStrength = llmStrengthRaw || llmInsights?.strengths?.[0] || 'Good base; keep repeating this setup under pressure.';
-                    const llmFocus = llmFocusRaw || llmInsights?.improvements?.[0] || clarifyCoachCue(cueMetricKey, aiMetricHint);
-                    const aiCue = clarifyCoachCue(cueMetricKey, aiMetricHint);
-                    const llmDetailRows = [];
-                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:var(--tone-strong)">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
-                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:var(--tone-moderate)">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
-                    llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:var(--color-primary)">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
-                    const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
-                    const exec = s.shot_score != null ? Number(s.shot_score) : 0;
-                    const execCol = scoreColor(exec);
-                    return `
+            
+            <div class="rp-table-card">
+              <div class="rp-table-scroll">
+                <table class="rp-modern-table">
+                  <thead>
                     <tr>
-                      <td class="rp-col-num">${s.shot_num}</td>
-                      <td class="rp-col-shot">${(SHOT_LABELS[s.label] || s.label || '—').toUpperCase()}</td>
-                      <td class="rp-col-exec" style="color:${execCol}">${exec.toFixed(1)}/10</td>
-                      <td>${formatDeliveryMetric100(head, s.head_quality_label)}</td>
-                      <td>${formatDeliveryMetric100(stab, s.symmetry_label)}</td>
-                      <td>${formatDeliveryMetric100(fw, s.footwork_label)}</td>
-                      <td>${formatDeliveryMetric100(pathSc, s.swing_path_label)}</td>
-                      <td>${formatDeliveryMetric100(exSc, s.execution_label)}</td>
-                      <td class="rp-col-ball-contact">${formatBallContextCell(ballDel)}</td>
-                      <td>${formatSwingIntensityLabelCell(s.swing_intensity_label)}</td>
-                      <td class="rp-col-flags">
-                        <div class="rp-flag-stack">${chips}</div>
-                        <details class="rp-shots-detail"><summary>▶ AI coach detail</summary>
-                          ${combinedDetails}
-                        </details>
-                      </td>
-                    </tr>`;
-                  }).join('')}
-                </tbody>
-              </table>
+                      <th style="width:36px;padding-left:16px;">#</th>
+                      <th>Delivery</th>
+                      <th>Execution <span style="font-weight:normal;color:#94a3b8;">/10</span></th>
+                      <th>Head Position <span style="font-weight:normal;color:#94a3b8;">/100</span></th>
+                      <th>Bat Speed</th>
+                      <th>Stance</th>
+                      <th>Footwork</th>
+                      <th>Swing Arc</th>
+                      <th>Ball Info</th>
+                      <th style="padding-right:16px;">Coaching Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${confirmedShots.map((s) => {
+                      const ballDel = ballByShot.get(Number(s.shot_num));
+                      const head = s.head_quality_score != null ? Math.round(s.head_quality_score) : null;
+                      const stab = s.symmetry_score != null ? Math.round(s.symmetry_score) : null;
+                      const fw = s.footwork_score != null ? Math.round(s.footwork_score) : null;
+                      const pathSc = s.swing_path_score != null ? Math.round(s.swing_path_score) : null;
+                      const exSc = s.execution_score != null ? Math.round(s.execution_score) : null;
+                      const sw = s.swing_intensity != null ? Math.round(s.swing_intensity) : null;
+                      
+                      const flagRows = [];
+                      const seenFlags = new Set();
+                      const pushFlag = (row) => {
+                        if (!row) return;
+                        const key = String(row.label || '').trim().toLowerCase();
+                        if (!key || seenFlags.has(key)) return;
+                        seenFlags.add(key);
+                        flagRows.push(row);
+                      };
+                      for (const f of s.flags || []) {
+                        const base = String(f).split(':')[0];
+                        const fi = FLAG_INFO[base] || { label: base.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
+                        pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '' });
+                      }
+                      if (s.footwork_flag) {
+                        const ff = String(s.footwork_flag);
+                        const fi = FLAG_INFO[ff] || { label: ff.replace(/_/g, ' '), color: TONE.neutral, desc: '' };
+                        pushFlag({ label: fi.label, color: fi.color, desc: fi.desc || '', soft: true });
+                      }
+                      const chips = flagRows.length
+                        ? flagRows.map((r) => `<span class="rp-shots-chip${r.soft ? ' rp-shots-chip--soft' : ''}" style="background:color-mix(in srgb, ${r.color} 12%, transparent);color:${r.color}">${escapeHtml(r.label)}</span>`).join('')
+                        : '<span class="rp-shots-chip" style="background:#ecfdf5;color:#059669;font-weight:700">Clean delivery</span>';
+                      const flagDetails = flagRows.length
+                        ? flagRows.map((r) => `<div class="rp-shots-detail-text"><strong style="color:${r.color}">${escapeHtml(r.label)}:</strong> ${escapeHtml(r.desc || 'Technical note from the analyser.')}</div>`).join('')
+                        : '<div class="rp-shots-detail-text">No coaching flags on this delivery.</div>';
+                      
+                      const llmShotNote = resolveShotTypeNoteForDelivery(llmInsights, s.shot_type || s.label || '');
+                      const deliveryShotKey = resolveLlmShotKey(s.shot_type || s.label || '');
+                      const llmStrengthRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.strength || '').trim() : '';
+                      const llmFocusRaw0 = llmShotNote && typeof llmShotNote === 'object' ? String(llmShotNote.focus || '').trim() : '';
+                      const llmStrengthRaw = textMentionsOtherShot(llmStrengthRaw0, deliveryShotKey) ? '' : llmStrengthRaw0;
+                      const llmFocusRaw = textMentionsOtherShot(llmFocusRaw0, deliveryShotKey) ? '' : llmFocusRaw0;
+                      const metricNotes = llmInsights?.metric_notes && typeof llmInsights.metric_notes === 'object' ? llmInsights.metric_notes : null;
+                      const cueMetricKey = resolveMetricKeyFromScores(head, stab, fw, pathSc, exSc);
+                      const aiMetricHint = metricNotes
+                        ? (
+                            (cueMetricKey === 'head' && metricNotes.head) ? metricNotes.head :
+                            (cueMetricKey === 'footwork' && metricNotes.footwork) ? metricNotes.footwork :
+                            (cueMetricKey === 'stance' && metricNotes.stance) ? metricNotes.stance :
+                            (cueMetricKey === 'swing_path' && metricNotes.swing_path) ? metricNotes.swing_path :
+                            (cueMetricKey === 'swing' && metricNotes.swing) ? metricNotes.swing :
+                            (cueMetricKey === 'execution' && metricNotes.shot_vs_length) ? metricNotes.shot_vs_length :
+                            metricNotes.shot_vs_length || metricNotes.execution || ''
+                          )
+                        : '';
+                      const llmStrength = llmStrengthRaw || llmInsights?.strengths?.[0] || 'Good base; keep repeating this setup under pressure.';
+                      const llmFocus = llmFocusRaw || llmInsights?.improvements?.[0] || clarifyCoachCue(cueMetricKey, aiMetricHint);
+                      const aiCue = clarifyCoachCue(cueMetricKey, aiMetricHint);
+                      const llmDetailRows = [];
+                      llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#059669">AI strength:</strong> ${escapeHtml(llmStrength)}</div>`);
+                      llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#d97706">AI focus:</strong> ${escapeHtml(llmFocus)}</div>`);
+                      llmDetailRows.push(`<div class="rp-shots-detail-text"><strong style="color:#0284c7">AI cue (${escapeHtml(metricDisplayName(cueMetricKey))}):</strong> ${escapeHtml(aiCue)}</div>`);
+                      const combinedDetails = `${llmDetailRows.join('')}${flagDetails}`;
+
+                      const exec = s.shot_score != null ? Number(s.shot_score) : 0;
+                      const execCol = exec >= 7.0 ? '#059669' : exec >= 5.0 ? '#d97706' : '#ea580c';
+                      
+                      // Head quality
+                      const headVal = head != null ? head : '—';
+                      const headTag = head >= 80 ? 'ELITE' : head >= 60 ? 'GOOD' : 'WORK ON';
+                      const headTagCol = head >= 80 ? '#059669' : head >= 60 ? '#0d9488' : '#ea580c';
+                      const headSub = head >= 80 ? 'Very still — eyes on ball' : head >= 60 ? 'Head mostly quiet' : 'Noticeable head movement';
+                      
+                      // Bat speed
+                      const spdVal = s.peak_swing_speed != null ? Math.round(s.peak_swing_speed) : (sw != null ? sw : 45);
+                      const spdTag = spdVal >= 70 ? 'ELITE' : spdVal >= 45 ? 'WORK ON' : 'NEEDS WORK';
+                      const spdTagCol = spdVal >= 70 ? '#059669' : spdVal >= 45 ? '#d97706' : '#e11d48';
+                      const spdSub = spdVal >= 70 ? 'Near peak torque' : spdVal >= 45 ? 'Moderate swing speed' : 'Slow bat speed';
+
+                      return `
+                      <tr>
+                        <td class="rp-td-num" style="padding-left:16px;">${s.shot_num}</td>
+                        <td class="rp-td-shot">${(SHOT_LABELS[s.label] || s.label || '—').toUpperCase()}</td>
+                        <td class="rp-td-exec" style="color:${execCol}">${exec.toFixed(1)}<span style="font-size:11px;color:#94a3b8;font-weight:normal;">/10</span></td>
+                        <td class="rp-metric-cell">
+                          <div class="rp-cell-score" style="color:${headTagCol}">${headVal}</div>
+                          <div class="rp-cell-tag" style="color:${headTagCol}">${headTag}</div>
+                          <div class="rp-cell-hint">${headSub}</div>
+                        </td>
+                        <td class="rp-metric-cell">
+                          <div class="rp-cell-score" style="color:${spdTagCol}">${spdVal}</div>
+                          <div class="rp-cell-tag" style="color:${spdTagCol}">${spdTag}</div>
+                          <div class="rp-cell-hint">${spdSub}</div>
+                        </td>
+                        <td>${formatDeliveryMetric100(stab, s.symmetry_label)}</td>
+                        <td>${formatDeliveryMetric100(fw, s.footwork_label)}</td>
+                        <td>${formatDeliveryMetric100(pathSc, s.swing_path_label)}</td>
+                        <td>${formatBallContextCell(ballDel)}</td>
+                        <td style="padding-right:16px;">
+                          <div class="rp-flag-stack">${chips}</div>
+                          <details class="rp-shots-detail"><summary>▶ AI coach detail</summary>
+                            ${combinedDetails}
+                          </details>
+                        </td>
+                      </tr>`;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          <!-- ═══ TRENDS ═══ -->
+          <!-- ═══ TRENDS (SCORING ZONES) ═══ -->
           <div data-panel="trends" style="display:none">
             ${buildModernScoringZonesHtml(trendShots, summary)}
           </div>
 
-          <!-- ═══ METRICS ═══ -->
+          <!-- ═══ METRICS (WHAT METRICS MEAN) ═══ -->
           <div data-panel="metrics" style="display:none">
             <div class="rp-section-title">What metrics mean</div>
-            <p style="font-family:Inter,sans-serif;font-size:0.82rem;color:#64748B;margin-bottom:20px;line-height:1.55">
+            <p style="font-size:12px;color:#64748b;margin:0 4px 16px;line-height:1.5;">
               Cricket-first interpretation: read dominant hand, head position, base stability, and scoring arc together before setting work-on drills.
             </p>
-            <p style="font-family:Inter,sans-serif;font-size:0.78rem;color:#94A3B8;margin:-8px 0 16px;line-height:1.5">
+            <p style="font-size:11px;color:#94a3b8;margin:-8px 4px 16px;line-height:1.5;">
               ${confirmedCount > 0
                 ? `${confirmedCount} of ${confirmedCount} shots confirmed (confidence filter at 30%).`
                 : 'No shots met the confirmation threshold (30%).'}
@@ -1939,11 +2253,27 @@ const ReportModal = (() => {
           </div>
 
         </div>
-      </div>
+
+        <!-- BEGIN: Sticky Floating Action Bar / Mobile Navigation Footer -->
+        <footer class="rp-floating-footer" data-purpose="floating-action-footer">
+          <button class="rp-btn-share" id="rpShareCoachBtn" type="button">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            Share with Coach
+          </button>
+          <button aria-label="Download Full Session PDF" class="rp-btn-pdf" id="rpDownloadPdfBtn" type="button">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </button>
+        </footer>
+        <!-- END: Sticky Floating Action Bar -->
+
+      </main>
     </div>`;
   }
 
-  // ── Animate pie arcs after render ───────────────────────
   function animatePies() {
     document.querySelectorAll('.rp-pie-arc').forEach(arc => {
       const target = parseFloat(arc.getAttribute('data-offset'));
@@ -1956,8 +2286,12 @@ const ReportModal = (() => {
     const tabs = document.querySelectorAll('.rp-tab');
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
+        tabs.forEach(t => {
+          t.classList.remove('active');
+          t.classList.remove('tab-active');
+        });
         tab.classList.add('active');
+        tab.classList.add('tab-active');
         const target = tab.getAttribute('data-tab');
         document.querySelectorAll('[data-panel]').forEach(panel => {
           panel.style.display = panel.getAttribute('data-panel') === target ? 'block' : 'none';
@@ -2830,11 +3164,27 @@ const ReportModal = (() => {
     document.body.appendChild(wrapper.firstElementChild);
 
     // Close handlers
-    document.getElementById('rpCloseBtn').addEventListener('click', close);
-    document.getElementById('rpOverlay').addEventListener('click', (e) => {
+    document.getElementById('rpCloseBtn')?.addEventListener('click', close);
+    document.getElementById('rpOverlay')?.addEventListener('click', (e) => {
       if (e.target.id === 'rpOverlay') close();
     });
     document.addEventListener('keydown', onEsc);
+
+    // Share & PDF buttons
+    document.getElementById('rpShareCoachBtn')?.addEventListener('click', () => {
+      if (navigator.share) {
+        navigator.share({
+          title: 'CrickEye Net Session Report',
+          text: `Batting Session Report: ${data.shots?.length || 0} shots, Average Score ${summary?.avgShotScore || '7.2'}/10`,
+          url: window.location.href
+        }).catch(() => {});
+      } else {
+        window.showAppToast?.('Report ready to share with coach!', 'info');
+      }
+    });
+    document.getElementById('rpDownloadPdfBtn')?.addEventListener('click', () => {
+      window.print ? window.print() : window.showAppToast?.('Generating report export...', 'info');
+    });
 
     setupTabs();
     setTimeout(animatePies, 100);

@@ -1,0 +1,32 @@
+<!-- BEGIN: CSS Stylesheets -->
+<style data-purpose="base-resets">
+    body {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+      background-color: #0b1120;
+    }
+    
+    /* Smooth iOS momentum scrolling */
+    .smooth-scroll {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .smooth-scroll::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+<style data-purpose="chart-gauges">
+    /* Circular Progress Utilities */
+    .gauge-circle {
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s ease-out;
+    }
+    
+    /* Segment tab indicator line */
+    .tab-active {
+      color: #0284c7;
+      border-bottom: 2.5px solid #06b6d4;
+    }
+  </style>
