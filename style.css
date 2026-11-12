@@ -9882,3 +9882,563 @@ button, [role="button"], a {
   color: #475569;
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   AI INSIGHTS V4 - Modern Sport Analytics Redesign
+   Matches exact template: Fallback/Live Banner, Top Strengths,
+   Focus Areas, Shot-Wise Notes & Drills, Posture Cues, Game Plan
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Modal Overrides for playCardDetailModal */
+#playCardDetailModal .ce-dialog {
+  background: #F8FAFC !important;
+}
+#playCardDetailModal .ce-dialog-head {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  padding: 14px 18px !important;
+}
+#playCardDetailModal .ce-dialog-title {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  letter-spacing: -0.02em !important;
+}
+#playCardDetailModal .ce-dialog-body {
+  background: #F8FAFC !important;
+  padding: 16px !important;
+}
+#playCardDetailModal .ce-dialog-foot {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border-top: 1px solid #E2E8F0 !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05) !important;
+  padding: 12px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+#playCardDetailModal .ce-dialog-foot .btn-primary {
+  background: #007A8C !important;
+  border-color: #007A8C !important;
+  color: #FFFFFF !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  box-shadow: 0 4px 14px rgba(0, 122, 140, 0.25) !important;
+  padding: 10px 24px !important;
+  min-height: 42px !important;
+  flex: 1 !important;
+  max-width: 200px !important;
+}
+#playCardDetailModal .ce-dialog-foot .btn-primary:active {
+  background: #006170 !important;
+  transform: scale(0.98);
+}
+#playCardDetailModal .ce-dialog-foot .btn-ghost {
+  border-radius: 12px !important;
+  color: #334155 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 10px 14px !important;
+  min-height: 42px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+#playCardDetailModal .ce-dialog-foot .btn-ghost:hover {
+  background: #F1F5F9 !important;
+  color: #0F172A !important;
+}
+
+/* AI Insights Container */
+.ai-v4-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 0 20px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  width: 100%;
+}
+.ai-v4-wrap * {
+  box-sizing: border-box;
+}
+
+/* Tracker Tag */
+.ai-v4-tracker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+}
+.ai-v4-tracker-text {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #94A3B8;
+  text-transform: uppercase;
+}
+.ai-v4-tracker-line {
+  height: 1px;
+  flex: 1;
+  background: #E2E8F0;
+}
+
+/* Banner Card (Fallback or Live) */
+.ai-v4-banner {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 12px -4px rgba(217, 119, 6, 0.08);
+}
+.ai-v4-banner--fallback {
+  border: 1px solid rgba(253, 230, 138, 0.85);
+}
+.ai-v4-banner--live {
+  border: 1px solid rgba(167, 243, 208, 0.9);
+  box-shadow: 0 2px 12px -4px rgba(16, 185, 129, 0.1);
+}
+.ai-v4-banner-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+.ai-v4-banner--fallback .ai-v4-banner-bar {
+  background: #F59E0B;
+}
+.ai-v4-banner--live .ai-v4-banner-bar {
+  background: #007A8C;
+}
+.ai-v4-banner-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ai-v4-banner-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-v4-banner-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ai-v4-banner--fallback .ai-v4-banner-icon {
+  background: #FEF3C7;
+  color: #B45309;
+}
+.ai-v4-banner--live .ai-v4-banner-icon {
+  background: #E6F4F6;
+  color: #007A8C;
+}
+.ai-v4-banner-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+.ai-v4-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.ai-v4-banner--fallback .ai-v4-banner-badge {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FCD34D;
+}
+.ai-v4-banner--live .ai-v4-banner-badge {
+  background: #E6F4F6;
+  color: #006170;
+  border: 1px solid rgba(0, 122, 140, 0.25);
+}
+.ai-v4-banner-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
+  padding-left: 34px;
+  margin: 0;
+}
+.ai-v4-banner-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(254, 243, 199, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #92400E;
+  font-weight: 500;
+  padding-left: 4px;
+}
+
+/* Sections & Headers */
+.ai-v4-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ai-v4-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+.ai-v4-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-v4-section-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ai-v4-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.ai-v4-count-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border-width: 1px;
+  border-style: solid;
+}
+
+/* Top Strengths */
+.ai-v4-icon--strengths {
+  background: #D1FAE5;
+  color: #059669;
+}
+.ai-v4-title--strengths {
+  color: #065F46;
+}
+.ai-v4-pill--strengths {
+  color: #059669;
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+}
+.ai-v4-strength-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(to right, rgba(236, 253, 245, 0.95), rgba(230, 244, 246, 0.65));
+  border: 1px solid rgba(167, 243, 208, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.ai-v4-strength-check {
+  margin-top: 2px;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #10B981;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.3);
+}
+.ai-v4-strength-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #1E293B;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Focus Areas */
+.ai-v4-icon--focus {
+  background: #FEF3C7;
+  color: #D97706;
+}
+.ai-v4-title--focus {
+  color: #92400E;
+}
+.ai-v4-pill--focus {
+  color: #B45309;
+  background: #FFFBEB;
+  border-color: #FDE68A;
+}
+.ai-v4-focus-item {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 251, 235, 0.65);
+  border: 1px solid rgba(253, 230, 138, 0.85);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ai-v4-focus-bullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #F59E0B;
+  margin-top: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 4px #FEF3C7;
+}
+.ai-v4-focus-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #1E293B;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Shot-Wise Notes & Drills */
+.ai-v4-icon--shots {
+  background: #E6F4F6;
+  color: #007A8C;
+}
+.ai-v4-title--shots {
+  color: #334155;
+}
+.ai-v4-shot-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ai-v4-shot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ai-v4-shot-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-v4-shot-diamond {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #007A8C;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+.ai-v4-shot-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #0F172A;
+  text-transform: uppercase;
+}
+.ai-v4-shot-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #007A8C;
+  background: #E6F4F6;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 122, 140, 0.2);
+}
+.ai-v4-shot-notes-box {
+  background: #F8FAFC;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #F1F5F9;
+}
+.ai-v4-shot-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.45;
+}
+.ai-v4-shot-note-label--good {
+  font-weight: 700;
+  color: #047857;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ai-v4-shot-note-label--focus {
+  font-weight: 700;
+  color: #B45309;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ai-v4-shot-note-val {
+  color: #334155;
+}
+.ai-v4-drills-subhead {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+  margin-top: 4px;
+}
+.ai-v4-drill-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(240, 249, 255, 0.7);
+  border: 1px solid #BAE6FD;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ai-v4-drill-emoji {
+  font-size: 16px;
+  user-select: none;
+  line-height: 1.2;
+}
+.ai-v4-drill-text {
+  font-size: 13px;
+  color: #1E293B;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Posture and Setup Cues */
+.ai-v4-icon--posture {
+  background: #CFFAFE;
+  color: #0E7490;
+}
+.ai-v4-title--posture {
+  color: #334155;
+}
+.ai-v4-posture-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ai-v4-posture-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #ECFEFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.ai-v4-posture-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #1E293B;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Pace and Range Game Plan */
+.ai-v4-icon--plan {
+  background: #E0E7FF;
+  color: #4F46E5;
+}
+.ai-v4-title--plan {
+  color: #334155;
+}
+.ai-v4-plan-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease;
+}
+.ai-v4-plan-card:hover {
+  border-color: #CBD5E1;
+}
+.ai-v4-plan-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ai-v4-plan-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ai-v4-plan-score {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 12px;
+}
+.ai-v4-plan-score--best-pace {
+  background: #D1FAE5;
+  color: #065F46;
+}
+.ai-v4-plan-score--focus-pace {
+  background: #FEF3C7;
+  color: #92400E;
+}
+.ai-v4-plan-score--best-len {
+  background: #E6F4F6;
+  color: #007A8C;
+}
+.ai-v4-plan-score--focus-len {
+  background: #FFEDD5;
+  color: #9A3412;
+}
+.ai-v4-plan-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+  line-height: 1.4;
+}
+.ai-v4-plan-sub {
+  color: #64748B;
+  font-weight: 400;
+}
+

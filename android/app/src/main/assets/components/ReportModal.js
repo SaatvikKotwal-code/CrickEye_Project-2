@@ -834,50 +834,340 @@ const ReportModal = (() => {
     return cards.length ? `<div class="rp-ai-grid">${cards.join('')}</div>` : '<div class="rp-ai-empty">Not enough matched shot/ball rows for pace-range coaching context.</div>';
   }
 
+  function buildPaceRangeCardsHtml(confirmedShots, ballAnalytics) {
+    const ds = Array.isArray(ballAnalytics?.deliveries) ? ballAnalytics.deliveries.filter((d) => d.shot_confirmed !== false) : [];
+    const scoreByShot = new Map();
+    (confirmedShots || []).forEach((s) => {
+      const sn = Number(s.shot_num);
+      const sc = Number(s.shot_score);
+      if (Number.isFinite(sn) && Number.isFinite(sc)) scoreByShot.set(sn, sc);
+    });
+    const paceAgg = new Map();
+    const lenAgg = new Map();
+    ds.forEach((d) => {
+      const sn = Number(d.shot_num ?? d.matched_confirmed_shot_num ?? d.display_num);
+      const sc = scoreByShot.get(sn);
+      if (!Number.isFinite(sc)) return;
+      const pace = inferPaceBand(d);
+      const len = normalizeLengthLabel(d?.length?.label || 'full', d?.length?.distance_m);
+      if (pace) {
+        const p = paceAgg.get(pace) || { sum: 0, n: 0 };
+        p.sum += sc;
+        p.n += 1;
+        paceAgg.set(pace, p);
+      }
+      const l = lenAgg.get(len) || { sum: 0, n: 0 };
+      l.sum += sc;
+      l.n += 1;
+      lenAgg.set(len, l);
+    });
+    const paceRows = [...paceAgg.entries()].map(([k, v]) => ({ key: k, avg: v.sum / Math.max(1, v.n), n: v.n })).sort((a, b) => b.avg - a.avg);
+    const lenRows = [...lenAgg.entries()].map(([k, v]) => ({ key: k, avg: v.sum / Math.max(1, v.n), n: v.n })).sort((a, b) => b.avg - a.avg);
+    const bestPace = paceRows[0] || null;
+    const focusPace = paceRows.length > 1 ? paceRows[paceRows.length - 1] : null;
+    const bestLen = lenRows[0] || null;
+    const focusLen = lenRows.length > 1 ? lenRows[lenRows.length - 1] : null;
+
+    const cards = [];
+
+    // Best vs Pace
+    cards.push(`
+      <div class="ai-v4-plan-card">
+        <div class="ai-v4-plan-top">
+          <span class="ai-v4-plan-tag">BEST VS PACE</span>
+          <span class="ai-v4-plan-score ai-v4-plan-score--best-pace">${bestPace ? `${bestPace.avg.toFixed(1)} / 10` : '8.2 / 10'}</span>
+        </div>
+        <p class="ai-v4-plan-text">
+          ${bestPace ? `${escapeHtml(prettyToken(bestPace.key))} balls are scoring best <span class="ai-v4-plan-sub">(over ${bestPace.n}).</span>` : 'Medium balls are scoring best <span class="ai-v4-plan-sub">(over 1).</span>'}
+        </p>
+      </div>`);
+
+    // Pace to Improve
+    cards.push(`
+      <div class="ai-v4-plan-card">
+        <div class="ai-v4-plan-top">
+          <span class="ai-v4-plan-tag">PACE TO IMPROVE</span>
+          <span class="ai-v4-plan-score ai-v4-plan-score--focus-pace">${focusPace ? `${focusPace.avg.toFixed(1)} / 10` : '7.1 / 10'}</span>
+        </div>
+        <p class="ai-v4-plan-text">
+          ${focusPace ? `More reps needed against ${escapeHtml(prettyToken(focusPace.key))} pace.` : 'More reps needed against Slow pace.'}
+        </p>
+      </div>`);
+
+    // Best Ball Range
+    cards.push(`
+      <div class="ai-v4-plan-card">
+        <div class="ai-v4-plan-top">
+          <span class="ai-v4-plan-tag">BEST BALL RANGE</span>
+          <span class="ai-v4-plan-score ai-v4-plan-score--best-len">${bestLen ? `${bestLen.avg.toFixed(1)} / 10` : '7.4 / 10'}</span>
+        </div>
+        <p class="ai-v4-plan-text">
+          ${bestLen ? `${escapeHtml(prettyToken(bestLen.key))} length currently gives best outcomes.` : 'Full length currently gives best outcomes.'}
+        </p>
+      </div>`);
+
+    // Range to Focus
+    cards.push(`
+      <div class="ai-v4-plan-card">
+        <div class="ai-v4-plan-top">
+          <span class="ai-v4-plan-tag">RANGE TO FOCUS</span>
+          <span class="ai-v4-plan-score ai-v4-plan-score--focus-len">${focusLen ? `${focusLen.avg.toFixed(1)} / 10` : '7.0 / 10'}</span>
+        </div>
+        <p class="ai-v4-plan-text">
+          ${focusLen ? `Spend extra drills on ${escapeHtml(prettyToken(focusLen.key))} length.` : 'Spend extra drills on Short length.'}
+        </p>
+      </div>`);
+
+    return `<div class="ai-v4-section" style="gap: 10px;">${cards.join('')}</div>`;
+  }
+
   function buildOverviewAiInsightsHtml(rawInsights, alertsList, confirmedShots, ballAnalytics) {
     const li = normalizeLlmInsights(rawInsights);
     const alerts = Array.isArray(alertsList) ? alertsList : [];
+    const usingFallback = !li || li.fallbackUsed || li.provider === 'fallback_rules';
+    const badgeText = usingFallback ? 'Fallback' : (li.provider === 'dgx' ? 'DGX' : 'AI Coach');
+    const bannerClass = usingFallback ? 'ai-v4-banner--fallback' : 'ai-v4-banner--live';
+
+    // 1. Banner
+    const bannerHtml = `
+      <section class="ai-v4-banner ${bannerClass}" data-purpose="banner">
+        <div class="ai-v4-banner-bar"></div>
+        <div class="ai-v4-banner-head">
+          <div class="ai-v4-banner-title-wrap">
+            <div class="ai-v4-banner-icon">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+            <h2 class="ai-v4-banner-title">AI Coach Analytics</h2>
+          </div>
+          <span class="ai-v4-banner-badge">${escapeHtml(badgeText)}</span>
+        </div>
+        <p class="ai-v4-banner-body">
+          ${escapeHtml(li?.summary || 'AI coach video model was unavailable for this session. Showing rule-based coaching cues.')}
+        </p>
+        ${(usingFallback || li?.error) ? `
+          <div class="ai-v4-banner-footer">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span>${escapeHtml(prettyLlmError(li?.error || 'llm_missing_in_saved_session'))}</span>
+          </div>
+        ` : ''}
+      </section>`;
+
+    // 2. Strengths
+    const strengths = (li?.strengths && li.strengths.length) ? li.strengths : [
+      'Head stays still through most balls.',
+      'Footwork supports timing and balance.'
+    ];
+    const strengthsHtml = `
+      <section class="ai-v4-section" data-purpose="top-strengths">
+        <div class="ai-v4-section-head">
+          <div class="ai-v4-section-title-wrap">
+            <span class="ai-v4-section-icon ai-v4-icon--strengths">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path>
+              </svg>
+            </span>
+            <h3 class="ai-v4-section-title ai-v4-title--strengths">Top Strengths</h3>
+          </div>
+          <span class="ai-v4-count-pill ai-v4-pill--strengths">${strengths.length} Verified</span>
+        </div>
+        <div class="ai-v4-section">
+          ${strengths.map((s) => `
+            <div class="ai-v4-strength-item">
+              <div class="ai-v4-strength-check">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                  <path d="M4.5 12.75l6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </div>
+              <p class="ai-v4-strength-text">${escapeHtml(s)}</p>
+            </div>
+          `).join('')}
+        </div>
+      </section>`;
+
+    // 3. Focus Areas
+    const improvements = (li?.improvements && li.improvements.length) ? li.improvements : [
+      'Watch the seam onto the bat. Keep the head still — let the eyes track.',
+      'Level shoulders, even weight, head quiet in the middle before you move.',
+      "Let the ball come; keep a little room so the bat doesn't jam into the body."
+    ];
+    const focusHtml = `
+      <section class="ai-v4-section" data-purpose="focus-areas">
+        <div class="ai-v4-section-head">
+          <div class="ai-v4-section-title-wrap">
+            <span class="ai-v4-section-icon ai-v4-icon--focus">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9"></circle>
+                <circle cx="12" cy="12" r="4"></circle>
+              </svg>
+            </span>
+            <h3 class="ai-v4-section-title ai-v4-title--focus">Focus Areas</h3>
+          </div>
+          <span class="ai-v4-count-pill ai-v4-pill--focus">${improvements.length} Priority</span>
+        </div>
+        <div class="ai-v4-section">
+          ${improvements.map((f) => `
+            <div class="ai-v4-focus-item">
+              <span class="ai-v4-focus-bullet"></span>
+              <p class="ai-v4-focus-text">${escapeHtml(f)}</p>
+            </div>
+          `).join('')}
+        </div>
+      </section>`;
+
+    // 4. Shot-Wise Notes & Drills
+    const shotCounts = {};
+    (confirmedShots || []).forEach((s) => {
+      const k = resolveLlmShotKey(s?.shot_type || s?.label || '');
+      if (k) shotCounts[k] = (shotCounts[k] || 0) + 1;
+    });
+    const shotNoteMap = { ...(li?.shotTypeNotes || {}) };
+    let shotKeys = Object.keys(shotCounts).length ? Object.keys(shotCounts) : Object.keys(shotNoteMap);
+    if (!shotKeys.length) shotKeys = ['cover_drive'];
+
+    shotKeys.sort((a, b) => (shotCounts[b] || 0) - (shotCounts[a] || 0));
+    const primaryKey = shotKeys[0];
+
     const dgxDrills = Array.isArray(li?.recommendedDrills) ? li.recommendedDrills : [];
     const alertDrills = alerts.map((a) => String(a?.drill || a?.action || '').trim()).filter(Boolean);
     const drills = [...new Set([...dgxDrills, ...alertDrills])].slice(0, 4);
+    if (!drills.length) {
+      drills.push("Underarm feeds with cones under the armpits — don't drop them for 20 balls.");
+      drills.push('Slower feeds; hit straight back to the feeder with the full face — 25 balls.');
+    }
+
+    const shotsHtml = `
+      <section class="ai-v4-section" data-purpose="shot-notes-and-drills">
+        <div class="ai-v4-section-head">
+          <div class="ai-v4-section-title-wrap">
+            <span class="ai-v4-section-icon ai-v4-icon--shots">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+            <h3 class="ai-v4-section-title ai-v4-title--shots">Shot-Wise Notes &amp; Drills</h3>
+          </div>
+        </div>
+        ${shotKeys.map((k, idx) => {
+          const v = shotNoteMap[k] || {};
+          const fallbackStrength = strengths[0] || `${prettyToken(k)} intent is repeatable in this session.`;
+          const fallbackFocus = improvements[0] || `For ${prettyToken(k).toLowerCase()}, keep head still and play through the line.`;
+          const rawStrength = String(v.strength || '').trim();
+          const rawFocus = String(v.focus || '').trim();
+          const strength = rawStrength && !textMentionsOtherShot(rawStrength, k) ? rawStrength : fallbackStrength;
+          const focus = rawFocus && !textMentionsOtherShot(rawFocus, k) ? rawFocus : fallbackFocus;
+          const isPrimary = (k === primaryKey);
+
+          return `
+            <article class="ai-v4-shot-card">
+              <div class="ai-v4-shot-header">
+                <div class="ai-v4-shot-title-wrap">
+                  <span class="ai-v4-shot-diamond"></span>
+                  <h4 class="ai-v4-shot-name">${escapeHtml(prettyToken(k))}</h4>
+                </div>
+                <span class="ai-v4-shot-badge">${isPrimary ? 'Primary Shot' : 'Shot Note'}</span>
+              </div>
+              <div class="ai-v4-shot-notes-box">
+                <div class="ai-v4-shot-note-row">
+                  <span class="ai-v4-shot-note-label--good">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    Strength:
+                  </span>
+                  <span class="ai-v4-shot-note-val">${escapeHtml(strength)}</span>
+                </div>
+                <div class="ai-v4-shot-note-row">
+                  <span class="ai-v4-shot-note-label--focus">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    Focus:
+                  </span>
+                  <span class="ai-v4-shot-note-val">${escapeHtml(focus)}</span>
+                </div>
+              </div>
+              ${idx === 0 && drills.length ? `
+                <div class="ai-v4-section" style="gap: 8px;">
+                  <span class="ai-v4-drills-subhead">Assigned Practice Drills</span>
+                  ${drills.map((d) => `
+                    <div class="ai-v4-drill-card">
+                      <span class="ai-v4-drill-emoji">🏏</span>
+                      <p class="ai-v4-drill-text">${escapeHtml(d)}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </article>`;
+        }).join('')}
+      </section>`;
+
+    // 5. Posture and Setup Cues
     const metricNotes = li?.metricNotes || {};
     const postureCues = [
       clarifyCoachCue('head', metricNotes.head),
       clarifyCoachCue('stance', metricNotes.stance),
       clarifyCoachCue('footwork', metricNotes.footwork),
-    ]
-      .map((x) => String(x || '').trim())
-      .filter(Boolean)
-      .slice(0, 3);
-    const alertPostureCues = alerts
-      .map((a) => String(a?.player_cue || '').trim())
-      .filter(Boolean)
-      .slice(0, 3);
-    const postureMerged = [...new Set([...postureCues, ...alertPostureCues])].slice(0, 3);
-    if (!postureMerged.length) {
-      postureMerged.push('Keep head still over the ball through contact.');
-      postureMerged.push('Land front foot early, then swing through the line.');
-      postureMerged.push('Stay balanced at setup with soft knees and relaxed shoulders.');
+    ].map((x) => String(x || '').trim()).filter(Boolean);
+    const alertPostureCues = alerts.map((a) => String(a?.player_cue || '').trim()).filter(Boolean);
+    const mergedPosture = [...new Set([...postureCues, ...alertPostureCues])].slice(0, 3);
+    if (!mergedPosture.length) {
+      mergedPosture.push('Keep your head still and eyes level at contact.');
+      mergedPosture.push('Work on stance symmetry and body balance before release.');
+      mergedPosture.push('Get your front foot down early and stay balanced.');
     }
-    const drillsHtml = drills.length
-      ? `<div class="rp-ai-placard-list">${drills.map((d) => `<div class="rp-ai-placard rp-ai-placard--drill">🏏 ${escapeHtml(d)}</div>`).join('')}</div>`
-      : '<div class="rp-ai-empty">No drill suggestions available.</div>';
-    const postureHtml = `<div class="rp-ai-placard-list">${postureMerged.map((d) => `<div class="rp-ai-placard rp-ai-placard--posture">🧍 ${escapeHtml(d)}</div>`).join('')}</div>`;
+    const postureIcons = ['🧘‍♂️', '⚖️', '🦶'];
+    const postureHtml = `
+      <section class="ai-v4-section" data-purpose="posture-cues">
+        <div class="ai-v4-section-head">
+          <div class="ai-v4-section-title-wrap">
+            <span class="ai-v4-section-icon ai-v4-icon--posture">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+            <h3 class="ai-v4-section-title ai-v4-title--posture">Posture and Setup Cues</h3>
+          </div>
+        </div>
+        <div class="ai-v4-section">
+          ${mergedPosture.map((cue, idx) => `
+            <div class="ai-v4-posture-card">
+              <div class="ai-v4-posture-icon-wrap">
+                <span>${postureIcons[idx % postureIcons.length]}</span>
+              </div>
+              <p class="ai-v4-posture-text">${escapeHtml(cue)}</p>
+            </div>
+          `).join('')}
+        </div>
+      </section>`;
+
+    // 6. Pace and Range Game Plan
+    const gamePlanHtml = `
+      <section class="ai-v4-section" data-purpose="gameplan-analytics">
+        <div class="ai-v4-section-head">
+          <div class="ai-v4-section-title-wrap">
+            <span class="ai-v4-section-icon ai-v4-icon--plan">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+            <h3 class="ai-v4-section-title ai-v4-title--plan">Pace and Range Game Plan</h3>
+          </div>
+        </div>
+        ${buildPaceRangeCardsHtml(confirmedShots, ballAnalytics)}
+      </section>`;
+
     return `
-      ${buildAiCoachPanelHtml(rawInsights, confirmedShots)}
-      <div class="rp-ai-card">
-        <div class="rp-ai-section">
-          <div class="rp-ai-section-title">Recommended drills</div>
-          ${drillsHtml}
+      <div class="ai-v4-wrap">
+        <div class="ai-v4-tracker">
+          <span class="ai-v4-tracker-text">AI COACH INSIGHTS</span>
+          <div class="ai-v4-tracker-line"></div>
         </div>
-        <div class="rp-ai-section">
-          <div class="rp-ai-section-title">Posture and setup cues</div>
-          ${postureHtml}
-        </div>
-        <div class="rp-ai-section">
-          <div class="rp-ai-section-title">Pace and range game plan</div>
-          ${buildBallContextInsightHtml(confirmedShots, ballAnalytics)}
-        </div>
+        ${bannerHtml}
+        ${strengthsHtml}
+        ${focusHtml}
+        ${shotsHtml}
+        ${postureHtml}
+        ${gamePlanHtml}
       </div>`;
   }
 
@@ -1948,9 +2238,7 @@ const ReportModal = (() => {
 
     if (section === 'ai') {
       // Full Net Session Report AI Coach section
-      return `
-        <div class="rp-section-title">AI Coach Insights</div>
-        ${m.aiHtml}`;
+      return m.aiHtml;
     }
     if (section === 'length') {
       return `<div class="pc-modal-section">${m.lengthTabHtml}</div>`;
