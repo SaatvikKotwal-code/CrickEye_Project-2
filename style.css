@@ -9481,6 +9481,16 @@ button, [role="button"], a {
 /* ==========================================================================
    Redesigned Session Score (ss-*)
    ========================================================================== */
+.playcard-panel[data-section="score"] {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.playcard-panel[data-section="score"] .ce-panel-head {
+  display: none !important;
+}
+
 .ss-container {
   display: flex;
   flex-direction: column;
