@@ -1207,6 +1207,144 @@ const ReportModal = (() => {
     style.id = 'rp-styles';
     style.textContent = `
 /* ═══ MODERN NET SESSION REPORT MODAL STYLES ═══ */
+
+/* Clickable Session Overview Card */
+.ss-hero-card.ss-hero-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+.ss-hero-card.ss-hero-clickable:active {
+  transform: scale(0.985);
+}
+.ss-hero-card-arrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0284c7;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+.ss-hero-card-arrow svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+.ss-hero-card.ss-hero-clickable:hover .ss-hero-card-arrow svg {
+  transform: translateX(2px);
+}
+
+/* Nested Session Overview Modal / Subpage */
+.so-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 20px;
+}
+.so-section-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+}
+.so-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+.so-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.so-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.so-icon--violet { background: #f5f3ff; color: #7c3aed; }
+.so-icon--blue { background: #eff6ff; color: #2563eb; }
+.so-icon--orange { background: #fff7ed; color: #ea580c; }
+.so-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.so-section-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+.so-section-body {
+  padding: 14px 14px 18px;
+}
+.so-section-body > .ai-v4-wrap {
+  margin-top: 0 !important;
+}
+.so-section-body > .ai-v4-wrap > .ai-v4-tracker {
+  display: none !important;
+}
+.so-section-body .rp-v3-wrapper {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.so-section-body .rp-v3-head {
+  display: none !important;
+}
+.so-section-body .sz-wrap {
+  margin-top: 0 !important;
+  padding: 0 !important;
+}
+.so-section-body .sz-head-intro {
+  display: none !important;
+}
+
+/* Collapsible Section Styling */
+.so-section-header {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+}
+.so-section-header:active {
+  background: #f8fafc;
+}
+.so-chevron-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease, color 0.2s ease;
+}
+.so-chevron-ico {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.so-section-card.so-collapsed .so-chevron-ico {
+  transform: rotate(-90deg);
+}
+.so-section-card.so-collapsed .so-section-header {
+  border-bottom-color: transparent;
+}
+.so-section-card.so-collapsed .so-section-body {
+  display: none !important;
+}
+
 @layer legacy {
 
 .rp-overlay {
@@ -1928,6 +2066,12 @@ const ReportModal = (() => {
           </div>
           <div style="margin-top:10px;text-align:right;">
             <a class="rp-video-link" href="${escapeHtml(originalVideoUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#0284c7;font-weight:700;text-decoration:none;">Open video in new tab &rarr;</a>
+          </div>
+          <div class="ss-hero-card-arrow">
+            <span>View AI Insights, Length & Zones</span>
+            <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
           </div>
         </section>`
       : '';
@@ -2739,6 +2883,9 @@ const ReportModal = (() => {
 
     const m = derivePlayCardModel(data);
 
+    if (section === 'overview') {
+      return buildOverviewPageHtml(data);
+    }
     if (section === 'ai') {
       // Full Net Session Report AI Coach section
       return m.aiHtml;
@@ -2870,6 +3017,104 @@ const ReportModal = (() => {
     return '<p class="pc-empty">Unknown section.</p>';
   }
 
+  function buildOverviewPageHtml(data) {
+    const m = derivePlayCardModel(data);
+    if (typeof window !== 'undefined' && window.szInitDataset) {
+      window.szInitDataset(m.trendShots);
+    }
+
+    // Expose collapsible toggle globally
+    if (typeof window !== 'undefined') {
+      window.toggleOverviewCard = function(headerEl) {
+        if (!headerEl) return;
+        const card = headerEl.closest('.so-section-card');
+        if (!card) return;
+        const isCollapsed = card.classList.toggle('so-collapsed');
+        headerEl.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+      };
+    }
+
+    return `
+      <div class="so-page-wrap">
+        <!-- 1. AI Insights Section (Collapsible) -->
+        <article class="so-section-card" data-purpose="so-ai-insights">
+          <header class="so-section-header" onclick="window.toggleOverviewCard && window.toggleOverviewCard(this)" role="button" tabindex="0" aria-expanded="true" aria-controls="soBodyAi" aria-label="Toggle AI Insights">
+            <div class="so-section-title-wrap">
+              <div class="so-section-icon so-icon--violet">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="so-section-title">AI Insights</h3>
+                <p class="so-section-sub">Bio-feedback &amp; coaching recommendations</p>
+              </div>
+            </div>
+            <div class="so-chevron-wrap">
+              <svg class="so-chevron-ico" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+          </header>
+          <div class="so-section-body" id="soBodyAi">
+            ${m.aiHtml}
+          </div>
+        </article>
+
+        <!-- 2. Ball Length Analysis Section (Collapsible) -->
+        <article class="so-section-card so-collapsed" data-purpose="so-ball-length">
+          <header class="so-section-header" onclick="window.toggleOverviewCard && window.toggleOverviewCard(this)" role="button" tabindex="0" aria-expanded="false" aria-controls="soBodyLength" aria-label="Toggle Ball Length Analysis">
+            <div class="so-section-title-wrap">
+              <div class="so-section-icon so-icon--blue">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="so-section-title">Ball Length Analysis</h3>
+                <p class="so-section-sub">Pitch zone distribution &amp; length performance</p>
+              </div>
+            </div>
+            <div class="so-chevron-wrap">
+              <svg class="so-chevron-ico" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+          </header>
+          <div class="so-section-body" id="soBodyLength">
+            ${m.lengthTabHtml}
+          </div>
+        </article>
+
+        <!-- 3. Scoring Zones Section (Collapsible) -->
+        <article class="so-section-card so-collapsed" data-purpose="so-scoring-zones">
+          <header class="so-section-header" onclick="window.toggleOverviewCard && window.toggleOverviewCard(this)" role="button" tabindex="0" aria-expanded="false" aria-controls="soBodyZones" aria-label="Toggle Scoring Zones">
+            <div class="so-section-title-wrap">
+              <div class="so-section-icon so-icon--orange">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <line x1="12" x2="12" y1="3" y2="21"></line>
+                  <line x1="3" x2="21" y1="12" y2="12"></line>
+                </svg>
+              </div>
+              <div>
+                <h3 class="so-section-title">Scoring Zones</h3>
+                <p class="so-section-sub">Wagon wheel &amp; ground dispersal trends</p>
+              </div>
+            </div>
+            <div class="so-chevron-wrap">
+              <svg class="so-chevron-ico" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+          </header>
+          <div class="so-section-body" id="soBodyZones">
+            ${m.trendsBlock}
+          </div>
+        </article>
+      </div>`;
+  }
+
   function buildLivePlayCardHtml(data) {
     const m = derivePlayCardModel(data);
     const { summary, best, worst, totalShots, avgScore } = m;
@@ -2943,7 +3188,7 @@ const ReportModal = (() => {
     return `
       <div class="ss-container">
         <!-- Hero Score Card -->
-        <section class="ss-hero-card" data-purpose="hero-score-card">
+        <section class="ss-hero-card ss-hero-clickable" data-purpose="hero-score-card" data-pc-open="overview" role="button" tabindex="0" aria-label="Open Session Overview Details">
           <div class="ss-hero-head">
             <span class="ss-tag-label">SESSION OVERVIEW</span>
             <div class="ss-stance-badge">
@@ -2980,6 +3225,9 @@ const ReportModal = (() => {
                 </div>
               </div>`;
             }).join('')}
+          </div>
+          <div class="ss-hero-card-arrow">
+            <span>Tap to view AI Insights, Length &amp; Zones &rarr;</span>
           </div>
         </section>
 
@@ -3045,85 +3293,7 @@ const ReportModal = (() => {
           </div>
         </section>
 
-        <!-- Detailed Breakdown Menu -->
-        <section class="ss-breakdown-section" data-purpose="deep-dive-menu">
-          <h2 class="ss-section-title ss-section-title--pad">DETAILED BREAKDOWN</h2>
-          <div class="ss-breakdown-card">
-            <!-- AI Insights -->
-            <button type="button" class="ss-breakdown-item pc-acc-btn" data-pc-open="ai">
-              <div class="ss-breakdown-left">
-                <div class="ss-breakdown-icon-wrap ss-icon--violet">
-                  <svg class="ss-svg-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke-linecap="round" stroke-linejoin="round"></path>
-                  </svg>
-                </div>
-                <div class="ss-breakdown-text">
-                  <span class="ss-breakdown-title">AI insights</span>
-                  <p class="ss-breakdown-sub">Bio-feedback &amp; coaching recommendations</p>
-                </div>
-              </div>
-              <svg class="ss-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-            </button>
-
-            <!-- Ball Length Analysis -->
-            <button type="button" class="ss-breakdown-item pc-acc-btn" data-pc-open="length">
-              <div class="ss-breakdown-left">
-                <div class="ss-breakdown-icon-wrap ss-icon--blue">
-                  <svg class="ss-svg-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"></path>
-                  </svg>
-                </div>
-                <div class="ss-breakdown-text">
-                  <span class="ss-breakdown-title">Ball length analysis</span>
-                  <p class="ss-breakdown-sub">Short, good &amp; full length pitch map</p>
-                </div>
-              </div>
-              <svg class="ss-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-            </button>
-
-            <!-- Deliveries -->
-            <button type="button" class="ss-breakdown-item pc-acc-btn" data-pc-open="deliveries">
-              <div class="ss-breakdown-left">
-                <div class="ss-breakdown-icon-wrap ss-icon--emerald">
-                  <svg class="ss-svg-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M4 6h16M4 12h16M4 18h7" stroke-linecap="round" stroke-linejoin="round"></path>
-                  </svg>
-                </div>
-                <div class="ss-breakdown-text">
-                  <span class="ss-breakdown-title">Deliveries</span>
-                  <p class="ss-breakdown-sub">Ball-by-ball video replay &amp; tags</p>
-                </div>
-              </div>
-              <svg class="ss-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-            </button>
-
-            <!-- Scoring Zones -->
-            <button type="button" class="ss-breakdown-item pc-acc-btn" data-pc-open="zones">
-              <div class="ss-breakdown-left">
-                <div class="ss-breakdown-icon-wrap ss-icon--orange">
-                  <svg class="ss-svg-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9"></circle>
-                    <line x1="12" x2="12" y1="3" y2="21"></line>
-                    <line x1="3" x2="21" y1="12" y2="12"></line>
-                  </svg>
-                </div>
-                <div class="ss-breakdown-text">
-                  <span class="ss-breakdown-title">Scoring zones</span>
-                  <p class="ss-breakdown-sub">Wagon wheel &amp; ground dispersal</p>
-                </div>
-              </div>
-              <svg class="ss-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-            </button>
-          </div>
-        </section>
+        
       </div>`;
   }
 
@@ -3134,9 +3304,9 @@ const ReportModal = (() => {
         const key = btn.getAttribute('data-pc-open');
         if (!key || typeof openSectionModal !== 'function' || typeof getReportData !== 'function') return;
         const titles = {
+          overview: 'Session Overview',
           ai: 'AI Insights',
           length: 'Ball length analysis',
-          deliveries: 'Deliveries',
           zones: 'Scoring zones',
         };
         const d = getReportData();
