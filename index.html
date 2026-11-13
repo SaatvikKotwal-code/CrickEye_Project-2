@@ -588,14 +588,6 @@
           <label class="toggle-opt"><input type="checkbox" id="hapticFeedbackToggle" checked /> <span>Vibrate on countdown beeps &amp; recording completion</span></label>
         </div>
 
-        <div class="apk-download-box">
-          <div class="apk-download-info">
-            <span class="apk-badge">APK READY</span>
-            <strong>CrickEye Pro Android App</strong>
-            <p>Directly install the APK onto Android phones for practice sessions in the nets.</p>
-          </div>
-          <a href="/download/apk" download="CrickEye-Pro.apk" class="btn btn-primary btn-sm"><span class="material-symbols-outlined">download</span> Download APK</a>
-        </div>
       </div>
       <footer class="ce-dialog-foot">
         <button type="button" class="btn btn-outline btn-sm" data-close-modal="serverSettingsModal">Close</button>
@@ -742,11 +734,11 @@
     <button type="button" class="mobile-nav-item" data-nav-target="pitch"><span class="material-symbols-outlined mobile-nav-icon">track_changes</span><span class="mobile-nav-label">Pitch</span></button>
     <button type="button" class="mobile-nav-item" data-nav-target="biomech"><span class="material-symbols-outlined mobile-nav-icon">accessibility_new</span><span class="mobile-nav-label">Biomech</span></button>
     <button type="button" class="mobile-nav-item" data-nav-target="sessions"><span class="material-symbols-outlined mobile-nav-icon">video_library</span><span class="mobile-nav-label">Sessions</span></button>
-    <button type="button" class="mobile-nav-item" data-nav-target="settings"><span class="material-symbols-outlined mobile-nav-icon">tune</span><span class="mobile-nav-label">Settings</span></button>
+    <!-- <button type="button" class="mobile-nav-item" data-nav-target="settings"><span class="material-symbols-outlined mobile-nav-icon">tune</span><span class="mobile-nav-label">Settings</span></button> -->
   </nav>
 
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="components/react.production.min.js"></script>
+  <script src="components/react-dom.production.min.js"></script>
   <script src="components/tone.js?v=7.4.4"></script>
   <script src="components/PitchMap.js?v=7.4.4"></script>
   <script src="components/wagonWheel.js?v=7.4.4"></script>
@@ -755,7 +747,7 @@
   <script src="components/ReportModal.js?v=7.4.4"></script>
   <script src="components/PlayCard.js?v=7.4.4"></script>
   <script src="components/skeleton.js?v=7.4.4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="components/supabase.js"></script>
   <script src="config.js?v=7.4.4"></script>
   <script src="components/fa-adapter.js?v=6.5.2"></script>
   <!-- Backend exposes this at /app.js (see backend/main.py); App.js 404s. -->

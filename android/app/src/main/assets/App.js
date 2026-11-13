@@ -1,4 +1,4 @@
-﻿/**
+/**
  * app.js — CrickEye Pro  (WebSocket real-time mode, v6.4)
  *
  * KEY CHANGES vs v6.3:
@@ -143,22 +143,24 @@ let activeApiBaseUrl = null;
 
 function getCandidateServerUrls() {
   const list = [];
-  if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
-    list.push(window.location.origin);
-  }
-  // USB reverse proxy (instant & reliable via adb reverse)
+  // USB reverse proxy port (instant & stable via USB adb reverse) - Primary candidate
   list.push('http://localhost:8000');
   list.push('http://127.0.0.1:8000');
-  // Local Wi-Fi LAN
-  list.push('http://192.168.29.14:8000');
-  list.push('http://10.253.4.106:8000');
-  list.push('http://192.168.0.179:8000');
+  const saved = localStorage.getItem('crickeye_server_url');
+  if (saved && saved.trim()) {
+    list.push(saved.trim().replace(/\/+$/, ''));
+  }
   if (window.CRICKEYE_DEFAULT_BACKEND_URL && window.CRICKEYE_DEFAULT_BACKEND_URL.trim()) {
     list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
   }
-  const saved = localStorage.getItem('crickeye_server_url');
-  if (saved && saved.trim() && !saved.includes('10.253.6.138') && !saved.includes('10.222.156.209') && !saved.includes('10.253.18.57')) {
-    list.unshift(saved.trim().replace(/\/+$/, ''));
+  // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
+  list.push('http://10.253.9.193:8000');
+  list.push('http://10.253.6.214:8000');
+  list.push('http://192.168.29.14:8000');
+  list.push('http://10.253.4.106:8000');
+  list.push('http://192.168.0.179:8000');
+  if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
+    list.push(window.location.origin);
   }
   return [...new Set(list.filter(Boolean))];
 }
@@ -791,7 +793,7 @@ function parseSessionSummary(results) {
 
   const replay = getSessionReplay(results);
   const shots = replay && Array.isArray(replay.shots) ? replay.shots : null;
-  const confirmed = shots ? shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3) : [];
+  const confirmed = shots ? shots.filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20) : [];
   if (confirmed.length) {
     const mean = (field) => {
       const vals = confirmed.map((s) => Number(s[field])).filter((n) => Number.isFinite(n));
@@ -1523,7 +1525,7 @@ function getAnalysisSummary(analysis) {
 function getAvgShotScoreFromResults(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return null;
-  const confirmed = replay.shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3 && s.shot_score != null && !Number.isNaN(Number(s.shot_score)));
+  const confirmed = replay.shots.filter((s) => (s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20) && s.shot_score != null && !Number.isNaN(Number(s.shot_score)));
   if (!confirmed.length) return null;
   const sum = confirmed.reduce((acc, s) => acc + Number(s.shot_score || 0), 0);
   return sum / confirmed.length;
@@ -1606,7 +1608,7 @@ function getConfirmedTrendShotsFromResults(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return [];
   return replay.shots
-    .filter((s) => Number(s.conf ?? s.confidence) >= 0.3)
+    .filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20)
     .map((s) => ({
       shot_num: s.shot_num,
       speed: parseFloat((s.peak_swing_speed || 0).toFixed(1)),
@@ -1628,7 +1630,7 @@ function getConfirmedTrendShotsFromResults(results) {
 function getConfirmedReplayShotsForLength(results) {
   const replay = getSessionReplay(results);
   if (!replay || !Array.isArray(replay.shots)) return [];
-  return replay.shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+  return replay.shots.filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
 }
 
 function buildCompareLengthPairHtml(sessionA, sessionB) {
@@ -2433,7 +2435,7 @@ function buildMonthPlayerInsightHtml(monthSessions, analyses) {
     const replay = getSessionReplay(s.results);
     if (!replay?.shots) return;
     for (const sh of replay.shots) {
-      if (Number(sh.conf ?? sh.confidence) < 0.3) continue;
+      if (sh.confirmed === false && Number(sh.conf ?? sh.confidence) < 0.20) continue;
       totalShots += 1;
       for (const f of sh.flags || []) {
         const base = String(f).split(':')[0];
@@ -2991,7 +2993,7 @@ function buildCrossPlayerInsightHtml(sessionA, sessionB, analysisA, analysisB, s
 
   function summarizePlayer(session, rows) {
     const replay = getSessionReplay(session.results);
-    const confirmed = (replay?.shots || []).filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
+    const confirmed = (replay?.shots || []).filter((s) => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
     const shotBuckets = new Map();
     for (const sh of confirmed) {
       const key = shotLabelPretty(sh.shot_type || sh.label || 'Unknown');
@@ -3914,7 +3916,7 @@ function rebuildDerivedShotStateFromShots(shots) {
   state.pendingSpokes = [];
   state.countedShotNums = new Set();
   for (const msg of state.shotLog) {
-    if (msg.confirmed === false || (msg.conf != null && msg.conf < 0.28)) continue;
+    if (msg.confirmed === false && (msg.conf != null && msg.conf < 0.20)) continue;
     if (!state.shotStats[msg.label]) state.shotStats[msg.label] = { count: 0 };
     state.shotStats[msg.label].count++;
     const zone = SHOT_ZONE[msg.label];
@@ -3924,6 +3926,8 @@ function rebuildDerivedShotStateFromShots(shots) {
     state.pendingSpokes.push({
       timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
       annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+      badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
+      badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
       label: msg.label,
       shot_num: msg.shot_num,
       msg,
@@ -4296,7 +4300,7 @@ function onProgress(msg) {
 }
 
 function onShotReceived(msg) {
-  const isConfirmed = msg.confirmed !== false && ((msg.conf ?? msg.confidence) == null || (msg.conf ?? msg.confidence) >= 0.28);
+  const isConfirmed = msg.confirmed === true || ((msg.conf ?? msg.confidence) == null || (msg.conf ?? msg.confidence) >= 0.20);
   const existingIdx = state.shotLog.findIndex(s => s.shot_num === msg.shot_num);
   if (existingIdx >= 0) {
     state.shotLog[existingIdx] = msg;
@@ -4308,6 +4312,12 @@ function onShotReceived(msg) {
       if (msg.annotated_timestamp_sec != null) {
         state.pendingSpokes[spokeIdx].annotated_timestamp_sec = msg.annotated_timestamp_sec;
       }
+      if (msg.badge_start_sec != null) {
+        state.pendingSpokes[spokeIdx].badge_start_sec = msg.badge_start_sec;
+      }
+      if (msg.badge_end_sec != null) {
+        state.pendingSpokes[spokeIdx].badge_end_sec = msg.badge_end_sec;
+      }
     } else if (isConfirmed) {
       if (!state.shotStats[msg.label]) state.shotStats[msg.label] = {count:0};
       state.shotStats[msg.label].count++;
@@ -4318,6 +4328,8 @@ function onShotReceived(msg) {
       state.pendingSpokes.push({
         timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
         annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+        badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
+        badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
         label: msg.label,
         shot_num: msg.shot_num,
         msg
@@ -4335,6 +4347,8 @@ function onShotReceived(msg) {
       state.pendingSpokes.push({
         timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
         annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+        badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
+        badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
         label: msg.label,
         shot_num: msg.shot_num,
         msg
@@ -4472,7 +4486,7 @@ function flushDashboard() {
     const sm = getAnalysisSummary(state.sessionAnalysis);
     let avgScore = sm.avgShotScore != null ? sm.avgShotScore : null;
     if (avgScore === null && state.shotLog.length > 0) {
-      const confirmed = state.shotLog.filter(s => Number(s.conf ?? s.confidence) >= 0.28);
+      const confirmed = state.shotLog.filter(s => s.confirmed !== false || Number(s.conf ?? s.confidence) >= 0.20);
       if (confirmed.length > 0) {
         avgScore = confirmed.reduce((sum, s) => sum + (s.shot_score || 0), 0) / confirmed.length;
       }
@@ -5488,17 +5502,31 @@ function getSpokeVideoTime(spoke) {
   return spoke.timestamp_sec;
 }
 
+function getSpokeBadgeStartTime(spoke) {
+  if (spoke.badge_start_sec != null) return spoke.badge_start_sec;
+  return getSpokeVideoTime(spoke) + 0.25;
+}
+
 /** Max shot # whose replay timestamp has been reached — drives progressive ball analytics (pitch / bars / table). */
 function computeBallPlaybackShotCap(t) {
   if (!video || !video.duration || !state.pendingSpokes.length) return 0;
-  const AHEAD = 0.5;
   let maxN = 0;
   state.pendingSpokes.forEach((spoke) => {
-    if (t >= getSpokeVideoTime(spoke) - AHEAD) {
+    if (t >= getSpokeBadgeStartTime(spoke)) {
       maxN = Math.max(maxN, spoke.shot_num);
     }
   });
   return maxN;
+}
+
+function clearShotBanner() {
+  hudShot.textContent = '—';
+  shotIndex.textContent = '—';
+  shotName.textContent = 'AWAITING';
+  shotTime.textContent = '—';
+  shotColorBar.style.background = '';
+  shotColorBar.style.boxShadow = 'none';
+  state.activeBannerSpoke = null;
 }
 
 function onVideoTimeUpdate() {
@@ -5513,19 +5541,26 @@ function onVideoTimeUpdate() {
     state.ballPlaybackCap = cap;
     if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(cap);
   }
-  const AHEAD   = 0.5;
   if (state._lastVideoTime !== undefined && t < state._lastVideoTime - 1.0) {
     // Video looped back or scrubbed backwards — keep drawnSpokes so spokes are never duplicated!
     document.querySelectorAll('.shot-circle').forEach(el => el.classList.remove('active'));
+    clearShotBanner();
   }
   state._lastVideoTime = t;
   state.pendingSpokes.forEach(spoke => {
     if (state.drawnSpokes.has(spoke.shot_num)) return;
-    if (t >= getSpokeVideoTime(spoke) - AHEAD) {
+    if (t >= getSpokeBadgeStartTime(spoke)) {
       state.drawnSpokes.add(spoke.shot_num);
       drawSpokeNow(spoke);
     }
   });
+  if (
+    state.activeBannerSpoke &&
+    state.activeBannerSpoke.badge_end_sec != null &&
+    t > state.activeBannerSpoke.badge_end_sec
+  ) {
+    clearShotBanner();
+  }
 
   // End-of-video safety net: if near video end (within 0.3s), flush any remaining undrawn spokes
   if (t >= video.duration - 0.3) {
@@ -5540,6 +5575,7 @@ function onVideoTimeUpdate() {
 
 function drawSpokeNow(spoke, onSpokeDrawn) {
   state.drawnSpokes.add(spoke.shot_num);
+  state.activeBannerSpoke = spoke;
   const circle = document.getElementById(`shot-circle-${spoke.shot_num}`);
   if (circle) {
     document.querySelectorAll('.shot-circle').forEach(el=>el.classList.remove('active'));
@@ -5911,12 +5947,12 @@ function initServerSettingsModal() {
     openDialog(modal);
   });
 
-  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://192.168.29.14:8000'; });
+  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.9.193:8000'; });
   presetLocalhost?.addEventListener('click', () => { if (input) input.value = 'http://localhost:8000'; });
   presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://redeem-thanks-oliver-aging.trycloudflare.com'; });
   presetEmulator?.addEventListener('click', () => { if (input) input.value = 'http://10.0.2.2:8000'; });
   presetOrigin?.addEventListener('click', () => {
-    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://192.168.29.14:8000';
+    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.9.193:8000';
   });
 
   pingBtn?.addEventListener('click', async () => {

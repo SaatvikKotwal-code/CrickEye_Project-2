@@ -4,13 +4,14 @@ plugins {
 
 android {
     namespace 'com.crickeye.pro'
-    compileSdk 34
+    compileSdk 35
+    buildToolsVersion "35.0.0"
 
     defaultConfig {
         applicationId "com.crickeye.pro"
         minSdk 24
         targetSdk 34
-        versionCode 1
+        versionCode 30
         versionName "1.0.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
