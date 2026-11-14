@@ -152,7 +152,7 @@
           </svg>
           <div class="sidebar-label leading-tight">
             <div class="font-display text-[0.95rem] font-extrabold tracking-tight">CrickEye<span class="text-primary">Pro</span></div>
-            <div class="font-mono text-[0.5rem] uppercase tracking-[0.18em] text-base-content/35">Batting Analytics</div>
+            <div class="text-[0.62rem] text-base-content/50">Batting analytics</div>
           </div>
         </div>
 
@@ -202,7 +202,7 @@
                   aria-haspopup="dialog" aria-controls="profileModal">
             <span class="ce-avatar" id="headerProfileAvatar">?</span>
             <span class="sidebar-label min-w-0 leading-tight">
-              <span class="block font-mono text-[0.5rem] uppercase tracking-[0.16em] text-base-content/35">Account</span>
+              <span class="block text-[0.6rem] text-base-content/50">Account</span>
               <span class="block truncate text-[0.72rem] text-base-content/75" id="headerProfileEmail"></span>
             </span>
           </button>
@@ -225,7 +225,7 @@
 
         <div class="min-w-0 leading-tight">
           <h2 id="appScreenTitle" class="truncate font-display text-[0.95rem] font-bold tracking-tight">Session Overview</h2>
-          <p class="hidden truncate font-mono text-[0.55rem] uppercase tracking-[0.16em] text-base-content/40 sm:block">Live batting telemetry</p>
+          <p class="hidden truncate text-[0.62rem] text-base-content/55 sm:block">Live batting telemetry</p>
         </div>
 
         <div class="ml-auto flex items-center gap-2">
@@ -235,7 +235,7 @@
           </div>
           <div class="verdict-pill hidden items-center gap-1.5 rounded-full border border-base-300 bg-base-200/60 px-3 py-1.5 lg:inline-flex" hidden>
             <span class="material-symbols-outlined text-[16px] text-accent">sports_cricket</span>
-            <span class="verdict-text text-xs font-medium text-base-content/70" id="batsmanLabel">AWAITING ANALYSIS</span>
+            <span class="verdict-text text-xs font-medium text-base-content/70" id="batsmanLabel">Awaiting analysis</span>
           </div>
 
           <!-- Font Size Adjuster (A- A A+) -->
@@ -311,9 +311,9 @@
                 <canvas id="ballOverlayCanvas" class="ball-overlay-canvas" aria-hidden="true"></canvas>
                 <div class="video-hud">
                   <div class="hud-corner hud-tl"><span class="rec-dot"></span> LIVE</div>
-                  <div class="hud-corner hud-tr" id="hudTime">00:00</div>
+                  <div class="hud-corner hud-tr tabular-nums" id="hudTime">00:00</div>
                   <div class="hud-corner hud-bl" style="display: none !important;">SHOT: <span id="hudShot">—</span></div>
-                  <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
+                  <div class="hud-corner hud-br tabular-nums" id="hudFrame">FRAME 0</div>
                 </div>
               </div>
 
@@ -327,8 +327,8 @@
 
               <div class="current-shot-display">
                 <div class="shot-badge" id="currentShotBadge">
-                  <span class="shot-number">SHOT <span id="shotIndex">—</span></span>
-                  <span class="shot-name" id="shotName">AWAITING</span>
+                  <span class="shot-number">Shot <span id="shotIndex" class="tabular-nums">—</span></span>
+                  <span class="shot-name" id="shotName">Awaiting</span>
                   <span class="shot-time" id="shotTime">—</span>
                 </div>
                 <div class="shot-color-bar" id="shotColorBar"></div>
@@ -365,7 +365,7 @@
                 <p class="ball-pitch-title mb-3 w-full text-center"></p>
                 <div class="pitch-map-frame">
                   <div id="pitchMapReactRoot" hidden></div>
-                  <canvas id="pitchMapCanvas" width="280" height="360" class="max-w-full"></canvas>
+                  <canvas id="pitchMapCanvas" width="280" height="360" class="max-w-full" aria-label="Interactive pitch length map" role="img"></canvas>
                 </div>
                 <div class="pitch-map-legend" aria-label="Delivery outcome legend">
                   <span><i class="pitch-legend-dot pitch-legend-dot--dot"></i>Dot</span>
@@ -393,7 +393,7 @@
               <div data-skeleton="wagon" hidden></div>
               <div data-content class="p-4">
                 <div class="wagon-wheel-container">
-                  <canvas id="wagonWheelCanvas"></canvas>
+                  <canvas id="wagonWheelCanvas" aria-label="Wagon wheel shot direction chart" role="img"></canvas>
                 </div>
 
                 <div class="ce-caption mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
@@ -415,7 +415,7 @@
                           <span class="font-mono tabular-nums text-base-content/55"><span id="dist-leg-cnt">0</span> · <span id="dist-leg-pct">0%</span></span>
                         </div>
                         <div class="h-1.5 overflow-hidden rounded-full bg-base-300">
-                          <div class="dist-bar leg h-full rounded-full bg-accent transition-[width]" id="dist-leg-bar" style="width:0%"></div>
+                          <div class="dist-bar leg h-full rounded-full bg-accent" id="dist-leg-bar" style="width:0%"></div>
                         </div>
                       </div>
                       <div>
@@ -424,7 +424,7 @@
                           <span class="font-mono tabular-nums text-base-content/55"><span id="dist-off-cnt">0</span> · <span id="dist-off-pct">0%</span></span>
                         </div>
                         <div class="h-1.5 overflow-hidden rounded-full bg-base-300">
-                          <div class="dist-bar off h-full rounded-full bg-primary transition-[width]" id="dist-off-bar" style="width:0%"></div>
+                          <div class="dist-bar off h-full rounded-full bg-primary" id="dist-off-bar" style="width:0%"></div>
                         </div>
                       </div>
                       <div>
@@ -433,7 +433,7 @@
                           <span class="font-mono tabular-nums text-base-content/55"><span id="dist-str-cnt">0</span> · <span id="dist-str-pct">0%</span></span>
                         </div>
                         <div class="h-1.5 overflow-hidden rounded-full bg-base-300">
-                          <div class="dist-bar str h-full rounded-full bg-success transition-[width]" id="dist-str-bar" style="width:0%"></div>
+                          <div class="dist-bar str h-full rounded-full bg-success" id="dist-str-bar" style="width:0%"></div>
                         </div>
                       </div>
                     </div>
@@ -500,7 +500,7 @@
               </div>
               <div data-skeleton="feed:5" hidden></div>
               <div id="biomech-feed" data-content class="p-4">
-                <div class="biomech-empty">AWAITING FIRST SHOT…</div>
+                <div class="biomech-empty">Awaiting first shot…</div>
               </div>
               <nav id="biomechPagination" class="biomech-pagination" aria-label="Biomechanics pages" hidden>
                 <button type="button" id="biomechPrevPage" class="btn btn-outline btn-sm">
@@ -542,56 +542,152 @@
   <!-- ═══════════════ MODALS ═══════════════ -->
   <div id="serverSettingsModal" class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="serverModalTitle" hidden>
     <div class="ce-modal-backdrop" data-close-modal="serverSettingsModal"></div>
-    <div class="ce-dialog">
-      <header class="ce-dialog-head">
-        <button type="button" class="ce-dialog-icon-btn" data-dialog-back aria-label="Back">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-        </button>
-        <h2 id="serverModalTitle" class="ce-dialog-title" tabindex="-1">Mobile &amp; Server Settings</h2>
+    <div class="ce-dialog server-settings-dialog">
+      <header class="ce-dialog-head server-modal-header">
+        <div class="server-modal-header-left">
+          <button type="button" class="ce-dialog-icon-btn" data-dialog-back aria-label="Back">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          </button>
+          <div>
+            <h2 id="serverModalTitle" class="ce-dialog-title" tabindex="-1">Mobile &amp; Server Settings</h2>
+          </div>
+        </div>
         <button type="button" class="ce-dialog-icon-btn" data-close-modal="serverSettingsModal" aria-label="Close">
           <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
       </header>
-      <div class="ce-dialog-body server-modal-body">
-        <p class="ce-modal-lead">Configure your wireless backend connection and mobile camera settings.</p>
-        <div class="server-field-group">
-          <label for="serverUrlInput" class="server-label">FastAPI Backend Server URL</label>
-          <div class="server-input-wrap">
-            <input type="url" id="serverUrlInput" class="server-input" placeholder="http://192.168.1.X:8000 or https://..." spellcheck="false" />
-            <button type="button" id="btnTestServerConnection" class="btn btn-primary btn-sm">Test Ping</button>
+      <div class="ce-dialog-body server-modal-body no-scrollbar">
+        <p class="server-lead-caption">Configure your wireless backend connection and mobile camera settings.</p>
+
+        <!-- Backend Server Section -->
+        <section class="server-section-card" data-purpose="server-connection-config">
+          <div class="server-section-head">
+            <label for="serverUrlInput" class="server-label">FastAPI Backend Server URL</label>
+            <span class="server-status-pill standby">
+              <span class="status-pulse-dot"></span>
+              Standby
+            </span>
           </div>
+          
+          <div class="server-url-field-wrap">
+            <span class="material-symbols-outlined server-url-icon" aria-hidden="true">language</span>
+            <input type="url" id="serverUrlInput" class="server-input font-mono" placeholder="http://192.168.1.X:8000 or https://..." spellcheck="false" />
+            <button type="button" class="server-copy-btn" id="serverUrlPasteBtn" title="Clear or paste URL" aria-label="Clear URL" onclick="var inp=document.getElementById('serverUrlInput');if(inp){inp.focus();}">
+              <span class="material-symbols-outlined">content_paste</span>
+            </button>
+          </div>
+
+          <button type="button" id="btnTestServerConnection" class="server-ping-btn" data-purpose="ping-server-action">
+            <span class="material-symbols-outlined ping-icon">sensors</span>
+            <span>Test Ping</span>
+          </button>
+
           <div id="serverPingResult" class="server-ping-status"></div>
-          <span class="server-hint">When using the Android APK on Wi-Fi or mobile data, enter your PC's Wi-Fi IP (e.g. <code>http://10.253.6.138:8000</code>) or your Cloudflare Tunnel URL.</span>
-        </div>
 
-        <div class="server-presets-group">
-          <span class="server-preset-label">Quick Presets:</span>
+          <div class="server-info-banner">
+            <span class="material-symbols-outlined server-info-icon" aria-hidden="true">info</span>
+            <p class="server-hint">
+              When using the Android APK on Wi-Fi or mobile data, enter your PC's Wi-Fi IP (e.g. <code>http://10.253.6.138:8000</code>) or your secure Cloudflare Tunnel URL.
+            </p>
+          </div>
+        </section>
+
+        <!-- Presets Section -->
+        <section class="server-section-card" data-purpose="quick-connection-presets">
+          <div class="server-section-head">
+            <h3 class="server-label">Quick Presets</h3>
+            <span class="server-sub-badge">Tap to load</span>
+          </div>
           <div class="server-preset-chips">
-            <button type="button" class="preset-chip" id="presetWifi"><span class="material-symbols-outlined preset-chip-icon">wifi</span> PC Wi-Fi (10.253.6.138)</button>
-            <button type="button" class="preset-chip" id="presetLocalhost"><span class="material-symbols-outlined preset-chip-icon">usb</span> USB / Localhost (:8000)</button>
-            <button type="button" class="preset-chip" id="presetCloudflare"><span class="material-symbols-outlined preset-chip-icon">cloud</span> Cloudflare Live Demo</button>
-            <button type="button" class="preset-chip" id="presetEmulator"><span class="material-symbols-outlined preset-chip-icon">phone_android</span> Emulator (10.0.2.2:8000)</button>
-            <button type="button" class="preset-chip" id="presetOrigin"><span class="material-symbols-outlined preset-chip-icon">laptop</span> Current Origin</button>
+            <button type="button" class="preset-chip" id="presetWifi">
+              <span class="material-symbols-outlined preset-chip-icon">wifi</span>
+              <span>PC Wi-Fi (10.253.6.138)</span>
+            </button>
+            <button type="button" class="preset-chip" id="presetLocalhost">
+              <span class="material-symbols-outlined preset-chip-icon">usb</span>
+              <span>USB / Localhost (:8000)</span>
+            </button>
+            <button type="button" class="preset-chip" id="presetCloudflare">
+              <span class="material-symbols-outlined preset-chip-icon">cloud</span>
+              <span>Cloudflare Live Demo</span>
+            </button>
+            <button type="button" class="preset-chip" id="presetEmulator">
+              <span class="material-symbols-outlined preset-chip-icon">phone_android</span>
+              <span>Emulator (10.0.2.2:8000)</span>
+            </button>
+            <button type="button" class="preset-chip" id="presetOrigin">
+              <span class="material-symbols-outlined preset-chip-icon">laptop</span>
+              <span>Current Origin</span>
+            </button>
           </div>
-        </div>
+        </section>
 
-        <div class="server-field-group">
-          <label class="server-label">Camera Facing Mode (for Cricket Net Practice)</label>
+        <!-- Camera Section -->
+        <section class="server-section-card" data-purpose="camera-facing-selection">
+          <div class="server-section-head-stacked">
+            <h3 class="server-label">Camera Facing Mode (for Cricket Net Practice)</h3>
+            <p class="server-micro-note">Optimized for high-speed bowling delivery &amp; batting trigger release</p>
+          </div>
+          
           <div class="camera-facing-picker">
-            <label class="facing-opt"><input type="radio" name="cameraFacingMode" value="environment" checked /> <span><span class="material-symbols-outlined facing-icon">photo_camera</span> Rear Camera (High FPS / Tripod)</span></label>
-            <label class="facing-opt"><input type="radio" name="cameraFacingMode" value="user" /> <span><span class="material-symbols-outlined facing-icon">flip_camera_android</span> Front / Selfie Camera</span></label>
-          </div>
-        </div>
+            <label class="camera-facing-card" id="facingEnvLabel">
+              <input type="radio" name="cameraFacingMode" value="environment" checked />
+              <div class="camera-radio-indicator">
+                <div class="camera-radio-dot"></div>
+              </div>
+              <div class="camera-card-icon-box brand">
+                <span class="material-symbols-outlined">photo_camera</span>
+              </div>
+              <div class="camera-card-content">
+                <div class="camera-card-title-row">
+                  <span class="camera-card-title">Rear Camera</span>
+                  <span class="camera-fps-pill">60 FPS</span>
+                </div>
+                <p class="camera-card-desc">Tripod Mount • Recommended for Bowler &amp; Batter tracking</p>
+              </div>
+            </label>
 
-        <div class="server-field-group">
-          <label class="server-label">Haptic Feedback (Vibration)</label>
-          <label class="toggle-opt"><input type="checkbox" id="hapticFeedbackToggle" checked /> <span>Vibrate on countdown beeps &amp; recording completion</span></label>
-        </div>
+            <label class="camera-facing-card" id="facingUserLabel">
+              <input type="radio" name="cameraFacingMode" value="user" />
+              <div class="camera-radio-indicator">
+                <div class="camera-radio-dot"></div>
+              </div>
+              <div class="camera-card-icon-box slate">
+                <span class="material-symbols-outlined">flip_camera_android</span>
+              </div>
+              <div class="camera-card-content">
+                <div class="camera-card-title-row">
+                  <span class="camera-card-title">Front / Selfie Camera</span>
+                  <span class="camera-fps-sub">30 FPS</span>
+                </div>
+                <p class="camera-card-desc">Mirror preview view for solo stance &amp; shadow swing checks</p>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <!-- Haptics Section -->
+        <section class="server-section-card" data-purpose="haptic-settings">
+          <h3 class="server-label">Haptic Feedback (Vibration)</h3>
+          <label class="haptic-switch-card">
+            <input type="checkbox" id="hapticFeedbackToggle" checked class="haptic-checkbox" />
+            <div class="haptic-card-content">
+              <span class="haptic-title">Vibrate on countdown beeps &amp; recording completion</span>
+              <span class="haptic-desc">Provides tactile feedback when bowler delivery stride is detected and automated net clipping concludes.</span>
+            </div>
+            <div class="haptic-icon-box">
+              <span class="material-symbols-outlined">vibration</span>
+            </div>
+          </label>
+        </section>
 
       </div>
-      <footer class="ce-dialog-foot">
-        <button type="button" class="btn btn-outline btn-sm" data-close-modal="serverSettingsModal">Close</button>
-        <button type="button" class="btn btn-primary btn-sm" id="btnSaveServerSettings">Save &amp; Reconnect</button>
+      <footer class="ce-dialog-foot server-modal-footer">
+        <button type="button" class="btn-server-cancel" data-close-modal="serverSettingsModal">Close</button>
+        <button type="button" class="btn-server-save" id="btnSaveServerSettings">
+          <span class="material-symbols-outlined">sync</span>
+          <span>Save &amp; Reconnect</span>
+        </button>
       </footer>
     </div>
   </div>
@@ -716,9 +812,9 @@
   </div>
 
   <!-- Hidden stubs — keep App.js DOM refs valid without rendering anything -->
-  <div style="display:none">
+  <div style="display:none" aria-hidden="true">
     <div id="session-report"></div>
-    <svg><circle id="ring-timing"/><circle id="ring-middling"/><circle id="ring-impact"/><circle id="ring-backlift"/></svg>
+    <svg aria-hidden="true"><circle id="ring-timing"/><circle id="ring-middling"/><circle id="ring-impact"/><circle id="ring-backlift"/></svg>
     <div class="analysis-row">
       <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
       <div class="analysis-card"><div class="analysis-icon"></div><div class="analysis-content"><div class="analysis-title"></div><div class="analysis-body"></div><div class="analysis-score"></div></div></div>
