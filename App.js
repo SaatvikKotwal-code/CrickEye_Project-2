@@ -4404,6 +4404,7 @@ function onComplete(msg, opts = {}) {
   }
 
   if (!video || !msg.output_video) {
+    syncFinalShotCount();
     if (!skipPersist) saveLiveAnalysisResult(msg);
     state.ballPlaybackCap = -1;
     if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(null);
@@ -5573,12 +5574,23 @@ function drawSpokeNow(spoke, onSpokeDrawn) {
     Number(spoke.msg?.head_quality_score || 0),
     Number(spoke.msg?.swing_intensity || 0),
     () => {
-      const confirmedTotal = state.shotLog.filter(s => s.confirmed !== false).length || WagonWheel.getSpokeCount();
+      const confirmedTotal = state.shotLog.filter(s => s.confirmed !== false && Number(s.conf ?? s.confidence ?? 1) >= 0.20).length || WagonWheel.getSpokeCount();
       shotCount.textContent = Math.min(WagonWheel.getSpokeCount(), confirmedTotal);
       if (onSpokeDrawn) onSpokeDrawn();
     },
     spoke.shot_num
   );
+}
+
+function syncFinalShotCount() {
+  const payloadShots = state.completePayload?.analysis?.deliveries
+    || state.completePayload?.shots
+    || state.sessionAnalysis?.deliveries
+    || state.shotLog;
+  if (Array.isArray(payloadShots) && payloadShots.length > 0) {
+    const definitiveCount = payloadShots.filter(s => s.confirmed !== false && Number(s.conf ?? s.confidence ?? 1) >= 0.20).length;
+    if (shotCount) shotCount.textContent = definitiveCount;
+  }
 }
 
 /** When the output MP4 cannot play in-browser, still paint wagon-wheel spokes in order. */
@@ -5589,6 +5601,7 @@ function drawAllSpokesWithoutPlayback() {
   let i = 0;
   function next() {
     if (i >= spokes.length) {
+      syncFinalShotCount();
       state.ballPlaybackCap = -1;
       if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(null);
       return;
@@ -5810,12 +5823,17 @@ function init() {
       undrawn.sort((a, b) => (a.annotated_timestamp_sec ?? a.timestamp_sec) - (b.annotated_timestamp_sec ?? b.timestamp_sec));
       let i = 0;
       function flushNext() {
-        if (i >= undrawn.length) return;
+        if (i >= undrawn.length) {
+          syncFinalShotCount();
+          return;
+        }
         const spoke = undrawn[i++];
         state.drawnSpokes.add(spoke.shot_num);
         drawSpokeNow(spoke, () => setTimeout(flushNext, 90));
       }
       flushNext();
+    } else {
+      syncFinalShotCount();
     }
     if (typeof PlayCard !== 'undefined' && PlayCard.revealAfterDelay) {
       PlayCard.revealAfterDelay(state);

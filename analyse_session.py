@@ -1416,11 +1416,13 @@ def recompute_composite_shot_score(e):
     head_pts = (hq / 100.0) * float(SCORE_W_HEAD)
     fw = float(e.get('footwork_score') or 0)
     footwork_pts = (fw / 100.0) * float(SCORE_W_FOOTWORK)
+    total_w = float(SCORE_W_HEAD + SCORE_W_FOOTWORK + SCORE_W_ELBOW + SCORE_W_EXECUTION + SCORE_W_SWING_PATH)
     sym = e.get('symmetry_score')
     if sym is not None:
         sym_pts = (float(sym) / 100.0) * float(SCORE_W_SYMMETRY)
+        total_w += float(SCORE_W_SYMMETRY)
     else:
-        sym_pts = 0.5 * float(SCORE_W_SYMMETRY)
+        sym_pts = 0.0
     label = e.get('label') or 'cover'
     elbow_pts = _elbow_points_for_label(label, e.get('elbow_collapse') or 'unknown')
     ex = float(e.get('execution_score') if e.get('execution_score') is not None else EXECUTION_NEUTRAL)
@@ -1429,7 +1431,7 @@ def recompute_composite_shot_score(e):
     sp = float(e.get('swing_path_score') if e.get('swing_path_score') is not None else 50.0)
     sp = float(np.clip(sp, 0.0, 100.0))
     swing_path_pts = (sp / 100.0) * float(SCORE_W_SWING_PATH)
-    raw = head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts
+    raw = ((head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts) / max(total_w, 1.0)) * 100.0
     shot_score = round(raw / 10.0, 1)
     e['shot_score'] = shot_score
     if shot_score >= 8.5:
@@ -2140,15 +2142,18 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     execution_score = EXECUTION_NEUTRAL
     head_pts = (head_quality_score / 100.0) * float(SCORE_W_HEAD)
     footwork_pts = (footwork_score / 100.0) * float(SCORE_W_FOOTWORK)
+    total_w = float(SCORE_W_HEAD + SCORE_W_FOOTWORK + SCORE_W_ELBOW + SCORE_W_EXECUTION + SCORE_W_SWING_PATH)
     if symmetry_score is not None:
         sym_pts = (symmetry_score / 100.0) * float(SCORE_W_SYMMETRY)
+        total_w += float(SCORE_W_SYMMETRY)
     else:
-        sym_pts = 0.5 * float(SCORE_W_SYMMETRY)
+        sym_pts = 0.0
     execution_pts = (execution_score / 100.0) * float(SCORE_W_EXECUTION)
     swing_path_pts = (swing_path_score / 100.0) * float(SCORE_W_SWING_PATH)
     raw_score = (
-        head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts
-    )
+        (head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts)
+        / max(total_w, 1.0)
+    ) * 100.0
     shot_score = round(raw_score / 10.0, 1)
 
     if shot_score >= 8.5:   shot_quality = "Top class"
@@ -3529,10 +3534,10 @@ def _ball_nx_at_peak(delivery: dict, peak_frame: int):
     return None
 
 
-def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_h: int):
+def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_h: int, analysis: dict = None):
     """
     After ball YOLO: length zone, execution vs length, optional lateral footwork blend.
-    Mutates shots in place; call before run_session_analysis.
+    Mutates shots in place; call before run_session_analysis (or pass analysis to update averages).
     """
     _ = frame_h
     deliveries = []
@@ -3626,6 +3631,20 @@ def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_
 
     for e in shot_log:
         finalize_shot_player_copy(e)
+
+    # Re-average session summary metrics if an existing analysis payload was provided
+    if analysis and isinstance(analysis, dict) and "session_summary" in analysis:
+        conf = [e for e in shot_log if e.get("conf", 0) >= CONF_THRESHOLD]
+        fw_vals = [e["footwork_score"] for e in conf if e.get("footwork_score") is not None]
+        if fw_vals:
+            analysis["session_summary"]["avg_footwork_score"] = round(float(np.mean(fw_vals)), 2)
+        ex_vals = [e["execution_score"] for e in conf if e.get("execution_score") is not None]
+        if ex_vals:
+            analysis["session_summary"]["avg_execution_score"] = round(float(np.mean(ex_vals)), 2)
+        sc_vals = [e["shot_score"] for e in conf if e.get("shot_score") is not None]
+        if sc_vals:
+            analysis["session_summary"]["avg_shot_score"] = round(float(np.mean(sc_vals)), 2)
+
     return shot_log
 
 
