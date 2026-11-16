@@ -1,4 +1,4 @@
-﻿/**
+/**
  * app.js — CrickEye Pro  (WebSocket real-time mode, v6.4)
  *
  * KEY CHANGES vs v6.3:
@@ -155,6 +155,7 @@ function getCandidateServerUrls() {
   }
   // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
   list.push('http://10.253.6.214:8000');
+  list.push('http://10.253.9.193:8000');
   list.push('http://192.168.29.14:8000');
   list.push('http://10.253.4.106:8000');
   list.push('http://192.168.0.179:8000');
@@ -3925,6 +3926,8 @@ function rebuildDerivedShotStateFromShots(shots) {
     state.pendingSpokes.push({
       timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
       annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+      badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
+      badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
       label: msg.label,
       shot_num: msg.shot_num,
       msg,
@@ -4309,6 +4312,12 @@ function onShotReceived(msg) {
       if (msg.annotated_timestamp_sec != null) {
         state.pendingSpokes[spokeIdx].annotated_timestamp_sec = msg.annotated_timestamp_sec;
       }
+      if (msg.badge_start_sec != null) {
+        state.pendingSpokes[spokeIdx].badge_start_sec = msg.badge_start_sec;
+      }
+      if (msg.badge_end_sec != null) {
+        state.pendingSpokes[spokeIdx].badge_end_sec = msg.badge_end_sec;
+      }
     } else if (isConfirmed) {
       if (!state.shotStats[msg.label]) state.shotStats[msg.label] = {count:0};
       state.shotStats[msg.label].count++;
@@ -4319,6 +4328,8 @@ function onShotReceived(msg) {
       state.pendingSpokes.push({
         timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
         annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+        badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
+        badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
         label: msg.label,
         shot_num: msg.shot_num,
         msg
@@ -4336,6 +4347,8 @@ function onShotReceived(msg) {
       state.pendingSpokes.push({
         timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
         annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+        badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
+        badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
         label: msg.label,
         shot_num: msg.shot_num,
         msg
@@ -5490,17 +5503,31 @@ function getSpokeVideoTime(spoke) {
   return spoke.timestamp_sec;
 }
 
+function getSpokeBadgeStartTime(spoke) {
+  if (spoke.badge_start_sec != null) return spoke.badge_start_sec;
+  return getSpokeVideoTime(spoke) + 0.25;
+}
+
 /** Max shot # whose replay timestamp has been reached — drives progressive ball analytics (pitch / bars / table). */
 function computeBallPlaybackShotCap(t) {
   if (!video || !video.duration || !state.pendingSpokes.length) return 0;
-  const AHEAD = 0.5;
   let maxN = 0;
   state.pendingSpokes.forEach((spoke) => {
-    if (t >= getSpokeVideoTime(spoke) - AHEAD) {
+    if (t >= getSpokeBadgeStartTime(spoke)) {
       maxN = Math.max(maxN, spoke.shot_num);
     }
   });
   return maxN;
+}
+
+function clearShotBanner() {
+  hudShot.textContent = '—';
+  shotIndex.textContent = '—';
+  shotName.textContent = 'AWAITING';
+  shotTime.textContent = '—';
+  shotColorBar.style.background = '';
+  shotColorBar.style.boxShadow = 'none';
+  state.activeBannerSpoke = null;
 }
 
 function onVideoTimeUpdate() {
@@ -5515,19 +5542,26 @@ function onVideoTimeUpdate() {
     state.ballPlaybackCap = cap;
     if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(cap);
   }
-  const AHEAD   = 0.5;
   if (state._lastVideoTime !== undefined && t < state._lastVideoTime - 1.0) {
     // Video looped back or scrubbed backwards — keep drawnSpokes so spokes are never duplicated!
     document.querySelectorAll('.shot-circle').forEach(el => el.classList.remove('active'));
+    clearShotBanner();
   }
   state._lastVideoTime = t;
   state.pendingSpokes.forEach(spoke => {
     if (state.drawnSpokes.has(spoke.shot_num)) return;
-    if (t >= getSpokeVideoTime(spoke) - AHEAD) {
+    if (t >= getSpokeBadgeStartTime(spoke)) {
       state.drawnSpokes.add(spoke.shot_num);
       drawSpokeNow(spoke);
     }
   });
+  if (
+    state.activeBannerSpoke &&
+    state.activeBannerSpoke.badge_end_sec != null &&
+    t > state.activeBannerSpoke.badge_end_sec
+  ) {
+    clearShotBanner();
+  }
 
   // End-of-video safety net: if near video end (within 0.3s), flush any remaining undrawn spokes
   if (t >= video.duration - 0.3) {
@@ -5542,6 +5576,7 @@ function onVideoTimeUpdate() {
 
 function drawSpokeNow(spoke, onSpokeDrawn) {
   state.drawnSpokes.add(spoke.shot_num);
+  state.activeBannerSpoke = spoke;
   const circle = document.getElementById(`shot-circle-${spoke.shot_num}`);
   if (circle) {
     document.querySelectorAll('.shot-circle').forEach(el=>el.classList.remove('active'));
