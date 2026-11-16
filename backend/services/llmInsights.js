@@ -80,8 +80,10 @@ ${JSON.stringify(summary)}`;
 }
 
 function extractJsonObject(text) {
-  const t = String(text || "").trim();
+  let t = String(text || "").trim();
   if (!t) return null;
+  // strip markdown code block wrapper if present
+  t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   try {
     return JSON.parse(t);
   } catch (_) {
@@ -90,8 +92,15 @@ function extractJsonObject(text) {
     if (s >= 0 && e > s) {
       try {
         return JSON.parse(t.slice(s, e + 1));
-      } catch (_) {
-        return null;
+      } catch (_) {}
+    }
+    // Attempt auto-recovery if output was truncated
+    if (s >= 0) {
+      const candidate = t.slice(s).trim();
+      for (const suffix of ["\n}", "\n]}", '"]\n}', '"\n]\n}', '}\n}', '"]}\n}']) {
+        try {
+          return JSON.parse(candidate + suffix);
+        } catch (_) {}
       }
     }
     return null;
@@ -334,7 +343,7 @@ async function callDgx(prompt) {
   const model = process.env.DGX_LLM_MODEL || process.env.GEMINI_MODEL || "qwen3:latest";
   if (!apiKey) throw new Error("DGX_API_KEY missing");
   const timeoutMs = Math.max(envNum("LLM_TIMEOUT_MS", 60000), 60000);
-  const maxOutputTokens = envNum("LLM_MAX_OUTPUT_TOKENS", 420);
+  const maxOutputTokens = Math.max(envNum("LLM_MAX_OUTPUT_TOKENS", 4096), 4096);
   async function requestOnce(reqTimeoutMs, includeJsonResponseFormat) {
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), reqTimeoutMs);
@@ -440,7 +449,10 @@ async function generateLlmInsights(results) {
   }
   const parsed = extractJsonObject(out.text);
   const norm = normalizeInsightPayload(parsed);
-  if (!norm) throw new Error("Invalid JSON from LLM");
+  if (!norm) {
+    console.warn("[llmInsights] Raw LLM text failed JSON parse / normalization:", out.text);
+    throw new Error("Invalid JSON from LLM");
+  }
   const withCoreCoverage = ensureCoreCoverage(norm, summary);
   const withShotCoverage = ensureShotTypeCoverage(withCoreCoverage, summary);
   return {

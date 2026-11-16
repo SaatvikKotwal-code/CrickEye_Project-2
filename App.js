@@ -2200,13 +2200,15 @@ function openCoachSessionNetReport(sessionId) {
   const replay = getSessionReplay(session.results);
   const shots = replay?.shots && Array.isArray(replay.shots) ? replay.shots : [];
   const handed = analysis.session_handedness || 'RHB';
+  const existingLlm = session.results?.llm_insights || analysis.llm_insights || null;
   ReportModal.open(
     {
       shotLog: shots,
+      llmInsights: existingLlm,
       completePayload: {
         handedness: handed,
         ball_analytics: getBallAnalyticsFromResults(session.results),
-        llm_insights: session.results?.llm_insights || null,
+        llm_insights: existingLlm,
       },
       originalVideoUrl: session.video_url || '',
       originalVideoName: sessionVideoFilename(session.video_url),
@@ -2215,6 +2217,50 @@ function openCoachSessionNetReport(sessionId) {
     },
     analysis
   );
+  if (!existingLlm || existingLlm.fallback_used === true || existingLlm.provider === 'fallback_rules') {
+    upgradeSessionLlmInsights(session);
+  }
+}
+
+async function upgradeSessionLlmInsights(session) {
+  if (!session || !session.results) return;
+  const reqPayload = buildLlmRequestPayload(session.results);
+  if (!reqPayload) return;
+  try {
+    const fetched = await fetchLlmInsightsForResults(reqPayload);
+    if (fetched && !fetched.fallback_used) {
+      session.results.llm_insights = fetched;
+      if (session.results.analysis) session.results.analysis.llm_insights = fetched;
+      if (supabaseClient && session.id && state.currentUser) {
+        supabaseClient.from('sessions').update({ results: session.results }).eq('id', session.id).then(() => {});
+      }
+      if (document.getElementById('rpOverlay')) {
+        const analysis = getSessionAnalysis(session.results);
+        const replay = getSessionReplay(session.results);
+        const shots = replay?.shots && Array.isArray(replay.shots) ? replay.shots : [];
+        const handed = analysis?.session_handedness || 'RHB';
+        ReportModal.close();
+        ReportModal.open(
+          {
+            shotLog: shots,
+            llmInsights: fetched,
+            completePayload: {
+              handedness: handed,
+              ball_analytics: getBallAnalyticsFromResults(session.results),
+              llm_insights: fetched,
+            },
+            originalVideoUrl: session.video_url || '',
+            originalVideoName: sessionVideoFilename(session.video_url),
+            sessionDateLabel: new Date(session.created_at).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }),
+            sessionStatus: String(session.status || '').toUpperCase(),
+          },
+          analysis
+        );
+      }
+    }
+  } catch (e) {
+    console.warn('[CrickEye] auto-upgrade LLM for session failed:', e);
+  }
 }
 
 function openSessionDetailModal(sessionId) {
@@ -2226,13 +2272,15 @@ function openSessionDetailModal(sessionId) {
     const replay = getSessionReplay(session.results);
     const shots = replay?.shots && Array.isArray(replay.shots) ? replay.shots : [];
     const handed = analysis.session_handedness || 'RHB';
+    const existingLlm = session.results?.llm_insights || analysis.llm_insights || null;
     ReportModal.open(
       {
         shotLog: shots,
+        llmInsights: existingLlm,
         completePayload: {
           handedness: handed,
           ball_analytics: getBallAnalyticsFromResults(session.results),
-        llm_insights: session.results?.llm_insights || null,
+          llm_insights: existingLlm,
         },
         originalVideoUrl: session.video_url || '',
         originalVideoName: sessionVideoFilename(session.video_url),
@@ -2241,6 +2289,9 @@ function openSessionDetailModal(sessionId) {
       },
       analysis
     );
+    if (!existingLlm || existingLlm.fallback_used === true || existingLlm.provider === 'fallback_rules') {
+      upgradeSessionLlmInsights(session);
+    }
     return;
   }
   if (!sessionDetailModal || !sessionDetailBody) return;
@@ -4088,7 +4139,72 @@ function buildLocalFallbackLlmInsights(analysis, reason = 'llm_unavailable') {
   };
 }
 
+async function ensureLiveLlmInsights(msg) {
+  if (state.latestLlmInsights && !state.latestLlmInsights.fallback_used) {
+    return state.latestLlmInsights;
+  }
+  const llmFromServer = (msg?.llm_insights && typeof msg.llm_insights === 'object' && !msg.llm_insights.fallback_used)
+    ? msg.llm_insights
+    : ((msg?.analysis?.llm_insights && typeof msg.analysis.llm_insights === 'object' && !msg.analysis.llm_insights.fallback_used)
+        ? msg.analysis.llm_insights
+        : null);
+
+  if (llmFromServer) {
+    state.latestLlmInsights = llmFromServer;
+    if (state.completePayload && typeof state.completePayload === 'object') {
+      state.completePayload.llm_insights = llmFromServer;
+    }
+    if (state.sessionAnalysis && typeof state.sessionAnalysis === 'object') {
+      state.sessionAnalysis.llm_insights = llmFromServer;
+    }
+    return llmFromServer;
+  }
+
+  const analysis = state.sessionAnalysis || msg?.analysis || null;
+  const ballAnalyticsSaved = msg?.ball_analytics || null;
+  const replay = {
+    complete: msg || state.completePayload,
+    shots: JSON.parse(JSON.stringify(state.shotLog || [])),
+  };
+  const payload = {
+    analysis,
+    replay,
+    ball_analytics: ballAnalyticsSaved,
+  };
+  const llmRequestPayload = buildLlmRequestPayload(payload);
+  if (!llmRequestPayload) return null;
+
+  try {
+    const fetched = await fetchLlmInsightsForResults(llmRequestPayload);
+    if (fetched && !fetched.fallback_used) {
+      state.latestLlmInsights = fetched;
+      if (state.completePayload && typeof state.completePayload === 'object') {
+        state.completePayload.llm_insights = fetched;
+      }
+      if (state.sessionAnalysis && typeof state.sessionAnalysis === 'object') {
+        state.sessionAnalysis.llm_insights = fetched;
+      }
+      try {
+        if (typeof PlayCard !== 'undefined' && PlayCard.isActive && PlayCard.isActive()) {
+          PlayCard.refresh(state);
+        } else if (document.getElementById('rpOverlay') && state.sessionAnalysis && typeof ReportModal !== 'undefined') {
+          ReportModal.close();
+          ReportModal.open(state, state.sessionAnalysis);
+        }
+      } catch (uiErr) {
+        console.warn('[CrickEye] UI refresh after LLM update failed:', uiErr);
+      }
+      return fetched;
+    }
+  } catch (err) {
+    console.warn('[CrickEye] ensureLiveLlmInsights error:', err);
+  }
+  return null;
+}
+
 async function saveLiveAnalysisResult(msg) {
+  // Always trigger live LLM resolution for local/guest or Supabase
+  const llmInsightsPromise = ensureLiveLlmInsights(msg);
   if (!supabaseClient || !state.activeSessionId || !state.currentUser) return;
   if (state.analysisCacheVersion == null) await refreshAnalysisCacheVersion();
   const analysis = state.sessionAnalysis || msg.analysis || null;
@@ -4122,11 +4238,8 @@ async function saveLiveAnalysisResult(msg) {
   if (typeof state.analysisCacheVersion === 'number' && !Number.isNaN(state.analysisCacheVersion)) {
     payload.analysis_cache_version = state.analysisCacheVersion;
   }
-  const llmFromServer = msg?.llm_insights && typeof msg.llm_insights === 'object' ? msg.llm_insights : null;
-  const llmRequestPayload = buildLlmRequestPayload(payload);
-  const llmFetched = llmRequestPayload ? await fetchLlmInsightsForResults(llmRequestPayload) : null;
-  const llmInsights = llmFromServer || llmFetched;
-  payload.llm_insights = llmInsights || buildLocalFallbackLlmInsights(analysis, 'llm_request_failed');
+  const llmInsights = await llmInsightsPromise;
+  payload.llm_insights = llmInsights || state.latestLlmInsights || buildLocalFallbackLlmInsights(analysis, 'llm_request_failed');
   state.latestLlmInsights = payload.llm_insights;
   if (state.completePayload && typeof state.completePayload === 'object') {
     state.completePayload.llm_insights = payload.llm_insights;
@@ -4370,15 +4483,21 @@ function onComplete(msg, opts = {}) {
   const videoDelayMs = opts.videoDelayMs != null ? opts.videoDelayMs : 150;
 
   state.completePayload = msg;
-  if (msg.llm_insights && typeof msg.llm_insights === 'object') {
+  if (msg.llm_insights && typeof msg.llm_insights === 'object' && !msg.llm_insights.fallback_used) {
     state.latestLlmInsights = msg.llm_insights;
+  } else if (msg.analysis?.llm_insights && typeof msg.analysis.llm_insights === 'object' && !msg.analysis.llm_insights.fallback_used) {
+    state.latestLlmInsights = msg.analysis.llm_insights;
   } else {
-    // Do not inject a premature fallback here; saveLiveAnalysisResult will fetch DGX then set final value.
     state.latestLlmInsights = null;
   }
   if (msg.total_frames && msg.fps) state.originalVideoDuration = msg.total_frames / msg.fps;
   if (msg.annotated_total_frames && msg.fps) state.annotatedVideoDuration = msg.annotated_total_frames / msg.fps;
-  if (msg.analysis && !state.sessionAnalysis) state.sessionAnalysis = msg.analysis;
+  if (msg.analysis) {
+    state.sessionAnalysis = Object.assign({}, state.sessionAnalysis || {}, msg.analysis);
+  }
+  if (state.sessionAnalysis && state.latestLlmInsights) {
+    state.sessionAnalysis.llm_insights = state.latestLlmInsights;
+  }
   if (msg.fps) state.videoFps = msg.fps;
 
   state.ballPlaybackCap = -1;

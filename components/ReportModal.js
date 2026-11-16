@@ -3305,9 +3305,10 @@ const ReportModal = (() => {
 
   function derivePlayCardModel(data) {
     const { shots, analysis } = data;
-    const ballAnalytics = data.ballAnalytics ?? null;
+    const ballAnalytics = data.ballAnalytics ?? data.completePayload?.ball_analytics ?? null;
     const llmInsights =
       data.llmInsights ??
+      data.completePayload?.llm_insights ??
       analysis?.llm_insights ??
       buildUiFallbackInsights(analysis);
     const zoneCounts = data.zoneCounts || { offside: 0, straight: 0, legside: 0 };
@@ -3392,9 +3393,10 @@ const ReportModal = (() => {
 
   function buildPlayCardSectionHtml(data, section) {
     const { shots, analysis } = data;
-    const ballAnalytics = data.ballAnalytics ?? null;
+    const ballAnalytics = data.ballAnalytics ?? data.completePayload?.ball_analytics ?? null;
     const llmInsights =
       data.llmInsights ??
+      data.completePayload?.llm_insights ??
       analysis?.llm_insights ??
       buildUiFallbackInsights(analysis);
     const ballByShot = indexBallDeliveriesByShot(ballAnalytics);

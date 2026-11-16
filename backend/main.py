@@ -459,6 +459,11 @@ def _get_last_session_payload():
             lbl = s.get("label", "unknown")
             shot_counts[lbl] = shot_counts.get(lbl, 0) + 1
 
+        analysis = data.get("analysis", {})
+        llm_insights = data.get("llm_insights") or analysis.get("llm_insights")
+        if llm_insights and "llm_insights" not in analysis:
+            analysis["llm_insights"] = llm_insights
+
         return {
             "type": "complete",
             "total_shots": len(shots),
@@ -472,7 +477,8 @@ def _get_last_session_payload():
             "total_frames": data.get("total_frames", 0),
             "annotated_total_frames": data.get("annotated_total_frames") or data.get("total_frames", 0),
             "fps": data.get("fps", 30.0),
-            "analysis": data.get("analysis", {}),
+            "analysis": analysis,
+            "llm_insights": llm_insights,
             "shots": shots,
             "speed_unit": "km/h",
             "camera_calibration": data.get("camera_calibration", {}),

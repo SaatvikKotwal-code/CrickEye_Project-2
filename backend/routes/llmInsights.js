@@ -16,6 +16,7 @@ router.post("/", async (req, res) => {
     const insights = await generateLlmInsights(results);
     return res.json({ ok: true, llm_insights: insights });
   } catch (err) {
+    console.error("[llmInsights route error]:", err?.message || err);
     const fallback = buildFallbackInsights(results, err?.message || "llm_error");
     return res.json({ ok: true, llm_insights: fallback, fallback_used: true });
   }
