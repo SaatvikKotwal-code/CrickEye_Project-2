@@ -184,7 +184,7 @@ PRESHOT_END              = 3
 
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
-CONF_THRESHOLD           = 0.20
+CONF_THRESHOLD           = 0.28
 
 # User-specified shot hardcodes / overrides (1-indexed shot number -> {'label': ..., 'conf': ...})
 SHOT_OVERRIDES = {
@@ -1013,49 +1013,16 @@ def vote_handedness_from_keypoints(all_keypoints, pre_start, pre_end, frame_w):
 
 def load_shot_classifier(checkpoint_path, device):
     print(f"[CrickEye] Loading shot classifier: {checkpoint_path} (device: {device})")
-    
-    if not os.path.exists(checkpoint_path):
-        print(f"[CrickEye] Warning: Checkpoint {checkpoint_path} not found. Running with fallback classifier.")
-        model = torchvision.models.video.swin3d_t(weights=None)
-        model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
-        model.eval()
-        return model
-
-    try:
-        with open(checkpoint_path, "rb") as f:
-            header = f.read(100)
-            if b"version https://git-lfs" in header:
-                print(f"[CrickEye] Warning: {checkpoint_path} is a Git LFS text pointer, not binary weights. Initializing Swin3D model.")
-                model = torchvision.models.video.swin3d_t(weights=None)
-                model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
-                model.eval()
-                return model
-    except Exception as e:
-        print(f"[CrickEye] Warning checking header of {checkpoint_path}: {e}")
-
     map_loc = 'cpu' if str(device) == 'cpu' else device
     try:
         ckpt = torch.load(checkpoint_path, map_location=map_loc, weights_only=False)
     except Exception as e:
         print(f"[CrickEye] Warning: map_location={map_loc} failed ({e}); falling back to CPU map_location")
-        try:
-            ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-        except Exception as e2:
-            print(f"[CrickEye] Warning: Failed to load checkpoint {checkpoint_path} ({e2}). Initializing fallback classifier.")
-            model = torchvision.models.video.swin3d_t(weights=None)
-            model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
-            model.eval()
-            return model
+        ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
 
     model = torchvision.models.video.swin3d_t(weights=None)
     model.head = nn.Linear(model.head.in_features, len(SHOT_CLASSES))
-    if isinstance(ckpt, dict) and 'model_state_dict' in ckpt:
-        model.load_state_dict(ckpt['model_state_dict'])
-    elif isinstance(ckpt, dict):
-        try:
-            model.load_state_dict(ckpt)
-        except Exception as e:
-            print(f"[CrickEye] Warning loading state dict: {e}")
+    model.load_state_dict(ckpt['model_state_dict'])
     del ckpt
     gc.collect()
 
@@ -1416,13 +1383,11 @@ def recompute_composite_shot_score(e):
     head_pts = (hq / 100.0) * float(SCORE_W_HEAD)
     fw = float(e.get('footwork_score') or 0)
     footwork_pts = (fw / 100.0) * float(SCORE_W_FOOTWORK)
-    total_w = float(SCORE_W_HEAD + SCORE_W_FOOTWORK + SCORE_W_ELBOW + SCORE_W_EXECUTION + SCORE_W_SWING_PATH)
     sym = e.get('symmetry_score')
     if sym is not None:
         sym_pts = (float(sym) / 100.0) * float(SCORE_W_SYMMETRY)
-        total_w += float(SCORE_W_SYMMETRY)
     else:
-        sym_pts = 0.0
+        sym_pts = 0.5 * float(SCORE_W_SYMMETRY)
     label = e.get('label') or 'cover'
     elbow_pts = _elbow_points_for_label(label, e.get('elbow_collapse') or 'unknown')
     ex = float(e.get('execution_score') if e.get('execution_score') is not None else EXECUTION_NEUTRAL)
@@ -1431,7 +1396,7 @@ def recompute_composite_shot_score(e):
     sp = float(e.get('swing_path_score') if e.get('swing_path_score') is not None else 50.0)
     sp = float(np.clip(sp, 0.0, 100.0))
     swing_path_pts = (sp / 100.0) * float(SCORE_W_SWING_PATH)
-    raw = ((head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts) / max(total_w, 1.0)) * 100.0
+    raw = head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts
     shot_score = round(raw / 10.0, 1)
     e['shot_score'] = shot_score
     if shot_score >= 8.5:
@@ -2142,18 +2107,15 @@ def extract_biomechanics(all_keypoints, lw_vels, rw_vels, bilateral,
     execution_score = EXECUTION_NEUTRAL
     head_pts = (head_quality_score / 100.0) * float(SCORE_W_HEAD)
     footwork_pts = (footwork_score / 100.0) * float(SCORE_W_FOOTWORK)
-    total_w = float(SCORE_W_HEAD + SCORE_W_FOOTWORK + SCORE_W_ELBOW + SCORE_W_EXECUTION + SCORE_W_SWING_PATH)
     if symmetry_score is not None:
         sym_pts = (symmetry_score / 100.0) * float(SCORE_W_SYMMETRY)
-        total_w += float(SCORE_W_SYMMETRY)
     else:
-        sym_pts = 0.0
+        sym_pts = 0.5 * float(SCORE_W_SYMMETRY)
     execution_pts = (execution_score / 100.0) * float(SCORE_W_EXECUTION)
     swing_path_pts = (swing_path_score / 100.0) * float(SCORE_W_SWING_PATH)
     raw_score = (
-        (head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts)
-        / max(total_w, 1.0)
-    ) * 100.0
+        head_pts + footwork_pts + sym_pts + elbow_pts + execution_pts + swing_path_pts
+    )
     shot_score = round(raw_score / 10.0, 1)
 
     if shot_score >= 8.5:   shot_quality = "Top class"
@@ -3534,10 +3496,10 @@ def _ball_nx_at_peak(delivery: dict, peak_frame: int):
     return None
 
 
-def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_h: int, analysis: dict = None):
+def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_h: int):
     """
     After ball YOLO: length zone, execution vs length, optional lateral footwork blend.
-    Mutates shots in place; call before run_session_analysis (or pass analysis to update averages).
+    Mutates shots in place; call before run_session_analysis.
     """
     _ = frame_h
     deliveries = []
@@ -3631,20 +3593,6 @@ def apply_ball_aware_shot_scoring(shot_log, ball_analytics, frame_w: int, frame_
 
     for e in shot_log:
         finalize_shot_player_copy(e)
-
-    # Re-average session summary metrics if an existing analysis payload was provided
-    if analysis and isinstance(analysis, dict) and "session_summary" in analysis:
-        conf = [e for e in shot_log if e.get("conf", 0) >= CONF_THRESHOLD]
-        fw_vals = [e["footwork_score"] for e in conf if e.get("footwork_score") is not None]
-        if fw_vals:
-            analysis["session_summary"]["avg_footwork_score"] = round(float(np.mean(fw_vals)), 2)
-        ex_vals = [e["execution_score"] for e in conf if e.get("execution_score") is not None]
-        if ex_vals:
-            analysis["session_summary"]["avg_execution_score"] = round(float(np.mean(ex_vals)), 2)
-        sc_vals = [e["shot_score"] for e in conf if e.get("shot_score") is not None]
-        if sc_vals:
-            analysis["session_summary"]["avg_shot_score"] = round(float(np.mean(sc_vals)), 2)
-
     return shot_log
 
 

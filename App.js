@@ -154,8 +154,8 @@ function getCandidateServerUrls() {
     list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
   }
   // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
-  list.push('http://10.253.6.214:8000');
   list.push('http://10.253.9.193:8000');
+  list.push('http://10.253.6.214:8000');
   list.push('http://192.168.29.14:8000');
   list.push('http://10.253.4.106:8000');
   list.push('http://192.168.0.179:8000');
@@ -4199,7 +4199,7 @@ function connectWebSocket() {
     wsUrl = base.replace(/^http:/, 'ws:') + '/ws';
   } else {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host || '10.253.6.214:8000';
+    const host = window.location.host || '192.168.29.14:8000';
     wsUrl = `${protocol}//${host}/ws`;
   }
 
@@ -4417,7 +4417,6 @@ function onComplete(msg, opts = {}) {
   }
 
   if (!video || !msg.output_video) {
-    syncFinalShotCount();
     if (!skipPersist) saveLiveAnalysisResult(msg);
     state.ballPlaybackCap = -1;
     if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(null);
@@ -5609,23 +5608,12 @@ function drawSpokeNow(spoke, onSpokeDrawn) {
     Number(spoke.msg?.head_quality_score || 0),
     Number(spoke.msg?.swing_intensity || 0),
     () => {
-      const confirmedTotal = state.shotLog.filter(s => s.confirmed !== false && Number(s.conf ?? s.confidence ?? 1) >= 0.20).length || WagonWheel.getSpokeCount();
+      const confirmedTotal = state.shotLog.filter(s => s.confirmed !== false).length || WagonWheel.getSpokeCount();
       shotCount.textContent = Math.min(WagonWheel.getSpokeCount(), confirmedTotal);
       if (onSpokeDrawn) onSpokeDrawn();
     },
     spoke.shot_num
   );
-}
-
-function syncFinalShotCount() {
-  const payloadShots = state.completePayload?.analysis?.deliveries
-    || state.completePayload?.shots
-    || state.sessionAnalysis?.deliveries
-    || state.shotLog;
-  if (Array.isArray(payloadShots) && payloadShots.length > 0) {
-    const definitiveCount = payloadShots.filter(s => s.confirmed !== false && Number(s.conf ?? s.confidence ?? 1) >= 0.20).length;
-    if (shotCount) shotCount.textContent = definitiveCount;
-  }
 }
 
 /** When the output MP4 cannot play in-browser, still paint wagon-wheel spokes in order. */
@@ -5636,7 +5624,6 @@ function drawAllSpokesWithoutPlayback() {
   let i = 0;
   function next() {
     if (i >= spokes.length) {
-      syncFinalShotCount();
       state.ballPlaybackCap = -1;
       if (typeof BallAnalytics !== 'undefined') BallAnalytics.setPlaybackVisibility(null);
       return;
@@ -5858,17 +5845,12 @@ function init() {
       undrawn.sort((a, b) => (a.annotated_timestamp_sec ?? a.timestamp_sec) - (b.annotated_timestamp_sec ?? b.timestamp_sec));
       let i = 0;
       function flushNext() {
-        if (i >= undrawn.length) {
-          syncFinalShotCount();
-          return;
-        }
+        if (i >= undrawn.length) return;
         const spoke = undrawn[i++];
         state.drawnSpokes.add(spoke.shot_num);
         drawSpokeNow(spoke, () => setTimeout(flushNext, 90));
       }
       flushNext();
-    } else {
-      syncFinalShotCount();
     }
     if (typeof PlayCard !== 'undefined' && PlayCard.revealAfterDelay) {
       PlayCard.revealAfterDelay(state);
@@ -5965,12 +5947,12 @@ function initServerSettingsModal() {
     openDialog(modal);
   });
 
-  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.6.214:8000'; });
+  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.9.193:8000'; });
   presetLocalhost?.addEventListener('click', () => { if (input) input.value = 'http://localhost:8000'; });
   presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://redeem-thanks-oliver-aging.trycloudflare.com'; });
   presetEmulator?.addEventListener('click', () => { if (input) input.value = 'http://10.0.2.2:8000'; });
   presetOrigin?.addEventListener('click', () => {
-    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.6.214:8000';
+    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.9.193:8000';
   });
 
   pingBtn?.addEventListener('click', async () => {
@@ -6211,7 +6193,8 @@ function applyFontSize(size) {
 
 function initFontSizeSwitcher() {
   let saved = 'md';
-  try { saved = localStorage.getItem(FONT_SIZE_KEY) || 'md'; } catch (e) {}
+  try { saved = localStorage.getItem(FONT_SIZE_KEY) || 'md'; }
+  catch (e) {}
   applyFontSize(saved);
 
   document.addEventListener('click', (e) => {

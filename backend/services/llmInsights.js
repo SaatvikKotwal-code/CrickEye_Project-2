@@ -41,7 +41,7 @@ function summarizeForPrompt(results) {
   const alerts = Array.isArray(analysis.coaching_alerts) ? analysis.coaching_alerts : [];
   const byShotType = ss.by_shot_type || analysis.by_shot_type || {};
   const shots = pickReplayShots(results);
-  const confirmed = shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.20);
+  const confirmed = shots.filter((s) => Number(s.conf ?? s.confidence) >= 0.3);
   return {
     dominant_hand: analysis.session_handedness || "RHB",
     shots_confirmed: ss.shots_confirmed ?? analysis.shots_confirmed ?? confirmed.length,
