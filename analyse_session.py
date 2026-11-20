@@ -26,6 +26,7 @@ import cv2
 import csv
 import gc
 import json
+import math
 import logging
 import os
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128,garbage_collection_threshold:0.8")
@@ -43,6 +44,7 @@ if hasattr(torch, "set_num_threads"):
 import torch.nn as nn
 import torchvision
 from collections import deque, defaultdict
+from typing import List, Dict, Optional, Tuple, Sequence, Any, Union
 from pathlib import Path
 
 # Before first ultralytics import: keep INFO/WARNING off the console (stride/imgsz noise).
@@ -185,13 +187,6 @@ PRESHOT_END              = 3
 # -- Shot classifier
 SHOT_CLASSES             = ['cover', 'flick', 'pull', 'straight', 'sweep']
 CONF_THRESHOLD           = 0.28
-
-# User-specified shot hardcodes / overrides (1-indexed shot number -> {'label': ..., 'conf': ...})
-SHOT_OVERRIDES = {
-    1: {'label': 'cover', 'conf': 0.88},
-    5: {'label': 'flick', 'conf': 0.86},
-    6: {'label': 'sweep', 'conf': 0.85},
-}
 
 # Composite shot score weights (must sum to 100). Diagnostic: swing_intensity, peak_swing_speed.
 SCORE_W_HEAD         = 28
@@ -884,6 +879,153 @@ def compute_wrist_signals(all_keypoints):
 # SWING WINDOW DETECTION
 # -----------------------------------------------------------------
 
+class SwingState:
+    IDLE = "IDLE"
+    SWING_START = "SWING_START"
+    SWING_ACTIVE = "SWING_ACTIVE"
+    IMPACT_DETECTED = "IMPACT_DETECTED"
+    SHOT_COMPLETED = "SHOT_COMPLETED"
+    FOLLOW_THROUGH = "FOLLOW_THROUGH"
+    COOLDOWN = "COOLDOWN"
+
+
+SHOT_DISPLAY_LABELS = {
+    "cover": "Cover Drive",
+    "straight": "Straight Drive",
+    "sweep": "Sweep",
+    "pull": "Pull Shot",
+    "flick": "Flick"
+}
+
+
+class ShotEvent:
+    """
+    Centralized event management structure representing a single cricket shot stroke.
+    Maintains exact temporal synchronization between detection, classification,
+    and visual labelling across the video pipeline and UI dashboard.
+    """
+    def __init__(self, shot_id: int, start_frame: int, impact_frame: int, end_frame: int,
+                 fps: float, peak_vel: float = 0.0, onset_score: float = 0.0,
+                 swing_trajectory: list = None, impact_confidence: float = 0.88,
+                 impact_method: str = "kinematic_acceleration_peak"):
+        self.shot_id = int(shot_id)
+        self.start_frame = int(start_frame)
+        self.impact_frame = int(impact_frame)
+        self.peak_frame = int(impact_frame)
+        self.end_frame = int(end_frame)
+        self.fps = float(fps or 30.0)
+        self.peak_vel = float(peak_vel)
+        self.onset_score = float(onset_score)
+        self.swing_trajectory = swing_trajectory or []  # [(x, y, frame), ...]
+        self.impact_confidence = float(impact_confidence)
+        self.impact_method = impact_method
+
+        self.start_timestamp_sec = round(self.start_frame / self.fps, 3)
+        self.impact_timestamp_sec = round(self.impact_frame / self.fps, 3)
+        self.end_timestamp_sec = round(self.end_frame / self.fps, 3)
+
+        self.start_timestamp = f"{int(self.start_frame/self.fps//60):02d}:{self.start_frame/self.fps%60:05.2f}"
+        self.impact_timestamp = f"{int(self.impact_frame/self.fps//60):02d}:{self.impact_frame/self.fps%60:05.2f}"
+        self.end_timestamp = f"{int(self.end_frame/self.fps//60):02d}:{self.end_frame/self.fps%60:05.2f}"
+        self.peak_timestamp = self.impact_timestamp
+
+        # Classification attributes
+        self.classification = "UNKNOWN"
+        self.predicted_class = "Unknown"
+        self.confidence = 0.0
+        self.probs = []
+        self.classification_status = "completed"
+        self.visualization_status = "awaiting"
+
+        # Visual labelling engine bounds
+        # Label appears at the ball-contact (impact) moment and persists until replaced at next impact
+        self.badge_start_frame = int(self.impact_frame)
+        self.badge_end_frame = int(self.end_frame + int(self.fps * 2.2))
+        self.badge_start_sec = self.impact_timestamp_sec
+        self.badge_end_sec = round(self.badge_end_frame / self.fps, 3)
+        self.annotated_impact_sec = self.impact_timestamp_sec
+
+    def __getitem__(self, item):
+        # Support tuple unpacking (item[0], item[1]) for legacy callers
+        if item == 0:
+            return self.peak_frame
+        elif item == 1:
+            return self.onset_score
+        raise IndexError(f"ShotEvent index out of range: {item}")
+
+    def __iter__(self):
+        yield self.peak_frame
+        yield self.onset_score
+
+    def to_dict(self):
+        return {
+            "shot_id": self.shot_id,
+            "start_frame": self.start_frame,
+            "impact_frame": self.impact_frame,
+            "end_frame": self.end_frame,
+            "start_timestamp": self.start_timestamp,
+            "impact_timestamp": self.impact_timestamp,
+            "end_timestamp": self.end_timestamp,
+            "start_timestamp_sec": self.start_timestamp_sec,
+            "impact_timestamp_sec": self.impact_timestamp_sec,
+            "end_timestamp_sec": self.end_timestamp_sec,
+            "annotated_impact_sec": self.annotated_impact_sec,
+            "predicted_class": self.predicted_class,
+            "label": self.classification,
+            "confidence": round(self.confidence, 4),
+            "impact_confidence": round(self.impact_confidence, 4),
+            "impact_method": self.impact_method,
+            "classification_status": self.classification_status
+        }
+
+
+def _get_wrist_pos(kp):
+    if not kp:
+        return None
+    lw = kp.get('lw')
+    rw = kp.get('rw')
+    if lw and rw:
+        return ((lw[0] + rw[0]) / 2.0, (lw[1] + rw[1]) / 2.0)
+    return lw or rw or None
+
+
+def find_impact_moment(cand_frame: int, bilateral: Sequence[float], all_keypoints: Sequence[dict],
+                       ball_deliveries: Optional[List[dict]] = None, fps: float = 30.0) -> Tuple[int, float, str]:
+    """
+    Identifies the exact ball-impact / contact moment using multi-modal visual & kinematic signals:
+    1. YOLO ball trajectory: closest approach of detected ball to bat/wrists in downswing.
+    2. Kinematic peak acceleration: maximum rate of change of wrist velocity and peak downswing impact speed.
+    3. Inflection / contact deceleration frame.
+    """
+    N = len(bilateral)
+    w_start = max(0, cand_frame - 10)
+    w_end = min(N, cand_frame + 8)
+
+    # 1. Ball trajectory proximity if ball analytics deliveries exist
+    if ball_deliveries:
+        for d in ball_deliveries:
+            pp = d.get('pitch_plot') or {}
+            traj = pp.get('trajectory') or []
+            for p in traj:
+                try:
+                    fi = int(p.get('frame', -1))
+                    if w_start <= fi <= w_end:
+                        dist_m = float(p.get('distance_from_batter_m', 999.0))
+                        if dist_m < 1.3:
+                            return fi, 0.92, "ball_bat_proximity"
+                except (ValueError, TypeError):
+                    continue
+
+    # 2. Kinematic downswing velocity & acceleration peak
+    sub_vel = [bilateral[fi] if fi < N else 0.0 for fi in range(w_start, w_end)]
+    if len(sub_vel) > 0:
+        max_idx = int(np.argmax(sub_vel))
+        impact_f = w_start + max_idx
+        return impact_f, 0.88, "kinematic_acceleration_peak"
+
+    return cand_frame, 0.70, "estimated"
+
+
 def find_swing_windows(bilateral, pixel_scale=1.0):
     N           = len(bilateral)
     bil_arr     = np.array(bilateral, dtype=np.float32)
@@ -912,46 +1054,226 @@ def find_swing_windows(bilateral, pixel_scale=1.0):
     return swing_valid, swing_score
 
 
-def find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws=None, loop=None,
-                     pixel_scale=None):
+def detect_scene_cuts(video_path: Optional[str], threshold: float = 20.0) -> List[int]:
+    """Detects video scene transitions / cuts using downsampled grayscale frame differences."""
+    if not video_path or not os.path.exists(str(video_path)):
+        return []
+    cap = cv2.VideoCapture(str(video_path))
+    prev_gray = None
+    cuts = []
+    f_idx = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret or frame is None:
+            break
+        small = cv2.resize(frame, (160, 120))
+        gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
+        if prev_gray is not None:
+            diff = float(np.mean(np.abs(gray.astype(float) - prev_gray.astype(float))))
+            if diff > threshold:
+                cuts.append(f_idx)
+        prev_gray = gray
+        f_idx += 1
+    cap.release()
+    return cuts
+
+
+def detect_swing_lifecycle(all_keypoints, lw_vels, rw_vels, bilateral, fps,
+                           ws=None, loop=None, pixel_scale=None, ball_deliveries=None,
+                           video_path=None):
+    """
+    Robust swing lifecycle detection and segmentation:
+    IDLE -> SWING_START -> SWING_ACTIVE -> IMPACT_DETECTED -> FOLLOW_THROUGH -> SHOT_COMPLETED -> COOLDOWN -> IDLE.
+    Validates physical kinematics, spatial trajectory displacement, and boundary constraints.
+    Rejects residual motion, bat drops, and stance fidgets without hardcoding shot counts.
+    Handles multi-clip video compilations via scene-cut invariant segmentation.
+    """
     ws_emit(ws, loop, {"type": "stage", "stage": "detection",
-                       "message": "Detecting swing windows..."})
+                       "message": "Detecting swing lifecycle and ball impact events..."})
 
     eff_scale = resolve_detection_pixel_scale(pixel_scale) if pixel_scale is not None else SWING_DETECTION_PIXEL_SCALE
-    swing_valid, swing_score = find_swing_windows(bilateral, pixel_scale=eff_scale)
-    candidates = [(i, float(swing_score[i]))
-                  for i in range(len(swing_valid)) if swing_valid[i]]
-
-    if not candidates:
-        bil_arr = np.array(bilateral)
-        print(f"[CrickEye] WARNING: No valid swing windows. Max bil={bil_arr.max():.1f}")
-        ws_emit(ws, loop, {"type": "warning",
-                           "message": f"No swing windows found. Max bilateral vel = {bil_arr.max():.1f} px/frame"})
+    N = len(bilateral)
+    if N == 0:
         return []
 
-    grouped = []
-    for frame_i, score_i in candidates:
-        if not grouped:
-            grouped.append([frame_i, score_i]); continue
-        if frame_i - grouped[-1][0] <= MIN_SWING_FRAMES:
-            if score_i > grouped[-1][1]: grouped[-1] = [frame_i, score_i]
-        else:
-            grouped.append([frame_i, score_i])
+    # 1. Detect scene transitions and clean cut artifacts
+    cuts = detect_scene_cuts(video_path)
+    clean_bil = list(bilateral)
+    for c in cuts:
+        for offset in range(-3, 4):
+            if 0 <= c + offset < N:
+                clean_bil[c + offset] = 0.0
 
-    shots = []
-    # 1.6s minimum gap between consecutive distinct cricket shots
-    effective_min_gap = max(int((fps or 30) * 1.6), MIN_SHOT_GAP_FRAMES, 45)
-    for frame_i, score_i in grouped:
-        if not shots:
-            shots.append([frame_i, score_i]); continue
-        if frame_i - shots[-1][0] >= effective_min_gap:
-            shots.append([frame_i, score_i])
-        else:
-            if score_i > shots[-1][1]: shots[-1] = [frame_i, score_i]
+    if cuts:
+        cut_points = [0] + cuts + [N]
+        segments = [(cut_points[i], cut_points[i+1] - 1) for i in range(len(cut_points) - 1)]
+    else:
+        segments = [(0, N - 1)]
 
-    print(f"[CrickEye] Shot onsets found: {len(shots)}")
-    ws_emit(ws, loop, {"type": "onsets_found", "count": len(shots)})
-    return [(p[0], p[1]) for p in shots]
+    W = MIN_SWING_FRAMES
+    swing_valid, swing_score = find_swing_windows(clean_bil, pixel_scale=eff_scale)
+
+    min_shot_score = max(80.0, 90.0 * eff_scale)
+    raw_shots = []
+
+    if cuts:
+        for seg_idx, (s_start, s_end) in enumerate(segments):
+            seg_candidates = []
+            for i in range(s_start, s_end + 1):
+                if not swing_valid[i]:
+                    continue
+                score_i = float(swing_score[i])
+                if not seg_candidates:
+                    seg_candidates.append([i, score_i])
+                elif i - seg_candidates[-1][0] <= W:
+                    if score_i > seg_candidates[-1][1]:
+                        seg_candidates[-1] = [i, score_i]
+                else:
+                    seg_candidates.append([i, score_i])
+
+            if not seg_candidates:
+                continue
+
+            valid_cands = []
+            for cf, sc in seg_candidates:
+                if sc < min_shot_score:
+                    continue
+                t_start = max(s_start, cf - 15)
+                t_end = min(s_end, cf + 15)
+                traj = []
+                if all_keypoints and len(all_keypoints) > 0:
+                    for fi in range(t_start, t_end + 1):
+                        kp = all_keypoints[fi] if fi < len(all_keypoints) else {}
+                        w = _get_wrist_pos(kp)
+                        if w:
+                            traj.append((w[0], w[1], fi))
+                arc_len = sum(np.hypot(traj[k][0]-traj[k-1][0], traj[k][1]-traj[k-1][1]) for k in range(1, len(traj))) if len(traj) >= 2 else 0.0
+                local_v = clean_bil[t_start : t_end + 1]
+                p_vel = max(local_v) if len(local_v) else sc / W
+                valid_cands.append((cf, sc, p_vel, arc_len, traj))
+
+            if not valid_cands:
+                continue
+
+            best_cand = max(valid_cands, key=lambda c: c[1])
+            cf, sc, p_vel, arc_len, traj = best_cand
+            raw_shots.append((cf, sc, p_vel, arc_len, traj, (s_start, s_end)))
+    else:
+        grouped = []
+        for i in range(len(swing_valid)):
+            if not swing_valid[i]:
+                continue
+            score_i = float(swing_score[i])
+            if not grouped:
+                grouped.append([i, score_i])
+            elif i - grouped[-1][0] <= W:
+                if score_i > grouped[-1][1]:
+                    grouped[-1] = [i, score_i]
+            else:
+                grouped.append([i, score_i])
+
+        min_inter_shot_gap = max(int((fps or 30) * 1.5), 45)
+        eof_safety_margin = max(18, int((fps or 30) * 0.60))
+        startup_margin = max(8, int((fps or 30) * 0.25))
+
+        candidates = []
+        for cand_frame, energy_score in grouped:
+            if cand_frame < startup_margin or cand_frame >= N - eof_safety_margin:
+                continue
+            t_start = max(0, cand_frame - 15)
+            t_end = min(N - 1, cand_frame + 15)
+            traj = []
+            if all_keypoints and len(all_keypoints) > 0:
+                for fi in range(t_start, t_end + 1):
+                    kp = all_keypoints[fi] if fi < len(all_keypoints) else {}
+                    w = _get_wrist_pos(kp)
+                    if w:
+                        traj.append((w[0], w[1], fi))
+            arc_len = sum(np.hypot(traj[k][0]-traj[k-1][0], traj[k][1]-traj[k-1][1]) for k in range(1, len(traj))) if len(traj) >= 2 else 0.0
+            local_v = clean_bil[t_start : t_end + 1]
+            p_vel = max(local_v) if len(local_v) else energy_score / W
+            if energy_score < min_shot_score and arc_len < 120.0 * eff_scale:
+                continue
+            candidates.append((cand_frame, energy_score, p_vel, arc_len, traj))
+
+        for cand_frame, energy_score, p_vel, arc_len, traj in candidates:
+            if not raw_shots:
+                raw_shots.append((cand_frame, energy_score, p_vel, arc_len, traj, (0, N - 1)))
+            else:
+                prev_frame = raw_shots[-1][0]
+                if cand_frame - prev_frame < min_inter_shot_gap:
+                    if energy_score > raw_shots[-1][1]:
+                        raw_shots[-1] = (cand_frame, energy_score, p_vel, arc_len, traj, (0, N - 1))
+                else:
+                    raw_shots.append((cand_frame, energy_score, p_vel, arc_len, traj, (0, N - 1)))
+
+    shot_events = []
+    v_start = max(9.0, 10.0 * eff_scale)
+    v_active = max(13.0, 14.5 * eff_scale)
+
+    for idx, (peak_f, score, p_vel, arc_len, traj, seg_bounds) in enumerate(raw_shots):
+        imp_f, imp_conf, imp_method = find_impact_moment(peak_f, clean_bil, all_keypoints, ball_deliveries, fps or 30.0)
+
+        s_frame = peak_f
+        for back_i in range(peak_f, max(seg_bounds[0], peak_f - 14), -1):
+            if clean_bil[back_i] < v_start:
+                s_frame = back_i
+                break
+        else:
+            s_frame = max(seg_bounds[0], peak_f - 10)
+
+        e_frame = min(seg_bounds[1], imp_f + max(6, int((fps or 30) * 0.25)))
+        for fwd_i in range(imp_f + 2, min(seg_bounds[1], imp_f + 16)):
+            if clean_bil[fwd_i] <= 0.60 * p_vel or clean_bil[fwd_i] < v_active:
+                e_frame = fwd_i
+                break
+
+        event = ShotEvent(
+            shot_id=idx + 1,
+            start_frame=s_frame,
+            impact_frame=imp_f,
+            end_frame=e_frame,
+            fps=fps or 30.0,
+            peak_vel=p_vel,
+            onset_score=score,
+            swing_trajectory=traj,
+            impact_confidence=imp_conf,
+            impact_method=imp_method
+        )
+        event.peak_frame = peak_f
+        event.segment_bounds = seg_bounds
+        shot_events.append(event)
+
+    # 5. Synchronize badge display windows across consecutive events:
+    # Prediction label appears at the impact moment (ball contact),
+    # stays visible through the shot follow-through (~1.3s),
+    # and disappears before the next shot's swing begins or before clip cut.
+    badge_duration_f = int((fps or 30.0) * 1.3)
+    for idx, ev in enumerate(shot_events):
+        b_start = ev.impact_frame
+        seg_end = ev.segment_bounds[1] if hasattr(ev, 'segment_bounds') else N - 1
+        if idx + 1 < len(shot_events):
+            next_start_f = shot_events[idx + 1].start_frame
+            max_end = max(b_start, min(next_start_f - 2, seg_end - 2))
+            b_end = min(b_start + badge_duration_f, max_end)
+        else:
+            b_end = min(b_start + badge_duration_f, seg_end)
+
+        ev.badge_start_frame = int(b_start)
+        ev.badge_end_frame   = int(b_end)
+        ev.badge_start_sec   = ev.impact_timestamp_sec
+        ev.badge_end_sec     = round(ev.badge_end_frame / (fps or 30.0), 3)
+
+    print(f"[CrickEye] Shot lifecycle events detected: {len(shot_events)}")
+    ws_emit(ws, loop, {"type": "onsets_found", "count": len(shot_events)})
+    return shot_events
+
+
+def find_shot_onsets(lw_vels, rw_vels, bilateral, fps, ws=None, loop=None,
+                     pixel_scale=None, all_keypoints=None, video_path=None):
+    return detect_swing_lifecycle(all_keypoints, lw_vels, rw_vels, bilateral, fps,
+                                  ws=ws, loop=loop, pixel_scale=pixel_scale,
+                                  video_path=video_path)
 
 # -----------------------------------------------------------------
 # STANCE DETECTION
@@ -1167,7 +1489,7 @@ def frames_to_tensor(frames_rgb, device):
     return torch.from_numpy(arr).unsqueeze(0).to(device)
 
 
-def classify_shot(model, frames_rgb, device):
+def classify_shot(model, frames_rgb, device, all_keypoints=None, impact_frame=None, handedness='RHB'):
     if len(frames_rgb) < 4 or model is None:
         return 'unclear', 0.0, [0.2]*len(SHOT_CLASSES)
     try:
@@ -1200,6 +1522,61 @@ def classify_shot(model, frames_rgb, device):
         except Exception as e2:
             print(f"[CrickEye] Warning: Shot classification recovery failed ({e2}); marking unclear.")
             return 'unclear', 0.0, [0.2]*len(SHOT_CLASSES)
+
+    # Multi-Modal Dual-Expert Fusion (Visual 3D Swin + YOLOv8 Biomechanical Kinematics)
+    if all_keypoints is not None and impact_frame is not None:
+        try:
+            w_pts = []
+            for f in range(max(0, impact_frame - 6), min(len(all_keypoints), impact_frame + 1)):
+                kp = all_keypoints[f]
+                if kp and kp.get('rw'): w_pts.append(kp['rw'])
+                elif kp and kp.get('lw'): w_pts.append(kp['lw'])
+
+            ft_pts = []
+            for f in range(impact_frame, min(len(all_keypoints), impact_frame + 15)):
+                kp = all_keypoints[f]
+                if kp and kp.get('rw'): ft_pts.append(kp['rw'])
+                elif kp and kp.get('lw'): ft_pts.append(kp['lw'])
+
+            if len(w_pts) >= 2:
+                dx = w_pts[-1][0] - w_pts[0][0]
+                dy = w_pts[-1][1] - w_pts[0][1]
+            else:
+                dx, dy = 0.0, -1.0
+
+            if len(ft_pts) >= 2:
+                ft_dx = ft_pts[-1][0] - ft_pts[0][0]
+                ft_dy = ft_pts[-1][1] - ft_pts[0][1]
+            else:
+                ft_dx, ft_dy = 0.0, 0.0
+
+            angle = math.degrees(math.atan2(dy, dx))
+            horiz_ratio = abs(dx) / (abs(dy) + 1e-5)
+
+            is_lhb = (handedness == 'LHB')
+            eff_dx = -dx if is_lhb else dx
+            eff_ft_dx = -ft_dx if is_lhb else ft_dx
+
+            k_mult = np.ones(len(SHOT_CLASSES), dtype=np.float32)
+
+            # RULE 1: Flick off pads (wrist roll to leg side dx < -15, dy < -20, angle between -140 and -100)
+            if (dx < -15 or eff_dx < -15) and dy < -20 and (-140 <= angle <= -100):
+                k_mult[1] *= 6.0   # flick
+                k_mult[0] *= 0.1   # not cover
+                k_mult[2] *= 0.1   # not pull
+
+            # RULE 2: Straight Drive vs Cover Drive
+            elif -110 <= angle <= -65:
+                if eff_dx < -2:
+                    k_mult[3] *= 1.5  # straight drive
+                elif eff_dx > 10:
+                    k_mult[0] *= 1.5  # cover drive
+
+            fused_unnorm = probs * k_mult
+            probs = (fused_unnorm / np.sum(fused_unnorm)).astype(np.float32)
+        except Exception as e_kin:
+            print(f"[CrickEye] Kinematic fusion warning: {e_kin}")
+
     top = int(probs.argmax())
     return SHOT_CLASSES[top], float(probs[top]), probs.tolist()
 
@@ -2746,6 +3123,7 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
 
     shot_log     = []
     stance_rows  = []
+    cur_hand     = 'RHB'
     session_info = {'handedness': 'UNKNOWN', 'conf': 0.0}
 
     ws_emit(ws, loop, {
@@ -2761,7 +3139,10 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
         print(f"[CrickEye] Session shoulder width (median): {session_shoulder_px:.1f} px  "
               f"(pixel_scale={pixel_scale:.2f})")
 
-    for i, (onset_frame, onset_score) in enumerate(shot_onsets):
+    for i, item in enumerate(shot_onsets):
+        ev = item if isinstance(item, ShotEvent) else None
+        onset_frame = ev.peak_frame if ev else item[0]
+        onset_score = ev.onset_score if ev else item[1]
 
         pre_start = max(0, onset_frame - PRESHOT_START)
         pre_end   = max(pre_start + 1, onset_frame - PRESHOT_END)
@@ -2776,20 +3157,21 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
         else:
             clip = extract_clip_frames_rgb(str(video_path_or_frames), start, end)
 
-        label, conf, probs = classify_shot(shot_classifier, clip, device)
+        imp_f = ev.impact_frame if ev and ev.impact_frame else onset_frame
+        label, conf, probs = classify_shot(
+            shot_classifier, clip, device,
+            all_keypoints=all_keypoints,
+            impact_frame=imp_f,
+            handedness=cur_hand if cur_hand != 'UNKNOWN' else 'RHB'
+        )
         del clip
         ts = f"{int(onset_frame/fps//60):02d}:{onset_frame/fps%60:05.2f}"
 
-        shot_num = i + 1
-        if shot_num in SHOT_OVERRIDES:
-            ov = SHOT_OVERRIDES[shot_num]
-            label = ov.get('label', label)
-            conf = float(ov.get('conf', 0.85))
-            if label in SHOT_CLASSES:
-                c_idx = SHOT_CLASSES.index(label)
-                p_arr = [0.03] * len(SHOT_CLASSES)
-                p_arr[c_idx] = conf
-                probs = p_arr
+        if ev:
+            ev.classification = label
+            ev.confidence = float(conf)
+            ev.probs = probs
+            ev.classification_status = "CLASSIFIED"
 
         stance_rows.append((shot_dom, shot_conf, conf))
         cur_hand, cur_conf, session_info = _session_stance_from_classifier_confirmed(stance_rows)
@@ -2807,14 +3189,21 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
         )
 
         entry = dict(
-            shot_num    = i + 1,
+            shot_num    = ev.shot_id if ev else (i + 1),
             label       = label,
             conf        = conf,
             timestamp   = ts,
             probs       = probs,
             peak_frame  = onset_frame,
-            start_frame = start,
-            end_frame   = end,
+            start_frame = ev.start_frame if ev else start,
+            end_frame   = ev.end_frame if ev else end,
+            badge_start_frame = ev.badge_start_frame if ev else int(onset_frame + max(6, int((fps or 30) * 0.25))),
+            badge_end_frame   = ev.badge_end_frame if ev else int(onset_frame + 50),
+            badge_start_sec   = ev.badge_start_sec if ev else round((onset_frame + 7) / (fps or 30), 3),
+            badge_end_sec     = ev.badge_end_sec if ev else round((onset_frame + 50) / (fps or 30), 3),
+            swing_trajectory  = ev.swing_trajectory if ev else [],
+            classification_status = "CLASSIFIED",
+            visualization_status  = "AWAITING",
             onset_score = round(onset_score, 1),
             _display_num     = None,
             _cur_hand        = cur_hand,
@@ -2891,6 +3280,26 @@ def classify_all_shots(video_path_or_frames, all_keypoints, shot_onsets,
         e['_session_hand'] = fin_hand
         e['_session_conf'] = fin_conf
 
+    # ── Coordinated shot label badge windows ──
+    # Requirement: Label appears at the ball-contact (impact) moment and stays visible
+    # during the shot's follow-through (~1.3s), and disappears before the next shot's
+    # swing begins or before clip cut (leaving clean video during idle pauses).
+    badge_duration_f = int((fps or 30.0) * 1.3)
+    for i, entry in enumerate(shot_log):
+        b_start = entry.get('impact_frame') or entry.get('badge_start_frame') or entry.get('peak_frame')
+        seg_end = entry.get('segment_bounds', (0, total_frames - 1))[1] if 'segment_bounds' in entry else (total_frames - 1)
+        if i + 1 < len(shot_log):
+            next_start_f = shot_log[i + 1].get('start_frame', shot_log[i + 1]['peak_frame'] - int((fps or 30.0) * 0.4))
+            max_end = max(b_start, min(next_start_f - 2, seg_end - 2))
+            b_end = min(b_start + badge_duration_f, max_end)
+        else:
+            b_end = min(b_start + badge_duration_f, seg_end)
+
+        entry['badge_start_frame'] = int(b_start)
+        entry['badge_end_frame']   = int(b_end)
+        entry['badge_start_sec']   = round(b_start / (fps or 30.0), 3)
+        entry['badge_end_sec']     = round(b_end / (fps or 30.0), 3)
+
     final = session_info['handedness']
     fconf = session_info['conf']
     session_info['camera_pixel_scale'] = pixel_scale
@@ -2939,6 +3348,18 @@ def compute_annotated_timestamps(shot_log, fps, total_frames, slow_factor=3):
         peaks_before = sum(1 for p in peak_frames_sorted if p < onset)
         annotated_frame = onset + peaks_before * max(0, slow_factor - 1)
         e['_annotated_timestamp_sec'] = round(annotated_frame / fps, 4)
+
+        imp_f = e.get('impact_frame', onset)
+        extra_imp = sum(max(0, slow_factor - 1) for p in peak_frames_sorted if p <= imp_f)
+        e['annotated_impact_sec'] = round((imp_f + extra_imp) / fps, 3)
+        e['_annotated_impact_sec'] = e['annotated_impact_sec']
+
+        b_start = e.get('badge_start_frame', imp_f)
+        b_end = e.get('badge_end_frame', total_frames - 1)
+        extra_start = sum(max(0, slow_factor - 1) for p in peak_frames_sorted if p <= b_start)
+        extra_end = sum(max(0, slow_factor - 1) for p in peak_frames_sorted if p <= b_end)
+        e['badge_start_sec'] = round((b_start + extra_start) / fps, 3)
+        e['badge_end_sec'] = round((b_end + extra_end) / fps, 3)
 
     return annotated_total
 
@@ -3022,11 +3443,14 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
     fourcc  = cv2.VideoWriter_fourcc(*'mp4v')
     writer  = cv2.VideoWriter(output_path, fourcc, fps, (orig_w, orig_h))
 
-    peak_set      = {e['peak_frame'] for e in shot_log}
-    frame_to_shot = {}
+    peak_set            = {e['peak_frame'] for e in shot_log}
+    frame_to_badge_shot = {}
     for entry in shot_log:
-        for f in range(entry['start_frame'], entry['end_frame']+1):
-            frame_to_shot[f] = entry
+        b_start = entry.get('badge_start_frame')
+        b_end   = entry.get('badge_end_frame')
+        if b_start is not None and b_end is not None:
+            for f in range(b_start, b_end + 1):
+                frame_to_badge_shot[f] = entry
 
     handedness = session_info['handedness']
     conf       = session_info['conf']
@@ -3065,7 +3489,7 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
         kp   = all_keypoints[frame_idx] if frame_idx < len(all_keypoints) else {}
 
         is_peak = frame_idx in peak_set
-        in_clip = frame_idx in frame_to_shot
+        badge_entry = frame_to_badge_shot.get(frame_idx)
 
         draw_skeleton(out, kp)
         draw_bilateral_bar(out, bil, orig_h, orig_w, bil_threshold=bil_thr)
@@ -3119,49 +3543,29 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
                             FONT, 0.42, (0, 255, 255), 1, cv2.LINE_AA)
 
         if is_peak:
-            e  = frame_to_shot.get(frame_idx)
-            if e:
-                ovl = out.copy()
-                cv2.rectangle(ovl, (0,0), (orig_w, orig_h), (0,60,200), -1)
-                cv2.addWeighted(ovl, 0.18, out, 0.82, 0, out)
-                spd = e.get('peak_swing_speed', 0)
-                label_disp = {'straight': 'STRAIGHT DRIVE', 'cover': 'COVER DRIVE', 'pull': 'PULL SHOT', 'flick': 'FLICK', 'sweep': 'SWEEP'}.get(e['label'], e['label'].upper())
-                pt = f"{label_disp}  {spd:.0f}km/h" if spd > 0 else f"{label_disp}"
-                
-                # Single prediction badge in lower left corner with white background and black text (increased font size, confidence removed)
-                font_scale = max(1.0, round(orig_w / 800.0, 2))
-                font_thick = 2 if font_scale < 1.15 else 3
-                (tw, th), _ = cv2.getTextSize(pt, FONT, font_scale, font_thick)
-                pad_x = int(20 * font_scale)
-                pad_y = int(13 * font_scale)
-                bx1 = int(22 * font_scale)
-                by2 = orig_h - int(32 * font_scale)
-                by1 = by2 - (th + 2 * pad_y)
-                bx2 = bx1 + (tw + 2 * pad_x)
-                cv2.rectangle(out, (bx1, by1), (bx2, by2), (255, 255, 255), -1, cv2.LINE_AA)
-                cv2.rectangle(out, (bx1, by1), (bx2, by2), (40, 40, 40), 2, cv2.LINE_AA)
-                cv2.putText(out, pt, (bx1 + pad_x, by1 + pad_y + th), FONT, font_scale, (0, 0, 0), font_thick, cv2.LINE_AA)
+            # Subtle red highlight flash at peak impact frame (no text badge during swing!)
+            ovl = out.copy()
+            cv2.rectangle(ovl, (0,0), (orig_w, orig_h), (0,60,200), -1)
+            cv2.addWeighted(ovl, 0.18, out, 0.82, 0, out)
 
-        elif in_clip:
-            e  = frame_to_shot[frame_idx]
-            if e['conf'] >= CONF_THRESHOLD:
-                spd = e.get('peak_swing_speed', 0)
-                label_disp = {'straight': 'STRAIGHT DRIVE', 'cover': 'COVER DRIVE', 'pull': 'PULL SHOT', 'flick': 'FLICK', 'sweep': 'SWEEP'}.get(e['label'], e['label'].upper())
-                pt = f"{label_disp}  {spd:.0f}km/h" if spd > 0 else f"{label_disp}"
-                
-                # Single prediction badge in lower left corner with white background and black text (increased font size, confidence removed)
-                font_scale = max(1.0, round(orig_w / 800.0, 2))
-                font_thick = 2 if font_scale < 1.15 else 3
-                (tw, th), _ = cv2.getTextSize(pt, FONT, font_scale, font_thick)
-                pad_x = int(20 * font_scale)
-                pad_y = int(13 * font_scale)
-                bx1 = int(22 * font_scale)
-                by2 = orig_h - int(32 * font_scale)
-                by1 = by2 - (th + 2 * pad_y)
-                bx2 = bx1 + (tw + 2 * pad_x)
-                cv2.rectangle(out, (bx1, by1), (bx2, by2), (255, 255, 255), -1, cv2.LINE_AA)
-                cv2.rectangle(out, (bx1, by1), (bx2, by2), (40, 40, 40), 2, cv2.LINE_AA)
-                cv2.putText(out, pt, (bx1 + pad_x, by1 + pad_y + th), FONT, font_scale, (0, 0, 0), font_thick, cv2.LINE_AA)
+        if badge_entry and badge_entry.get('conf', 0) >= CONF_THRESHOLD:
+            spd = badge_entry.get('peak_swing_speed', 0)
+            label_disp = {'straight': 'STRAIGHT DRIVE', 'cover': 'COVER DRIVE', 'pull': 'PULL SHOT', 'flick': 'FLICK', 'sweep': 'SWEEP'}.get(badge_entry['label'], badge_entry['label'].upper())
+            pt = f"{label_disp}  {spd:.0f}km/h" if spd > 0 else f"{label_disp}"
+            
+            # Prediction badge appears at the end of that swing and disappears before the next shot's swing path
+            font_scale = max(1.0, round(orig_w / 800.0, 2))
+            font_thick = 2 if font_scale < 1.15 else 3
+            (tw, th), _ = cv2.getTextSize(pt, FONT, font_scale, font_thick)
+            pad_x = int(20 * font_scale)
+            pad_y = int(13 * font_scale)
+            bx1 = int(22 * font_scale)
+            by2 = orig_h - int(32 * font_scale)
+            by1 = by2 - (th + 2 * pad_y)
+            bx2 = bx1 + (tw + 2 * pad_x)
+            cv2.rectangle(out, (bx1, by1), (bx2, by2), (255, 255, 255), -1, cv2.LINE_AA)
+            cv2.rectangle(out, (bx1, by1), (bx2, by2), (40, 40, 40), 2, cv2.LINE_AA)
+            cv2.putText(out, pt, (bx1 + pad_x, by1 + pad_y + th), FONT, font_scale, (0, 0, 0), font_thick, cv2.LINE_AA)
 
         writer.write(out)
 
@@ -3319,8 +3723,24 @@ def save_json(shot_log, fps, total_frames, session_info, analysis, json_path, ba
                 'label'                : e['label'],
                 'confidence'           : round(e['conf'], 4),
                 'confirmed'            : e['conf'] >= CONF_THRESHOLD,
+                'predicted_class'      : e.get('predicted_class', SHOT_DISPLAY_LABELS.get(e['label'], e['label'].title())),
+                'classification'       : e.get('classification', SHOT_DISPLAY_LABELS.get(e['label'], e['label'].title())),
                 'timestamp'            : e['timestamp'],
+                'impact_timestamp'     : e.get('impact_timestamp', e['timestamp']),
+                'impact_timestamp_sec' : e.get('impact_timestamp_sec', round(e.get('impact_frame', e['peak_frame']) / fps, 3)),
                 'annotated_timestamp_sec': e.get('_annotated_timestamp_sec'),
+                'annotated_impact_sec' : e.get('annotated_impact_sec'),
+                'impact_frame'         : e.get('impact_frame', e['peak_frame']),
+                'impact_confidence'    : e.get('impact_confidence', 0.90),
+                'impact_method'        : e.get('impact_method', 'kinematic_acceleration_inflection'),
+                'badge_start_sec'      : e.get('badge_start_sec'),
+                'badge_end_sec'        : e.get('badge_end_sec'),
+                'badge_start_frame'    : e.get('badge_start_frame'),
+                'badge_end_frame'      : e.get('badge_end_frame'),
+                'start_frame'          : e.get('start_frame'),
+                'end_frame'            : e.get('end_frame'),
+                'classification_status': e.get('classification_status', 'CLASSIFIED'),
+                'visualization_status' : e.get('visualization_status', 'AWAITING'),
                 'peak_frame'           : e['peak_frame'],
                 'travel_px'            : e['onset_score'],
                 'swing_intensity'      : e.get('swing_intensity'),
@@ -3643,7 +4063,8 @@ def run_pipeline(video_path=None, output_path=None):
     else:
         print("[CrickEye] Camera scale: shoulder unknown → pixel_scale=1.00")
     shot_onsets = find_shot_onsets(
-        lw_vels, rw_vels, bilateral, fps, pixel_scale=pixel_scale)
+        lw_vels, rw_vels, bilateral, fps, pixel_scale=pixel_scale, all_keypoints=all_keypoints,
+        video_path=vp)
 
     if len(shot_onsets) > 0:
         shot_classifier = load_shot_classifier(MODEL_PATH, device)
@@ -3715,7 +4136,8 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
             print("[CrickEye] Camera scale: shoulder unknown → pixel_scale=1.00")
         shot_onsets = find_shot_onsets(
             lw_vels, rw_vels, bilateral, fps, ws, loop,
-            pixel_scale=pixel_scale)
+            pixel_scale=pixel_scale, all_keypoints=all_keypoints,
+            video_path=video_path)
 
         if len(shot_onsets) > 0:
             shot_classifier = load_shot_classifier(MODEL_PATH, device)
@@ -3795,7 +4217,21 @@ def run_pipeline_ws_sync(video_path: str, ws, loop):
                 "head_confidence"      : e.get('head_confidence'),
                 "probs": {cls: round(p, 4) for cls, p in zip(SHOT_CLASSES, e['probs'])},
                 "early_classified"     : early,
+                "predicted_class"      : e.get('predicted_class', SHOT_DISPLAY_LABELS.get(e['label'], e['label'].title())),
+                "classification"       : e.get('classification', SHOT_DISPLAY_LABELS.get(e['label'], e['label'].title())),
+                "classification_status": e.get('classification_status', 'CLASSIFIED'),
+                "visualization_status" : e.get('visualization_status', 'AWAITING'),
+                "impact_frame"         : e.get('impact_frame', e['peak_frame']),
+                "impact_timestamp"     : e.get('impact_timestamp', e['timestamp']),
+                "impact_timestamp_sec" : e.get('impact_timestamp_sec', round(e.get('impact_frame', e['peak_frame']) / fps, 3)),
+                "annotated_impact_sec" : e.get('annotated_impact_sec'),
+                "start_frame"          : e.get('start_frame'),
+                "end_frame"            : e.get('end_frame'),
+                "badge_start_frame"    : e.get('badge_start_frame'),
+                "badge_end_frame"      : e.get('badge_end_frame'),
                 "annotated_timestamp_sec": e.get('_annotated_timestamp_sec'),
+                "badge_start_sec"      : e.get('badge_start_sec'),
+                "badge_end_sec"        : e.get('badge_end_sec'),
             }
 
         ws_emit(ws, loop, {

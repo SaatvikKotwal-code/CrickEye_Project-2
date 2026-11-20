@@ -374,6 +374,7 @@ async function callDgx(prompt) {
       const text =
         json?.choices?.[0]?.message?.content ||
         json?.message?.content ||
+        json?.message?.thinking ||
         json?.response ||
         json?.data?.response ||
         json?.data?.text ||

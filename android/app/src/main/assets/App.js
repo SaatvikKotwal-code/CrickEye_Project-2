@@ -154,9 +154,11 @@ function getCandidateServerUrls() {
     list.push(window.CRICKEYE_DEFAULT_BACKEND_URL.trim().replace(/\/+$/, ''));
   }
   // PC LAN Wi-Fi (direct wireless access for phone on same Wi-Fi)
+  list.push('http://192.168.29.14:8000');
+  list.push('http://10.253.11.229:8000');
+  list.push('http://10.253.10.100:8000');
   list.push('http://10.253.9.193:8000');
   list.push('http://10.253.6.214:8000');
-  list.push('http://192.168.29.14:8000');
   list.push('http://10.253.4.106:8000');
   list.push('http://192.168.0.179:8000');
   if (window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:') {
@@ -3977,14 +3979,17 @@ function rebuildDerivedShotStateFromShots(shots) {
     state.pendingSpokes.push({
       timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
       annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+      annotated_impact_sec: msg.annotated_impact_sec != null ? msg.annotated_impact_sec : null,
+      impact_timestamp_sec: msg.impact_timestamp_sec != null ? msg.impact_timestamp_sec : null,
       badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
       badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
       label: msg.label,
+      predicted_class: msg.predicted_class || msg.classification || SHOT_LABELS[msg.label] || msg.label,
       shot_num: msg.shot_num,
       msg,
     });
   }
-  state.pendingSpokes.sort((a, b) => (a.annotated_timestamp_sec ?? a.timestamp_sec) - (b.annotated_timestamp_sec ?? b.timestamp_sec));
+  state.pendingSpokes.sort((a, b) => (getSpokeImpactTime(a)) - (getSpokeImpactTime(b)));
 }
 
 /** Restore dashboard from a completed session row (same file hash). */
@@ -4421,9 +4426,16 @@ function onShotReceived(msg) {
     if (spokeIdx >= 0) {
       state.pendingSpokes[spokeIdx].msg = msg;
       state.pendingSpokes[spokeIdx].label = msg.label;
+      state.pendingSpokes[spokeIdx].predicted_class = msg.predicted_class || msg.classification || SHOT_LABELS[msg.label] || msg.label;
       // Update annotated timestamp when the final (post-render) shot message arrives
       if (msg.annotated_timestamp_sec != null) {
         state.pendingSpokes[spokeIdx].annotated_timestamp_sec = msg.annotated_timestamp_sec;
+      }
+      if (msg.annotated_impact_sec != null) {
+        state.pendingSpokes[spokeIdx].annotated_impact_sec = msg.annotated_impact_sec;
+      }
+      if (msg.impact_timestamp_sec != null) {
+        state.pendingSpokes[spokeIdx].impact_timestamp_sec = msg.impact_timestamp_sec;
       }
       if (msg.badge_start_sec != null) {
         state.pendingSpokes[spokeIdx].badge_start_sec = msg.badge_start_sec;
@@ -4441,9 +4453,12 @@ function onShotReceived(msg) {
       state.pendingSpokes.push({
         timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
         annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+        annotated_impact_sec: msg.annotated_impact_sec != null ? msg.annotated_impact_sec : null,
+        impact_timestamp_sec: msg.impact_timestamp_sec != null ? msg.impact_timestamp_sec : null,
         badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
         badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
         label: msg.label,
+        predicted_class: msg.predicted_class || msg.classification || SHOT_LABELS[msg.label] || msg.label,
         shot_num: msg.shot_num,
         msg
       });
@@ -4460,9 +4475,12 @@ function onShotReceived(msg) {
       state.pendingSpokes.push({
         timestamp_sec: parseFloat(parts[0]) * 60 + parseFloat(parts[1] || 0),
         annotated_timestamp_sec: msg.annotated_timestamp_sec != null ? msg.annotated_timestamp_sec : null,
+        annotated_impact_sec: msg.annotated_impact_sec != null ? msg.annotated_impact_sec : null,
+        impact_timestamp_sec: msg.impact_timestamp_sec != null ? msg.impact_timestamp_sec : null,
         badge_start_sec: msg.badge_start_sec != null ? msg.badge_start_sec : null,
         badge_end_sec: msg.badge_end_sec != null ? msg.badge_end_sec : null,
         label: msg.label,
+        predicted_class: msg.predicted_class || msg.classification || SHOT_LABELS[msg.label] || msg.label,
         shot_num: msg.shot_num,
         msg
       });
@@ -5621,9 +5639,20 @@ function getSpokeVideoTime(spoke) {
   return spoke.timestamp_sec;
 }
 
-function getSpokeBadgeStartTime(spoke) {
+/**
+ * Returns the exact ball-contact / impact timestamp in seconds for a shot.
+ * Used for stage-B synchronized video playback.
+ */
+function getSpokeImpactTime(spoke) {
+  if (spoke.annotated_impact_sec != null) return spoke.annotated_impact_sec;
   if (spoke.badge_start_sec != null) return spoke.badge_start_sec;
-  return getSpokeVideoTime(spoke) + 0.25;
+  if (spoke.annotated_timestamp_sec != null) return spoke.annotated_timestamp_sec;
+  if (spoke.impact_timestamp_sec != null) return spoke.impact_timestamp_sec;
+  return getSpokeVideoTime(spoke);
+}
+
+function getSpokeBadgeStartTime(spoke) {
+  return getSpokeImpactTime(spoke);
 }
 
 /** Max shot # whose replay timestamp has been reached — drives progressive ball analytics (pitch / bars / table). */
@@ -5631,7 +5660,7 @@ function computeBallPlaybackShotCap(t) {
   if (!video || !video.duration || !state.pendingSpokes.length) return 0;
   let maxN = 0;
   state.pendingSpokes.forEach((spoke) => {
-    if (t >= getSpokeBadgeStartTime(spoke)) {
+    if (t >= getSpokeImpactTime(spoke)) {
       maxN = Math.max(maxN, spoke.shot_num);
     }
   });
@@ -5641,11 +5670,29 @@ function computeBallPlaybackShotCap(t) {
 function clearShotBanner() {
   hudShot.textContent = '—';
   shotIndex.textContent = '—';
-  shotName.textContent = 'AWAITING';
+  shotName.textContent = 'AWAITING IMPACT';
   shotTime.textContent = '—';
   shotColorBar.style.background = '';
   shotColorBar.style.boxShadow = 'none';
   state.activeBannerSpoke = null;
+}
+
+function showShotBanner(spoke) {
+  state.activeBannerSpoke = spoke;
+  const circle = document.getElementById(`shot-circle-${spoke.shot_num}`);
+  if (circle) {
+    document.querySelectorAll('.shot-circle').forEach(el=>el.classList.remove('active'));
+    circle.classList.add('played','active');
+    setTimeout(()=>circle.classList.remove('active'),1200);
+  }
+  const labelText = spoke.predicted_class || spoke.msg?.predicted_class || spoke.msg?.classification || SHOT_LABELS[spoke.label] || spoke.label;
+  hudShot.textContent   = labelText;
+  shotIndex.textContent = spoke.shot_num;
+  shotName.textContent  = labelText.toUpperCase();
+  shotTime.textContent  = spoke.msg?.timestamp || spoke.timestamp || '';
+  const col = SHOT_COLORS[spoke.label]||'#fff';
+  shotColorBar.style.background=col; shotColorBar.style.boxShadow=`0 0 10px ${col}`;
+  if (spoke.msg) renderBiomechCard(spoke.msg);
 }
 
 function onVideoTimeUpdate() {
@@ -5666,18 +5713,39 @@ function onVideoTimeUpdate() {
     clearShotBanner();
   }
   state._lastVideoTime = t;
+
+  if (timelineProgress && video.duration) {
+    const pct = Math.min(100, Math.max(0, (t / video.duration) * 100));
+    timelineProgress.style.width = pct + '%';
+  }
+
+  // 1. Spoke drawing (wagon wheel and stats trigger once per shot when impact time reached)
   state.pendingSpokes.forEach(spoke => {
     if (state.drawnSpokes.has(spoke.shot_num)) return;
-    if (t >= getSpokeBadgeStartTime(spoke)) {
+    if (t >= getSpokeImpactTime(spoke)) {
       state.drawnSpokes.add(spoke.shot_num);
       drawSpokeNow(spoke);
     }
   });
-  if (
-    state.activeBannerSpoke &&
-    state.activeBannerSpoke.badge_end_sec != null &&
-    t > state.activeBannerSpoke.badge_end_sec
-  ) {
+
+  // 2. Active shot banner coordination (Event-driven synchronization at ball-impact):
+  // The predicted classification appears at the ball-contact moment (badge_start_sec),
+  // stays active during the shot's follow-through window, and clears before the next shot's swing.
+  let activeSpoke = null;
+  for (const spoke of state.pendingSpokes) {
+    const sStart = getSpokeImpactTime(spoke);
+    const sEnd = spoke.badge_end_sec != null ? spoke.badge_end_sec : (sStart + 2.2);
+    if (t >= sStart && t <= sEnd) {
+      activeSpoke = spoke;
+      break;
+    }
+  }
+
+  if (activeSpoke) {
+    if (state.activeBannerSpoke !== activeSpoke) {
+      showShotBanner(activeSpoke);
+    }
+  } else if (state.activeBannerSpoke) {
     clearShotBanner();
   }
 
@@ -5694,20 +5762,7 @@ function onVideoTimeUpdate() {
 
 function drawSpokeNow(spoke, onSpokeDrawn) {
   state.drawnSpokes.add(spoke.shot_num);
-  state.activeBannerSpoke = spoke;
-  const circle = document.getElementById(`shot-circle-${spoke.shot_num}`);
-  if (circle) {
-    document.querySelectorAll('.shot-circle').forEach(el=>el.classList.remove('active'));
-    circle.classList.add('played','active');
-    setTimeout(()=>circle.classList.remove('active'),1200);
-  }
-  hudShot.textContent   = SHOT_LABELS[spoke.label] || spoke.label;
-  shotIndex.textContent = spoke.shot_num;
-  shotName.textContent  = (SHOT_LABELS[spoke.label]||spoke.label).toUpperCase();
-  shotTime.textContent  = spoke.msg.timestamp;
-  const col = SHOT_COLORS[spoke.label]||'#fff';
-  shotColorBar.style.background=col; shotColorBar.style.boxShadow=`0 0 10px ${col}`;
-  renderBiomechCard(spoke.msg);
+  showShotBanner(spoke);
 
   // Deduplicate live stats so replaying or clicking shots does not inflate counts
   state.countedShotNums = state.countedShotNums || new Set();
@@ -6066,12 +6121,12 @@ function initServerSettingsModal() {
     openDialog(modal);
   });
 
-  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://10.253.9.193:8000'; });
+  presetWifi?.addEventListener('click', () => { if (input) input.value = 'http://192.168.29.14:8000'; });
   presetLocalhost?.addEventListener('click', () => { if (input) input.value = 'http://localhost:8000'; });
   presetCloudflare?.addEventListener('click', () => { if (input) input.value = 'https://redeem-thanks-oliver-aging.trycloudflare.com'; });
   presetEmulator?.addEventListener('click', () => { if (input) input.value = 'http://10.0.2.2:8000'; });
   presetOrigin?.addEventListener('click', () => {
-    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://10.253.9.193:8000';
+    if (input) input.value = window.location.origin && window.location.origin !== 'null' && window.location.protocol !== 'file:' ? window.location.origin : 'http://192.168.29.14:8000';
   });
 
   pingBtn?.addEventListener('click', async () => {
