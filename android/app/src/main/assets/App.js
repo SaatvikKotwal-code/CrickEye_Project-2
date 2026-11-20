@@ -5687,11 +5687,11 @@ function vrpLayout() {
   const rightSpace = (rw - scaledW) / 2;
 
   if (rightSpace >= 60) {
-    // Clamp panel width to actual blank space (minus 8px safety margin)
-    const panelW = Math.min(rightSpace - 8, 200);
+    // Increase horizontal width up to 260px while strictly maintaining at least 12px margin on both sides
+    const panelW = Math.min(Math.max(60, rightSpace - 24), 260);
     panel.style.width = panelW + 'px';
-    // Center horizontally in the right letterbox space
-    const rightMargin = Math.max(0, Math.floor((rightSpace - panelW) / 2));
+    // Center horizontally in the right letterbox space, maintaining equal margins
+    const rightMargin = Math.max(12, Math.floor((rightSpace - panelW) / 2));
     panel.style.right = rightMargin + 'px';
     panel.classList.add('vrp-visible');
   } else {
@@ -5711,7 +5711,7 @@ function vrpRebuildLog(activeNum) {
   drawn.sort((a, b) => a.shot_num - b.shot_num);
   rowsEl.innerHTML = drawn.map(s => {
     const lbl = s.predicted_class || SHOT_LABELS[s.label] || s.label || '—';
-    const shortLbl = lbl.length > 14 ? lbl.substring(0, 14) + '…' : lbl;
+    const shortLbl = lbl.length > 20 ? lbl.substring(0, 20) + '…' : lbl;
     const spd = s.msg?.peak_swing_speed || s.peak_swing_speed || s.msg?.speed || 0;
     const isActive = s.shot_num === activeNum;
     return `<div class="vrp-log-row${isActive ? ' vrp-active-row' : ''}">
