@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>CrickEye Pro — AI Cricket Analytics</title>
   <!-- style.css loads first: it declares the cascade layer order. -->
-  <link rel="stylesheet" href="style.css?v=7.5.2" />
+  <link rel="stylesheet" href="style.css?v=7.5.4" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
@@ -314,6 +314,23 @@
                   <div class="hud-corner hud-tr" id="hudTime">00:00</div>
                   <div class="hud-corner hud-bl" style="display: none !important;">SHOT: <span id="hudShot">—</span></div>
                   <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
+
+                  <!-- Live Shot Data Panel — right letterbox area -->
+                  <div class="vid-right-panel" id="vidRightPanel">
+                    <!-- Current shot badge (flashes at impact) -->
+                    <div class="vrp-current" id="vrpCurrent" style="display:none;">
+                      <div class="vrp-current-pill" id="vrpCurrentPill">SHOT 1</div>
+                      <div class="vrp-current-label" id="vrpCurrentLabel">COVER DRIVE</div>
+                      <div class="vrp-current-speed" id="vrpCurrentSpeed">120<span class="vrp-unit">km/h</span></div>
+                    </div>
+                    <!-- Session shot log — builds up as video plays -->
+                    <div class="vrp-log" id="vrpLog">
+                      <div class="vrp-log-title">SESSION LOG</div>
+                      <div class="vrp-log-rows" id="vrpLogRows">
+                        <div class="vrp-log-empty">Awaiting shots…</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -751,7 +768,7 @@
   <script src="config.js?v=7.4.4"></script>
   <script src="components/fa-adapter.js?v=6.5.2"></script>
   <!-- Backend exposes this at /app.js (see backend/main.py); App.js 404s. -->
-  <script src="app.js?v=7.5.2"></script>
+  <script src="app.js?v=7.5.4"></script>
   <!-- DEV ONLY: dashboard mock, active only with ?mock=1. Remove with dev-mock.js. -->
   <script src="components/dev-mock.js?v=7.4.4"></script>
 </body>

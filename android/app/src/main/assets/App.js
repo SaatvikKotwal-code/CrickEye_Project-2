@@ -5667,6 +5667,90 @@ function computeBallPlaybackShotCap(t) {
   return maxN;
 }
 
+// ═══════════════════════════════════════════════════════
+// VID RIGHT PANEL — Live shot data in the right letterbox
+// ═══════════════════════════════════════════════════════
+
+/** Compute the right-letterbox width in px and size/show the panel accordingly. */
+function vrpLayout() {
+  const panel = document.getElementById('vidRightPanel');
+  if (!panel || !video) return;
+  const rw = video.clientWidth;
+  const rh = video.clientHeight;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!rw || !rh || !vw || !vh) { panel.classList.remove('vrp-visible'); return; }
+
+  const r  = Math.min(rw / vw, rh / vh);
+  const scaledW = vw * r;
+  // rightSpace = width of each letterbox bar on each side
+  const rightSpace = (rw - scaledW) / 2;
+
+  if (rightSpace >= 60) {
+    // Clamp panel width to actual blank space (minus 8px safety margin)
+    const panelW = Math.min(rightSpace - 8, 200);
+    panel.style.width = panelW + 'px';
+    // Center horizontally in the right letterbox space
+    const rightMargin = Math.max(0, Math.floor((rightSpace - panelW) / 2));
+    panel.style.right = rightMargin + 'px';
+    panel.classList.add('vrp-visible');
+  } else {
+    panel.classList.remove('vrp-visible');
+  }
+}
+
+/** Rebuild the shot-log rows from state.drawnSpokes, marking the latest as active. */
+function vrpRebuildLog(activeNum) {
+  const rowsEl = document.getElementById('vrpLogRows');
+  if (!rowsEl) return;
+  const drawn = [...(state.pendingSpokes || [])].filter(s => state.drawnSpokes?.has(s.shot_num));
+  if (!drawn.length) {
+    rowsEl.innerHTML = '<div class="vrp-log-empty">Awaiting shots…</div>';
+    return;
+  }
+  drawn.sort((a, b) => a.shot_num - b.shot_num);
+  rowsEl.innerHTML = drawn.map(s => {
+    const lbl = s.predicted_class || SHOT_LABELS[s.label] || s.label || '—';
+    const shortLbl = lbl.length > 14 ? lbl.substring(0, 14) + '…' : lbl;
+    const spd = s.msg?.peak_swing_speed || s.peak_swing_speed || s.msg?.speed || 0;
+    const isActive = s.shot_num === activeNum;
+    return `<div class="vrp-log-row${isActive ? ' vrp-active-row' : ''}">
+      <span class="vrp-log-num">#${s.shot_num}</span>
+      <span class="vrp-log-name">${shortLbl.toUpperCase()}</span>
+      ${spd > 0 ? `<span class="vrp-log-spd">${Math.round(spd)}km/h</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/** Show the current-shot hero card and highlight it in the log. */
+function vrpShowShot(spoke) {
+  const cur = document.getElementById('vrpCurrent');
+  const pill = document.getElementById('vrpCurrentPill');
+  const lbl  = document.getElementById('vrpCurrentLabel');
+  const spd  = document.getElementById('vrpCurrentSpeed');
+  if (!cur) return;
+  const labelText = spoke.predicted_class || spoke.msg?.predicted_class || SHOT_LABELS[spoke.label] || spoke.label || '—';
+  const speed = spoke.msg?.peak_swing_speed || spoke.peak_swing_speed || spoke.msg?.speed || 0;
+  if (pill) pill.textContent = `SHOT ${spoke.shot_num}`;
+  if (lbl)  lbl.textContent  = labelText.toUpperCase();
+  if (spd)  {
+    spd.innerHTML = speed > 0
+      ? `${Math.round(speed)}<span class="vrp-unit">km/h</span>`
+      : `—<span class="vrp-unit"></span>`;
+  }
+  cur.style.display = 'flex';
+  vrpRebuildLog(spoke.shot_num);
+}
+
+/** Clear hero card when no active shot. */
+function vrpClearShot() {
+  const cur = document.getElementById('vrpCurrent');
+  if (cur) cur.style.display = 'none';
+  vrpRebuildLog(null);
+}
+
+function positionRightShotBadge() { vrpLayout(); }
+
 function clearShotBanner() {
   hudShot.textContent = '—';
   shotIndex.textContent = '—';
@@ -5675,6 +5759,7 @@ function clearShotBanner() {
   shotColorBar.style.background = '';
   shotColorBar.style.boxShadow = 'none';
   state.activeBannerSpoke = null;
+  vrpClearShot();
 }
 
 function showShotBanner(spoke) {
@@ -5693,6 +5778,9 @@ function showShotBanner(spoke) {
   const col = SHOT_COLORS[spoke.label]||'#fff';
   shotColorBar.style.background=col; shotColorBar.style.boxShadow=`0 0 10px ${col}`;
   if (spoke.msg) renderBiomechCard(spoke.msg);
+
+  vrpShowShot(spoke);
+  vrpLayout();
 }
 
 function onVideoTimeUpdate() {
@@ -6004,11 +6092,13 @@ function init() {
   }
   window.addEventListener('resize', () => {
     if (typeof BallAnalytics !== 'undefined') BallAnalytics.resizeOverlay();
+    positionRightShotBadge();
   });
   injectBiomechStyles();
   buildStartPanel();
   injectOverlayStyles();
   video.addEventListener('timeupdate', onVideoTimeUpdate);
+  video.addEventListener('loadedmetadata', () => { vrpLayout(); });
   video.addEventListener('click', ()=>{ if(video.paused) video.play(); else video.pause(); });
   // Reveal session results after a short compile delay when the analysed video finishes.
   video.addEventListener('ended', () => {

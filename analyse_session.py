@@ -3548,24 +3548,8 @@ def pass2_render(video_path, output_path, all_frames_rgb, all_keypoints,
             cv2.rectangle(ovl, (0,0), (orig_w, orig_h), (0,60,200), -1)
             cv2.addWeighted(ovl, 0.18, out, 0.82, 0, out)
 
-        if badge_entry and badge_entry.get('conf', 0) >= CONF_THRESHOLD:
-            spd = badge_entry.get('peak_swing_speed', 0)
-            label_disp = {'straight': 'STRAIGHT DRIVE', 'cover': 'COVER DRIVE', 'pull': 'PULL SHOT', 'flick': 'FLICK', 'sweep': 'SWEEP'}.get(badge_entry['label'], badge_entry['label'].upper())
-            pt = f"{label_disp}  {spd:.0f}km/h" if spd > 0 else f"{label_disp}"
-            
-            # Prediction badge appears at the end of that swing and disappears before the next shot's swing path
-            font_scale = max(1.0, round(orig_w / 800.0, 2))
-            font_thick = 2 if font_scale < 1.15 else 3
-            (tw, th), _ = cv2.getTextSize(pt, FONT, font_scale, font_thick)
-            pad_x = int(20 * font_scale)
-            pad_y = int(13 * font_scale)
-            bx1 = int(22 * font_scale)
-            by2 = orig_h - int(32 * font_scale)
-            by1 = by2 - (th + 2 * pad_y)
-            bx2 = bx1 + (tw + 2 * pad_x)
-            cv2.rectangle(out, (bx1, by1), (bx2, by2), (255, 255, 255), -1, cv2.LINE_AA)
-            cv2.rectangle(out, (bx1, by1), (bx2, by2), (40, 40, 40), 2, cv2.LINE_AA)
-            cv2.putText(out, pt, (bx1 + pad_x, by1 + pad_y + th), FONT, font_scale, (0, 0, 0), font_thick, cv2.LINE_AA)
+        # Note: Prediction label & speed are now rendered in the right-hand blank space HUD badge in the player,
+        # keeping the pitch, batsman crease, and ball impact zone clean and unblocked.
 
         writer.write(out)
 

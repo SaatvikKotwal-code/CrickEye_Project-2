@@ -314,6 +314,23 @@
                   <div class="hud-corner hud-tr" id="hudTime">00:00</div>
                   <div class="hud-corner hud-bl" style="display: none !important;">SHOT: <span id="hudShot">—</span></div>
                   <div class="hud-corner hud-br" id="hudFrame">FRAME 0</div>
+
+                  <!-- Live Shot Data Panel — right letterbox area -->
+                  <div class="vid-right-panel" id="vidRightPanel">
+                    <!-- Current shot badge (flashes at impact) -->
+                    <div class="vrp-current" id="vrpCurrent" style="display:none;">
+                      <div class="vrp-current-pill" id="vrpCurrentPill">SHOT 1</div>
+                      <div class="vrp-current-label" id="vrpCurrentLabel">COVER DRIVE</div>
+                      <div class="vrp-current-speed" id="vrpCurrentSpeed">120<span class="vrp-unit">km/h</span></div>
+                    </div>
+                    <!-- Session shot log — builds up as video plays -->
+                    <div class="vrp-log" id="vrpLog">
+                      <div class="vrp-log-title">SESSION LOG</div>
+                      <div class="vrp-log-rows" id="vrpLogRows">
+                        <div class="vrp-log-empty">Awaiting shots…</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
